@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pixel Digital Clock</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&family=Press+Start+2P&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="bg-slideshow-container" id="bgContainer">
+        </div>
+
+    <div id="loading-screen" class="loading-screen">
+        <h1 class="loading-text">LOADING</h1>
+    </div>
+
+    <div class="clock-container">
+        <div id="day" class="day"></div>
+        <div id="clock" class="clock"></div>
+        <div id="date" class="date"></div>
+    </div>
+    <div class="controls-container">
+        <button id="prev-button" class="control-button navigation">◄</button>
+        <button id="bg-toggle-button" class="control-button">PAUSE</button>
+        <button id="next-button" class="control-button navigation">►</button>
+    </div>
+
+    <div class="top-controls">
+        <button id="funny-button" class="top-button">TROPA</button>
+        <button id="calendar-button" class="top-button">DATE</button>
+        <button id="resources-button" class="top-button">RESOURCES</button>
+    </div>
+
+    <div id="calendar-overlay" class="calendar-overlay">
+        <div class="calendar-popup">
+            <div class="calendar-header">
+                <button class="calendar-nav" id="prevMonth">◄</button>
+                <span id="currentMonth"></span>
+                <button class="calendar-nav" id="nextMonth">►</button>
+            </div>
+            <div class="calendar-grid" id="calendarGrid"></div>
+            <button class="close-calendar" id="closeCalendar">CLOSE</button>
+        </div>
+    </div>
+    
+    <div id="resources-overlay" class="calendar-overlay">
+        <div class="calendar-popup">
+            <div class="calendar-header">
+                <span>LOADED RESOURCES</span>
+            </div>
+            <div class="resources-list-container">
+                <button id="show-bg-btn" class="control-button">Backgrounds</button>
+                <button id="show-rss-btn" class="control-button">Tropa images</button>
+                <div id="bg-list" class="image-list">
+                    <div class="image-grid"></div>
+                </div>
+                <div id="rss-list" class="image-list" style="display: none;">
+                    <div class="image-grid"></div>
+                </div>
+            </div>
+            <button class="close-calendar" id="closeResources">CLOSE</button>
+        </div>
+    </div>
+    
+
+    <script src="script.js"></script>
+</body>
+</html>
