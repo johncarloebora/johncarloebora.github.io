@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pixel Digital Clock</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&family=Press+Start+2P&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="bg-slideshow-container" id="bgContainer"></div>
+
+<div id="loading-screen" class="loading-screen">
+    <h1 class="loading-text">TROPA</h1>
+    <div id="loading-log" class="loading-log"></div>
+</div>
+
+    <div class="clock-container" id="clockContainer">
+        <div id="day" class="day"></div>
+        <div id="clock" class="clock"></div>
+        <div id="date" class="date"></div>
+    </div>
+
+    <div class="controls-container">
+        <button id="prev-button" class="control-button navigation main-nav-button">◄</button>
+        <button id="bg-toggle-button" class="control-button main-nav-button">PAUSE</button>
+        <button id="next-button" class="control-button navigation main-nav-button">►</button>
+    </div>
+
+    <div class="top-controls">
+        <div class="tropa-buttons">
+            <button id="funny-button" class="top-button tropa-button main-nav-button">TROPA</button>
+            <button id="burst-button" class="top-button burst-button main-nav-button">BURST</button>
+            <button id="countdown-toggle" class="control-button main-nav-button" aria-pressed="false">⌛</button>
+        </div>
+        
+        <div class="hamburger-menu">
+            <button id="hamburger-button" class="hamburger-button">
+                <div class="hamburger-lines"></div>
+                <div class="hamburger-lines"></div>
+                <div class="hamburger-lines"></div>
+            </button>
+            <div id="hamburger-dropdown" class="hamburger-dropdown">
+                <button id="calendar-button" class="top-button">DATE</button>
+                <button id="resources-button" class="top-button">RESOURCES</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="calendar-overlay" class="calendar-overlay">
+        <div class="calendar-popup">
+            <div class="calendar-header">
+                <button class="calendar-nav" id="prevMonth">◄</button>
+                <div class="date-selector">
+                    <select id="monthSelector" class="year-month-selector">
+                        <option value="0">JAN</option>
+                        <option value="1">FEB</option>
+                        <option value="2">MAR</option>
+                        <option value="3">APR</option>
+                        <option value="4">MAY</option>
+                        <option value="5">JUN</option>
+                        <option value="6">JUL</option>
+                        <option value="7">AUG</option>
+                        <option value="8">SEP</option>
+                        <option value="9">OCT</option>
+                        <option value="10">NOV</option>
+                        <option value="11">DEC</option>
+                    </select>
+                    <select id="yearSelector" class="year-month-selector"></select>
+                </div>
+                <button class="calendar-nav" id="nextMonth">►</button>
+            </div>
+            <div class="calendar-grid" id="calendarGrid"></div>
+            <button class="close-calendar" id="closeCalendar">CLOSE</button>
+        </div>
+    </div>
+    
+    <div id="resources-overlay" class="calendar-overlay">
+        <div class="calendar-popup">
+            <div class="calendar-header">
+                <span>LOADED RESOURCES</span>
+            </div>
+            <div class="resources-list-container">
+                <button id="show-bg-btn" class="control-button">Backgrounds</button>
+                <button id="show-rss-btn" class="control-button">Tropa images</button>
+                <div id="bg-list" class="image-list">
+                    <div class="image-grid"></div>
+                </div>
+                <div id="rss-list" class="image-list" style="display: none;">
+                    <div class="image-grid"></div>
+                </div>
+                <div class="cache-warning">
+                    <span class="warning-icon">⚠</span>
+                    <span class="warning-text">UPLOADED FILES ARE CACHE FILES ONLY - UPLOADS WILL DISAPPEAR ON RELOAD</span>
+                </div>
+                <label for="bg-upload" class="upload-button">UPLOAD BG</label>
+                <input type="file" id="bg-upload" accept="image/gif, image/jpeg, image/png, image/webp" style="display: none;">
+                <label for="image-upload" class="upload-button">UPLOAD IMAGE</label>
+                <input type="file" id="image-upload" accept="image/gif, image/jpeg, image/png, image/webp, image/jfif" style="display: none;">
+                <button class="close-calendar" id="closeResources">CLOSE</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="image-preview-overlay" class="calendar-overlay">
+        <div class="calendar-popup image-preview-popup">
+          <div class="image-preview-container">
+            <img id="preview-image" src="" alt="Preview" />
+          </div>
+          <div class="image-preview-controls">
+            <button id="prevImage" class="control-button">◄</button>
+            <a id="downloadImage" class="control-button" download>DOWNLOAD</a>
+            <button id="nextImage" class="control-button">►</button>
+          </div>
+          <button class="close-resources" id="closePreview">CLOSE</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- ===== Special Countdown HTML (paste before </body>) ===== -->
+    <div id="countdown-container" class="countdown-container" aria-hidden="true">
+        <div class="countdown-box" role="region" aria-label="Special Countdown">
+        <div class="countdown-header">INIP KA NA?</div>
+    
+        <div class="countdown-time" id="countdown-time">--:--:--</div>
+        <div class="countdown-date" id="countdown-date">Choose a preset or custom time</div>
+    
+        <div class="countdown-controls">
+            <label class="countdown-label" for="countdown-select">Preset / Custom</label>
+            <select id="countdown-select" class="countdown-selector" aria-label="Preset or Custom">
+            <option value="7">Start Mon 7:00 → End Fri 16:00</option>
+            <option value="8">Start Mon 8:00 → End Fri 17:00</option>
+            <option value="9">Start Mon 9:00 → End Fri 18:00</option>
+            <option value="custom">Custom (pick start & end)</option>
+            </select>
+    
+            <div id="custom-time-container" class="custom-time-container" aria-hidden="true">
+            <label class="countdown-label" for="customStart">Start (Monday)</label>
+            <input id="customStart" class="countdown-timepicker" type="time" />
+    
+            <label class="countdown-label" for="customEnd">End (Friday)</label>
+            <input id="customEnd" class="countdown-timepicker" type="time" />
+            </div>
+        </div>
+    <div>
+    <script src="script.js"></script>
+</body>
+</html>

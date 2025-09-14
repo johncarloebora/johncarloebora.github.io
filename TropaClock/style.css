@@ -1,0 +1,1159 @@
+/* Global styles with enhanced pixel art theme */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    height: 100%;
+    width: 100%;
+}
+
+body {
+    font-family: 'Press Start 2P', 'VT323', monospace;
+    color: #FFFFFF;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    overflow: hidden;
+    position: relative;
+    background: linear-gradient(45deg, #1a1a2e, #16213e);
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+}
+
+/* Enhanced background slideshow with better scaling */
+.bg-slideshow-container {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    filter: brightness(0.7) contrast(1.2);
+}
+
+.bg-slide {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-size: cover;
+    opacity: 0;
+    transition: opacity 2s ease-in-out;
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+}
+
+.bg-slide.active {
+    opacity: 1;
+}
+
+/* Enhanced loading screen with Matrix-style effects */
+.loading-screen {
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(0, 20, 40, 0.95), rgba(20, 0, 40, 0.95));
+    backdrop-filter: blur(15px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+    opacity: 1;
+    transition: opacity 1.2s ease-in-out;
+    padding: clamp(20px, 5vw, 60px);
+    overflow: hidden;
+}
+
+.loading-screen::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: repeating-conic-gradient(
+        from 0deg at 50% 50%, 
+        transparent 0deg, 
+        rgba(0, 255, 65, 0.03) 2deg, 
+        transparent 4deg, 
+        rgba(255, 0, 128, 0.03) 6deg, 
+        transparent 8deg
+    );
+    animation: matrixRotate 20s linear infinite;
+    z-index: -1;
+}
+
+.loading-screen::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at center, transparent 30%, rgba(0, 20, 40, 0.8) 70%);
+    z-index: -1;
+}
+
+.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+@keyframes matrixRotate {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes pixelPulse {
+    0% { transform: scale(1) perspective(1000px) rotateX(0deg); filter: brightness(1) hue-rotate(0deg); }
+    25% { transform: scale(1.02) perspective(1000px) rotateX(2deg); filter: brightness(1.1) hue-rotate(90deg); }
+    50% { transform: scale(1.05) perspective(1000px) rotateX(0deg); filter: brightness(1.3) hue-rotate(180deg); }
+    75% { transform: scale(1.02) perspective(1000px) rotateX(-2deg); filter: brightness(1.1) hue-rotate(270deg); }
+    100% { transform: scale(1) perspective(1000px) rotateX(0deg); filter: brightness(1) hue-rotate(360deg); }
+}
+
+@keyframes loadingGlow {
+    0%, 100% { text-shadow: 2px 2px 0 #000, 0 0 20px rgba(0, 255, 65, 0.5), 0 0 40px rgba(0, 255, 65, 0.3); }
+    33% { text-shadow: 2px 2px 0 #000, 0 0 20px rgba(255, 0, 128, 0.5), 0 0 40px rgba(255, 0, 128, 0.3); }
+    66% { text-shadow: 2px 2px 0 #000, 0 0 20px rgba(0, 255, 255, 0.5), 0 0 40px rgba(0, 255, 255, 0.3); }
+}
+
+.loading-text {
+    font-size: clamp(28px, 8vw, 100px);
+    animation: pixelPulse 3s infinite ease-in-out, loadingGlow 4s infinite ease-in-out;
+    text-align: center;
+    color: #00ff41;
+    font-family: 'Press Start 2P', monospace;
+    letter-spacing: clamp(3px, 0.8vw, 8px);
+    margin-bottom: clamp(30px, 6vw, 50px);
+    position: relative;
+}
+
+.loading-text::before {
+    content: 'TROPA';
+    position: absolute;
+    top: -2px;
+    left: 2px;
+    color: rgba(255, 0, 128, 0.4);
+    z-index: -1;
+    animation: loadingGlitch 2s infinite;
+}
+
+@keyframes loadingGlitch {
+    0%, 90%, 100% { transform: translate(0); }
+    92% { transform: translate(-2px, 2px); }
+    94% { transform: translate(2px, -2px); }
+    96% { transform: translate(-1px, 1px); }
+}
+
+@keyframes dots {
+    0% { content: ""; }
+    25% { content: "."; }
+    50% { content: ".."; }
+    75% { content: "..."; }
+    100% { content: ""; }
+}
+
+.loading-text:after {
+    content: "";
+    animation: dots 2s infinite;
+}
+
+/* Enhanced loading log with cyberpunk aesthetics */
+.loading-log {
+    font-family: 'VT323', monospace;
+    font-size: clamp(14px, 2.2vw, 20px);
+    color: #00ff41;
+    text-shadow: 1px 1px 0 #000, 0 0 15px rgba(0, 255, 65, 0.4);
+    white-space: pre-wrap;
+    text-align: left;
+    width: min(92vw, 900px);
+    max-height: min(45vh, 350px);
+    overflow-y: auto;
+    padding: clamp(15px, 3vw, 25px);
+    border: 2px solid #00ff41;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(12px);
+    border-radius: 8px;
+    box-shadow: 
+        0 0 30px rgba(0, 255, 65, 0.3),
+        inset 0 0 20px rgba(0, 255, 65, 0.1);
+    position: relative;
+}
+
+.loading-log::before {
+    content: '> SYSTEM INITIALIZATION';
+    position: absolute;
+    top: -15px;
+    left: 15px;
+    background: linear-gradient(135deg, rgba(0, 20, 40, 0.9), rgba(0, 40, 20, 0.9));
+    padding: 5px 15px;
+    font-size: clamp(10px, 1.5vw, 14px);
+    border: 1px solid #00ff41;
+    border-radius: 4px;
+}
+
+/* Fluid clock container with perfect centering */
+.clock-container {
+    z-index: 1;
+    width: min(95vw, 1400px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: clamp(20px, 5vw, 60px);
+    margin-bottom: clamp(80px, 12vh, 120px);
+    gap: clamp(8px, 2vh, 20px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Enhanced text scaling with dynamic effects */
+.day {
+    font-size: clamp(18px, 5vw, min(70px, 9vh));
+    letter-spacing: clamp(1px, 0.4vw, 5px);
+    user-select: none;
+    color: #FFFFFF;
+    text-shadow: 3px 3px 0 #000, 0 0 20px rgba(255, 255, 255, 0.4);
+    font-family: 'VT323', monospace;
+    white-space: nowrap;
+    line-height: 1.1;
+    opacity: 0.9;
+    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.clock {
+    font-size: clamp(36px, min(20vw, 14vh), min(220px, 22vh));
+    font-weight: bold;
+    letter-spacing: clamp(2px, 0.6vw, 10px);
+    user-select: none;
+    color: #FFFFFF;
+    text-shadow: 4px 4px 0 #000, 0 0 30px rgba(255, 255, 255, 0.5);
+    font-family: 'VT323', monospace;
+    white-space: nowrap;
+    line-height: 1;
+    filter: brightness(1.1);
+    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.date {
+    font-size: clamp(16px, 4vw, min(56px, 7vh));
+    letter-spacing: clamp(1px, 0.3vw, 4px);
+    user-select: none;
+    color: #FFFFFF;
+    text-shadow: 3px 3px 0 #000, 0 0 20px rgba(255, 255, 255, 0.4);
+    font-family: 'VT323', monospace;
+    white-space: nowrap;
+    line-height: 1.1;
+    opacity: 0.9;
+    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Clock effects when bubbles are present */
+.clock-container.bubble-active .day,
+.clock-container.bubble-active .clock,
+.clock-container.bubble-active .date {
+    animation: clockPulse 2s ease-in-out infinite;
+    filter: brightness(1.2) saturate(1.1);
+}
+
+@keyframes clockPulse {
+    0%, 100% { 
+        transform: scale(1) perspective(1000px) rotateX(0deg);
+        text-shadow: 4px 4px 0 #000, 0 0 30px rgba(255, 255, 255, 0.5), 0 0 60px rgba(0, 255, 255, 0.3);
+    }
+    50% { 
+        transform: scale(1.02) perspective(1000px) rotateX(1deg);
+        text-shadow: 4px 4px 0 #000, 0 0 40px rgba(255, 255, 255, 0.7), 0 0 80px rgba(255, 0, 128, 0.4);
+    }
+}
+
+/* Translucent effect - ONLY for main navigation buttons */
+.main-nav-button.translucent {
+    opacity: 0.15 !important;
+    transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hamburger-button.translucent {
+    opacity: 0.15 !important;
+    transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Enhanced bottom controls with better positioning */
+.controls-container {
+    position: fixed;
+    left: 50%;
+    bottom: max(20px, env(safe-area-inset-bottom, 20px));
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: clamp(12px, 4vw, 32px);
+    z-index: 20;
+    padding: clamp(8px, 2vw, 16px);
+}
+
+.control-button {
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(15px);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    cursor: pointer;
+    font-family: 'Press Start 2P', monospace;
+    color: #FFFFFF;
+    font-size: clamp(10px, 2.5vw, 16px);
+    padding: clamp(8px, 2vw, 16px) clamp(12px, 3vw, 24px);
+    text-shadow: 2px 2px 0 #000;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 4px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+.control-button::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%);
+    transform: translateX(-100%);
+    transition: transform 0.6s;
+}
+
+.control-button:hover::before {
+    transform: translateX(100%);
+}
+
+.control-button:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(255, 255, 255, 0.1);
+}
+
+.control-button:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+}
+
+/* Enhanced top controls with hamburger menu */
+.top-controls {
+    position: fixed;
+    top: max(20px, env(safe-area-inset-top, 20px));
+    right: max(20px, env(safe-area-inset-right, 20px));
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: clamp(8px, 2.5vw, 20px);
+}
+
+.tropa-buttons {
+    display: flex;
+    gap: clamp(8px, 2vw, 15px);
+    margin-bottom: clamp(10px, 2vw, 15px);
+}
+
+.hamburger-menu {
+    position: relative;
+}
+
+.hamburger-button {
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(15px);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    cursor: pointer;
+    font-family: 'Press Start 2P', monospace;
+    color: #FFFFFF;
+    font-size: clamp(12px, 2.5vw, 18px);
+    padding: clamp(8px, 2vw, 12px);
+    text-shadow: 2px 2px 0 #000;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 4px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    width: 48px;
+    height: 48px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.hamburger-lines {
+    width: 20px;
+    height: 2px;
+    background: white;
+    margin: 2px 0;
+    transition: all 0.3s ease;
+    box-shadow: 1px 1px 0 #000;
+}
+
+.hamburger-button.active .hamburger-lines:nth-child(1) {
+    transform: rotate(45deg) translate(5px, 5px);
+}
+
+.hamburger-button.active .hamburger-lines:nth-child(2) {
+    opacity: 0;
+}
+
+.hamburger-button.active .hamburger-lines:nth-child(3) {
+    transform: rotate(-45deg) translate(7px, -6px);
+}
+
+.hamburger-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 10px;
+    background: rgba(20, 25, 40, 0.95);
+    backdrop-filter: blur(20px);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-10px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    min-width: 120px;
+}
+
+.hamburger-dropdown.active {
+    opacity: 1;
+    pointer-events: all;
+    transform: translateY(0);
+}
+
+.top-button {
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(15px);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    cursor: pointer;
+    font-family: 'Press Start 2P', monospace;
+    color: #FFFFFF;
+    font-size: clamp(9px, 2vw, 14px);
+    padding: clamp(8px, 2vw, 12px) clamp(12px, 3vw, 18px);
+    text-shadow: 2px 2px 0 #000;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 4px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    white-space: nowrap;
+    text-align: center;
+}
+
+.top-button:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(255, 255, 255, 0.1);
+}
+
+/* Tropa and Burst buttons with special styling */
+.tropa-button {
+    background: rgba(255, 0, 128, 0.1);
+    border-color: rgba(255, 0, 128, 0.3);
+    color: #ff0080;
+}
+
+.tropa-button:hover {
+    background: rgba(255, 0, 128, 0.2);
+    border-color: rgba(255, 0, 128, 0.5);
+    box-shadow: 0 8px 30px rgba(255, 0, 128, 0.3);
+}
+
+.burst-button {
+    background: rgba(255, 165, 0, 0.1);
+    border-color: rgba(255, 165, 0, 0.3);
+    color: #ffa500;
+    position: relative;
+}
+
+.burst-button:hover:not(.disabled) {
+    background: rgba(255, 165, 0, 0.2);
+    border-color: rgba(255, 165, 0, 0.5);
+    box-shadow: 0 8px 30px rgba(255, 165, 0, 0.3);
+}
+
+.burst-button.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    color: #666;
+}
+
+.burst-cooldown {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: #ff4444;
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-family: 'Press Start 2P', monospace;
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+/* Enhanced bouncing containers with better physics */
+.funny-container {
+    position: absolute;
+    width: clamp(60px, 8vw, 120px);
+    height: clamp(60px, 8vw, 120px);
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    border-radius: 50%;
+    overflow: hidden;
+    z-index: 2;
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(8px);
+    transition: box-shadow 0.3s ease;
+}
+
+.funny-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+}
+
+/* Fluid popup overlays */
+.calendar-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(8px);
+    padding: clamp(20px, 5vw, 40px);
+}
+
+.calendar-overlay.active {
+    opacity: 1;
+    pointer-events: all;
+}
+
+/* Enhanced popup with better scaling */
+.calendar-popup {
+    background: rgba(20, 25, 40, 0.95);
+    backdrop-filter: blur(20px);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    padding: clamp(20px, 4vw, 40px);
+    width: min(90vw, 800px);
+    max-height: min(90vh, 700px);
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+
+.calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: clamp(20px, 4vw, 30px);
+    font-family: 'Press Start 2P', monospace;
+    color: #FFFFFF;
+    font-size: clamp(12px, 2.5vw, 20px);
+    gap: clamp(10px, 2vw, 20px);
+}
+
+/* Year/Month selector */
+.date-selector {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.year-month-selector {
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    color: #ff0084;
+    font-family: 'Press Start 2P', monospace;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-radius: 4px;
+    font-size: clamp(10px, 2vw, 14px);
+    min-width: 80px;
+    text-align: center;
+}
+
+.year-month-selector:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+.calendar-nav {
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    color: #FFFFFF;
+    font-family: 'Press Start 2P', monospace;
+    padding: clamp(8px, 1.5vw, 12px);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-radius: 4px;
+    font-size: clamp(10px, 2vw, 16px);
+}
+
+.calendar-nav:hover {
+    background: #00ff41;
+    color: #000;
+    transform: translateY(-1px);
+}
+
+/* Fluid calendar grid */
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: clamp(2px, 0.5vw, 4px);
+    margin-bottom: clamp(20px, 4vw, 30px);
+    width: 100%;
+}
+
+.calendar-day-header {
+    font-family: 'Press Start 2P', monospace;
+    color: #ff0080;
+    text-align: center;
+    padding: clamp(8px, 2vw, 15px) clamp(4px, 1vw, 8px);
+    font-size: clamp(8px, 1.5vw, 12px);
+    background: rgba(255, 0, 128, 0.1);
+    border-radius: 2px;
+}
+
+.calendar-day {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Press Start 2P', monospace;
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-size: clamp(8px, 1.5vw, 12px);
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.calendar-day:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.4);
+    transform: scale(1.05);
+}
+
+.calendar-day.today {
+    background: #ff0080;
+    color: #000;
+    box-shadow: 0 0 15px rgba(255, 0, 128, 0.5);
+}
+
+.calendar-day.other-month {
+    color: #666;
+    opacity: 0.5;
+}
+
+.close-calendar {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    color: #FFFFFF;
+    font-family: 'Press Start 2P', monospace;
+    padding: clamp(10px, 2.5vw, 16px) clamp(20px, 4vw, 30px);
+    cursor: pointer;
+    width: 100%;
+    box-sizing: border-box;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 4px;
+    font-size: clamp(10px, 2vw, 14px);
+    position: static;
+    margin-top: clamp(10px, 2vw, 15px);
+    margin-bottom: 0;
+}
+
+.close-resources {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    color: #FFFFFF;
+    font-family: 'Press Start 2P', monospace;
+    padding: clamp(10px, 2.5vw, 16px) clamp(20px, 4vw, 30px);
+    cursor: pointer;
+    width: 100%;
+    box-sizing: border-box;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 4px;
+    font-size: clamp(10px, 2vw, 14px);
+    position: static;
+    margin-top: clamp(10px, 2vw, 15px);
+    margin-bottom: 0;
+}
+
+.close-resources:hover {
+    background: linear-gradient(135deg, #cc0066, #990050);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(255, 0, 128, 0.3);
+}
+
+.close-calendar:hover {
+    background: linear-gradient(135deg, #cc0066, #990050);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(255, 0, 128, 0.3);
+}
+
+/* Enhanced resources popup */
+.resources-list-container {
+    margin-top: clamp(15px, 3vw, 25px);
+    margin-bottom: clamp(10px, 2vw, 18px);
+}
+
+.image-list {
+    margin-top: clamp(10px, 2vw, 20px);
+    padding: clamp(10px, 2.5vw, 20px);
+    background: rgba(0, 0, 0, 0.3);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    max-height: min(50vh, 400px);
+    overflow-y: auto;
+}
+
+.image-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(clamp(80px, 12vw, 120px), 1fr));
+    gap: clamp(8px, 2vw, 16px);
+    padding: clamp(5px, 1vw, 10px);
+}
+
+.image-item {
+    background: rgba(0, 0, 0, 0.4);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    padding: clamp(5px, 1vw, 10px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    overflow: hidden;
+}
+
+.image-item:hover {
+    background: rgba(0, 0, 0, 0.6);
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(255, 255, 255, 0.15);
+}
+
+.image-item img {
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
+    max-height: clamp(60px, 8vw, 100px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    margin-bottom: clamp(5px, 1vw, 8px);
+}
+
+.image-item-filename {
+    font-family: 'VT323', monospace;
+    font-size: clamp(10px, 1.5vw, 12px);
+    color: #fff;
+    text-shadow: 1px 1px 0 #000;
+    word-wrap: break-word;
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.2;
+}
+
+/* Cache warning styles */
+.cache-warning {
+    background: rgba(255, 165, 0, 0.15);
+    border: 2px solid rgba(255, 165, 0, 0.4);
+    border-radius: 4px;
+    padding: clamp(8px, 2vw, 12px);
+    margin: clamp(10px, 2vw, 15px) 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(6px, 1.5vw, 10px);
+    backdrop-filter: blur(8px);
+}
+
+.warning-icon {
+    color: #ffa500;
+    font-size: clamp(14px, 2.5vw, 18px);
+    text-shadow: 2px 2px 0 #000, 0 0 10px rgba(255, 165, 0, 0.5);
+    animation: warningPulse 2s infinite ease-in-out;
+}
+
+.warning-text {
+    color: #ffa500;
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(8px, 1.4vw, 10px);
+    text-shadow: 1px 1px 0 #000;
+    text-align: center;
+    letter-spacing: clamp(0.5px, 0.1vw, 1px);
+    word-spacing: clamp(2px, 0.3vw, 4px);
+    line-height: 1.3;
+}
+
+@keyframes warningPulse {
+    0% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.7; transform: scale(1.1); }
+    100% { opacity: 1; transform: scale(1); }
+}
+
+.upload-button {
+    background: rgba(0, 255, 65, 0.1);
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(0, 255, 65, 0.3);
+    color: #00ff41;
+    font-family: 'Press Start 2P', monospace;
+    padding: clamp(10px, 2.5vw, 16px) clamp(20px, 4vw, 30px);
+    cursor: pointer;
+    width: 100%;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 4px;
+    font-size: clamp(10px, 2vw, 14px);
+    text-shadow: 2px 2px 0 #000;
+    margin-top: clamp(10px, 2vw, 15px);
+    text-align: center;
+    display: inline-block;
+}
+
+.upload-button:hover {
+    background: rgba(0, 255, 65, 0.2);
+    border-color: rgba(0, 255, 65, 0.5);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(0, 255, 65, 0.3);
+    text-shadow: 2px 2px 0 #000, 0 0 15px rgba(0, 255, 65, 0.6);
+}
+
+/* Enhanced responsive breakpoints */
+@media (max-width: 1200px) {
+    .clock-container {
+        margin-bottom: clamp(60px, 10vh, 100px);
+    }
+}
+
+@media (max-width: 768px) {
+    .top-controls {
+        top: max(15px, env(safe-area-inset-top, 15px));
+        right: max(15px, env(safe-area-inset-right, 15px));
+    }
+    
+    .controls-container {
+        bottom: max(15px, env(safe-area-inset-bottom, 15px));
+        gap: clamp(10px, 3vw, 20px);
+    }
+    
+    .calendar-popup {
+        padding: clamp(15px, 3vw, 25px);
+    }
+    
+    .tropa-buttons {
+        flex-direction: column;
+        gap: clamp(6px, 1.5vw, 10px);
+    }
+}
+
+@media (max-width: 480px) {
+    .top-controls {
+        top: max(10px, env(safe-area-inset-top, 10px));
+        right: max(10px, env(safe-area-inset-right, 10px));
+        gap: clamp(6px, 2vw, 12px);
+    }
+    
+    .controls-container {
+        bottom: max(10px, env(safe-area-inset-bottom, 10px));
+        gap: clamp(8px, 2.5vw, 16px);
+    }
+    
+    .image-grid {
+        grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+    }
+    
+    .hamburger-dropdown {
+        right: -10px;
+        min-width: 100px;
+    }
+}
+
+/* Ultra-wide screen optimizations */
+@media (min-width: 1400px) {
+    .clock-container {
+        max-width: 1600px;
+    }
+    
+    .calendar-popup {
+        max-width: 900px;
+    }
+}
+
+/* High-density display optimizations */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    .loading-text {
+        text-shadow: 2px 2px 0 #000, 0 0 30px rgba(0, 255, 65, 0.6);
+    }
+    
+    .clock {
+        text-shadow: 4px 4px 0 #000, 0 0 35px rgba(255, 255, 255, 0.5);
+    }
+}
+
+/* Custom scrollbar for popup elements */
+.loading-log::-webkit-scrollbar,
+.image-list::-webkit-scrollbar,
+.calendar-popup::-webkit-scrollbar {
+    width: 8px;
+}
+
+.loading-log::-webkit-scrollbar-track,
+.image-list::-webkit-scrollbar-track,
+.calendar-popup::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+}
+
+.loading-log::-webkit-scrollbar-thumb,
+.image-list::-webkit-scrollbar-thumb,
+.calendar-popup::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+}
+
+.loading-log::-webkit-scrollbar-thumb:hover,
+.image-list::-webkit-scrollbar-thumb:hover,
+.calendar-popup::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.image-preview-popup {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: min(90vw, 700px);
+    max-height: min(90vh, 700px);
+}
+
+.image-preview-container {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-height: 70vh;
+    margin-bottom: clamp(12px, 2vw, 20px);
+}
+
+.image-preview-container img {
+    max-width: 100%;
+    max-height: 100%;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    image-rendering: pixelated;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 6px;
+}
+
+.image-preview-controls {
+    display: flex;
+    gap: clamp(8px, 2vw, 20px);
+    margin-bottom: clamp(12px, 2vw, 20px);
+    justify-content: center;
+    width: 100%;
+}
+
+/* Countdown Container (lower-left corner) */
+.countdown-container {
+    position: fixed;
+    top: max(20px, env(safe-area-inset-top, 20px));
+    left: max(20px, env(safe-area-inset-left, 20px));
+    z-index: 100; /* high enough to overlay content */
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.45s ease-in-out;
+}
+
+.countdown-container.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.countdown-container.hidden-inline { display: none; }
+
+/* Countdown Box styled like main container */
+.countdown-box {
+    position: relative;
+    background: rgba(255,255,255,0); /* main bg handled by overlay */
+    border: 2px solid rgba(255,255,255,0.18);
+    border-radius: 10px;
+    padding: clamp(12px, 2vw, 18px);
+    width: min(320px, 90vw);
+    box-shadow: 0 6px 25px rgba(0,0,0,0.45);
+    font-family: 'VT323', monospace;
+    color: #fff;
+    overflow: hidden;
+    transition: opacity 0.45s ease-in-out;
+}
+
+.countdown-box::before{
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    background: rgba(255,255,255,0.04);
+    opacity: 0;
+    transition: opacity 0.45s ease-in-out;
+    z-index: 0;
+}
+
+.countdown-box > * {
+    position: relative;
+    z-index: 1;
+}
+
+.countdown-container.active .countdown-box::before {
+    opacity: 1;
+}
+
+/* When active, apply blur */
+.countdown-container.active .countdown-box {
+    backdrop-filter: blur(10px);
+}
+
+/* Countdown Header */
+.countdown-header {
+    font-size: clamp(11px, 2.0vw, 14px);
+    font-family: 'Press Start 2P', monospace;
+    color: #ffffff;
+    margin-bottom: 8px;
+    text-shadow: 2px 2px 0 #000;
+}
+
+/* Countdown Time */
+.countdown-time {
+    font-size: clamp(18px, 4.5vw, 28px);
+    font-family: 'VT323', monospace;
+    color: #ffffff;
+    margin-bottom: 6px;
+    text-shadow: 2px 2px 0 #000;
+}
+
+/* Countdown Date */
+.countdown-date {
+    font-size: clamp(9px, 1.8vw, 12px);
+    opacity: 0.9;
+    margin-bottom: 10px;
+}
+
+/* Fix dropdown spacing so it doesn't overlap */
+#countdown-select {
+    width: 100%;
+    margin-top: 8px;
+    margin-bottom: 4px;
+    box-sizing: border-box;
+}
+
+/* Translucent effect also applies */
+.countdown-box.translucent { opacity: 0.18 !important; }
+
+/* Countdown Toggle Button (bottom-left, above safe area) */
+#countdown-toggle {
+    position: fixed;
+    bottom: max(20px, env(safe-area-inset-bottom, 20px));
+    left: max(20px, env(safe-area-inset-left, 20px));
+    z-index: 120;
+}
+
+/* Apply translucent effect to button */
+#countdown-toggle.translucent {
+    opacity: 0.15 !important;
+    transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.countdown-selector {
+    width: 100%;
+    box-sizing: border-box;
+    background: rgba(0, 0, 0, 0.08);   /* translucent like buttons */
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 2px solid rgba(255,255,255,0.14);
+    color: #ffffff;
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(10px, 2vw, 13px);
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    text-align: center;
+}
+
+/* Options inside dropdown */
+.countdown-selector option {
+    background: rgba(0, 0, 0, 0.06);
+    color: #000000;
+}
+
+.countdown-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.countdown-label { font-size: clamp(9px, 1.6vw, 11px); color: #ffccff; }
+
+.countdown-timepicker {
+    width: 100%;
+    padding: 6px 8px;
+    box-sizing: border-box;
+    background: rgba(255,255,255,0.06);
+    border: 2px solid rgba(255,255,255,0.12);
+    color: #fff;
+    border-radius: 4px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(10px, 2vw, 13px);
+}
+
+.custom-time-container {
+    display: none; 
+}
+.custom-time-container.active { 
+    display: flex; flex-direction: column; gap: 6px; 
+}
+
+#countdown-toggle {
+    display: none; /* hide until explicitly enabled */
+  }
+  #countdown-toggle.ready {
+    display: block;
+  }
