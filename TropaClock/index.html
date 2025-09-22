@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>
+    Enhanced Pixel Digital Clock
+  </title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=VT323&family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <!-- Enhanced Cursor System -->
+  <div class="cursor-system">
+    <div class="main-cursor" id="mainCursor">
+    </div>
+    <div class="cursor-trail" id="cursorTrail">
+    </div>
+    <div class="cursor-glow" id="cursorGlow">
+    </div>
+    <div class="cursor-ripple" id="cursorRipple">
+    </div>
+  </div>
+  <!-- Background Container -->
+  <div class="bg-slideshow-container" id="bgContainer">
+  </div>
+  <!-- Enhanced Loading Screen -->
+  <div id="loading-screen" class="loading-screen">
+    <div class="loading-content">
+      <div class="loading-logo">
+        TROPA
+      </div>
+      <div class="loading-subtitle">
+        ENHANCED PIXEL CLOCK SYSTEM
+      </div>
+      <div id="loading-log" class="loading-log">
+      </div>
+    </div>
+  </div>
+  <!-- Navigation Bar (Desktop) -->
+  <nav class="nav-bar" id="navBar">
+    <div class="nav-logo">
+      TROPA CLOCK
+    </div>
+    <div class="nav-links">
+      <button class="nav-button" id="nav-calendar">
+        <svg class="btn-icon" viewBox="0 0 24 24">
+          <path
+            d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-2 .89-2 2v14c0 1.11.89 2 2 2h14c1.11 0 2-.89 2-2V5c0-1.11-.89-2-2-2zM5 7h14v12H5V7z" />
+          <rect x="7" y="9" width="2" height="2" />
+          <rect x="11" y="9" width="2" height="2" />
+          <rect x="15" y="9" width="2" height="2" />
+        </svg>
+        <span>
+          CALENDAR
+        </span>
+      </button>
+      <button class="nav-button" id="nav-resources">
+        <svg class="btn-icon" viewBox="0 0 24 24">
+          <path
+            d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z" />
+        </svg>
+        <span>
+          RESOURCES
+        </span>
+      </button>
+    </div>
+  </nav>
+  <!-- Mobile Controls -->
+  <div class="mobile-controls" id="mobileControls">
+    <div class="hamburger-menu">
+      <button class="hamburger-button" id="hamburger-button">
+        <div class="hamburger-lines">
+        </div>
+        <div class="hamburger-lines">
+        </div>
+        <div class="hamburger-lines">
+        </div>
+      </button>
+      <div class="hamburger-dropdown" id="hamburger-dropdown">
+        <button class="control-button" id="mobile-calendar">
+          <svg class="btn-icon" viewBox="0 0 24 24">
+            <path
+              d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-2 .89-2 2v14c0 1.11.89 2 2 2h14c1.11 0 2-.89 2-2V5c0-1.11-.89-2-2-2zM5 7h14v12H5V7z" />
+          </svg>
+          <span>
+            DATE
+          </span>
+        </button>
+        <button class="control-button" id="mobile-resources">
+          <svg class="btn-icon" viewBox="0 0 24 24">
+            <path
+              d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" />
+          </svg>
+          <span>
+            RESOURCES
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+  <!-- Clock Container -->
+  <div class="clock-container" id="clockContainer">
+    <div id="day" class="day">
+    </div>
+    <div id="clock" class="clock">
+    </div>
+    <div id="date" class="date">
+    </div>
+  </div>
+  <!-- Footer (Desktop) -->
+  <footer class="footer" id="footer">
+    <button class="footer-button main-nav-button tropa-button" id="footer-tropa">
+      <svg class="btn-icon" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10" />
+        <circle cx="8" cy="8" r="2" />
+        <circle cx="16" cy="8" r="2" />
+        <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+      </svg>
+      <span>
+        TROPA
+      </span>
+    </button>
+    <button class="footer-button main-nav-button burst-button" id="footer-burst">
+      <svg class="btn-icon" viewBox="0 0 24 24">
+        <path d="M12 2l2.09 6.26L20 10l-5.91 1.74L12 18 9.91 11.74 4 10l5.91-1.74L12 2z" />
+        <path d="M12 6l1.5 4L18 8l-4.5 1.5L12 14 10.5 9.5 6 8l4.5-2L12 6z" />
+      </svg>
+      <span>
+        BURST
+      </span>
+    </button>
+    <button class="footer-button main-nav-button countdown-timer-button" id="footer-countdown">
+      <svg class="btn-icon" viewBox="0 0 24 24">
+        <circle cx="12" cy="13" r="8" />
+        <path d="M12 9v4l3 3" />
+        <path d="M9 2h6" />
+        <path d="M12 2v2" />
+      </svg>
+      <span>
+        TIMER
+      </span>
+    </button>
+    <button class="footer-button main-nav-button navigation" id="prev-button">
+      <svg class="btn-icon" viewBox="0 0 24 24">
+        <polygon points="15,18 9,12 15,6" />
+      </svg>
+    </button>
+    <button class="footer-button main-nav-button" id="bg-toggle-button">
+      <svg class="btn-icon" viewBox="0 0 24 24">
+        <rect x="6" y="4" width="4" height="16" />
+        <rect x="14" y="4" width="4" height="16" />
+      </svg>
+      <span>
+        PAUSE
+      </span>
+    </button>
+    <button class="footer-button main-nav-button navigation" id="next-button">
+      <svg class="btn-icon" viewBox="0 0 24 24">
+        <polygon points="9,18 15,12 9,6" />
+      </svg>
+    </button>
+  </footer>
+  <!-- Mobile Bottom Controls -->
+  <div class="bottom-controls" id="bottomControls">
+    <button class="control-button main-nav-button tropa-button" id="mobile-tropa">
+      <svg class="btn-icon" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10" />
+        <circle cx="8" cy="8" r="2" />
+        <circle cx="16" cy="8" r="2" />
+        <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+      </svg>
+    </button>
+    <button class="control-button main-nav-button burst-button" id="mobile-burst">
+      <svg class="btn-icon" viewBox="0 0 24 24">
+        <path d="M12 2l2.09 6.26L20 10l-5.91 1.74L12 18 9.91 11.74 4 10l5.91-1.74L12 2z" />
+      </svg>
+    </button>
+    <button class="control-button main-nav-button countdown-timer-button" id="mobile-countdown">
+      <svg class="btn-icon" viewBox="0 0 24 24">
+        <circle cx="12" cy="13" r="8" />
+        <path d="M12 9v4l3 3" />
+        <path d="M9 2h6" />
+      </svg>
+    </button>
+    <button class="control-button main-nav-button navigation" id="mobile-prev">
+      <svg class="btn-icon" viewBox="0 0 24 24">
+        <polygon points="15,18 9,12 15,6" />
+      </svg>
+    </button>
+    <button class="control-button main-nav-button" id="mobile-bg-toggle">
+      <svg class="btn-icon" viewBox="0 0 24 24">
+        <rect x="6" y="4" width="4" height="16" />
+        <rect x="14" y="4" width="4" height="16" />
+      </svg>
+    </button>
+    <button class="control-button main-nav-button navigation" id="mobile-next">
+      <svg class="btn-icon" viewBox="0 0 24 24">
+        <polygon points="9,18 15,12 9,6" />
+      </svg>
+    </button>
+  </div>
+  <!-- Draggable Special Countdown Container -->
+  <div id="countdown-container" class="countdown-container" aria-hidden="true">
+    <div class="countdown-box" role="region" aria-label="Special Countdown">
+      <div class="countdown-header">
+        INIP KA NA?
+      </div>
+      <div class="countdown-time" id="countdown-time">
+        Meron ka pang --:--:-- Para Mamahinga
+      </div>
+      <!-- Custom Message Inputs -->
+      <div class="message-controls">
+        <label class="countdown-label" for="custom-prefix">
+          Custom Prefix (before time):
+        </label>
+        <input type="text" id="custom-prefix" class="message-input" placeholder="Meron ka pang / Trabaho ka muna ng" />
+        <label class="countdown-label" for="custom-suffix">
+          Custom Suffix (after time):
+        </label>
+        <input type="text" id="custom-suffix" class="message-input" placeholder="Para Mamahinga / Bago Hayahay" />
+      </div>
+      <div class="countdown-controls">
+        <label class="countdown-label" for="countdown-select">
+          Preset / Custom
+        </label>
+        <select id="countdown-select" class="countdown-selector" aria-label="Preset or Custom">
+          <option value="7">
+            Start Mon 7:00 → End Fri 16:00
+          </option>
+          <option value="8">
+            Start Mon 8:00 → End Fri 17:00
+          </option>
+          <option value="9">
+            Start Mon 9:00 → End Fri 18:00
+          </option>
+          <option value="custom">
+            Custom (pick start & end)
+          </option>
+        </select>
+        <div id="custom-time-container" class="custom-time-container" aria-hidden="true">
+          <label class="countdown-label" for="customStart">
+            Start (Monday)
+          </label>
+          <input id="customStart" class="countdown-timepicker" type="time" />
+          <label class="countdown-label" for="customEnd">
+            End (Friday)
+          </label>
+          <input id="customEnd" class="countdown-timepicker" type="time" />
+        </div>
+        <!-- Shift Break Controls -->
+        <div class="shift-controls">
+          <label class="countdown-label">
+            <input type="checkbox" id="enable-breaks" class="shift-checkbox" />
+            Enable Break Times
+          </label>
+          <div id="break-times" class="break-times-container" style="display: none">
+            <div class="break-time-item">
+              <label class="countdown-label">
+                Morning Break:
+              </label>
+              <input type="time" id="morning-break" class="countdown-timepicker" value="10:00" />
+              <input type="number" id="morning-duration" class="duration-input" value="15" min="5" max="60" />
+              mins
+            </div>
+            <div class="break-time-item">
+              <label class="countdown-label">
+                Lunch Break:
+              </label>
+              <input type="time" id="lunch-break" class="countdown-timepicker" value="12:00" />
+              <input type="number" id="lunch-duration" class="duration-input" value="60" min="15" max="120" />
+              mins
+            </div>
+            <div class="break-time-item">
+              <label class="countdown-label">
+                Afternoon Break:
+              </label>
+              <input type="time" id="afternoon-break" class="countdown-timepicker" value="15:00" />
+              <input type="number" id="afternoon-duration" class="duration-input" value="15" min="5" max="60" />
+              mins
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Calendar Overlay -->
+  <div id="calendar-overlay" class="overlay">
+    <div class="popup">
+      <div class="popup-header">
+        <h2>
+          CALENDAR
+        </h2>
+        <button class="close-btn" id="close-calendar">
+          ×
+        </button>
+      </div>
+      <div class="calendar-nav">
+        <button id="prev-month">
+          ‹
+        </button>
+        <div class="month-year-selector">
+          <select id="month-selector">
+            <option value="0">
+              JAN
+            </option>
+            <option value="1">
+              FEB
+            </option>
+            <option value="2">
+              MAR
+            </option>
+            <option value="3">
+              APR
+            </option>
+            <option value="4">
+              MAY
+            </option>
+            <option value="5">
+              JUN
+            </option>
+            <option value="6">
+              JUL
+            </option>
+            <option value="7">
+              AUG
+            </option>
+            <option value="8">
+              SEP
+            </option>
+            <option value="9">
+              OCT
+            </option>
+            <option value="10">
+              NOV
+            </option>
+            <option value="11">
+              DEC
+            </option>
+          </select>
+          <select id="year-selector">
+          </select>
+        </div>
+        <button id="next-month">
+          ›
+        </button>
+      </div>
+      <div class="calendar-grid" id="calendar-grid">
+      </div>
+    </div>
+  </div>
+  <!-- Resources Overlay -->
+  <div id="resources-overlay" class="overlay">
+    <div class="popup">
+      <div class="popup-header">
+        <h2>
+          RESOURCES
+        </h2>
+        <button class="close-btn" id="close-resources">
+          ×
+        </button>
+      </div>
+      <div class="resource-tabs">
+        <button class="tab-btn active" id="bg-tab">
+          Backgrounds
+        </button>
+        <button class="tab-btn" id="images-tab">
+          Images
+        </button>
+      </div>
+      <div id="bg-content" class="tab-content active">
+        <div class="backgrounds-header">
+          <div class="backgrounds-stats">
+            <span id="bg-count">Backgrounds: 0</span>
+            <span id="bg-size">Total Size: 0 MB</span>
+          </div>
+          <div class="backgrounds-controls">
+            <label for="bg-upload" class="upload-btn enhanced" title="Upload Background">
+              <svg class="btn-icon" viewBox="0 0 24 24">
+                <path d="M5 20h14v-2H5v2zm7-18l-5.5 9h11L12 2z" />
+              </svg>
+              UPLOAD BACKGROUND
+            </label>
+            <input type="file" id="bg-upload" accept="image/*" style="display: none" />
+            <button id="bg-refresh" class="action-btn refresh-btn" title="Refresh Backgrounds">
+              <svg class="btn-icon" viewBox="0 0 24 24">
+                <path
+                  d="M17.65 6.35A7.95 7.95 0 0012 4V1L7 6l5 5V7c2.76 0 5 2.24 5 5 0 1.66-.83 3.14-2.09 4.03l1.46 1.46A7.945 7.945 0 0020 12c0-2.21-.9-4.21-2.35-5.65z" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="backgrounds-container">
+          <div id="bg-grid" class="enhanced-backgrounds-grid">
+            <!-- Background items will be populated here by JavaScript -->
+          </div>
+        </div>
+        <div class="cache-warning">
+          <span class="warning-icon">⚠</span>
+          <span class="warning-text">UPLOADED FILES ARE CACHE ONLY - WILL DISAPPEAR ON RELOAD</span>
+        </div>
+      </div>
+      <div class="resource-content">
+        <div id="images-content" class="tab-content">
+          <div class="images-header">
+            <div class="images-stats">
+              <span id="images-count">
+                0 Images
+              </span>
+              <span id="images-size">
+                0 KB
+              </span>
+            </div>
+            <div class="images-controls">
+              <button class="view-toggle active" id="grid-view" title="Grid View">
+                <svg class="btn-icon" viewBox="0 0 24 24">
+                  <rect x="3" y="3" width="7" height="7" />
+                  <rect x="14" y="3" width="7" height="7" />
+                  <rect x="3" y="14" width="7" height="7" />
+                  <rect x="14" y="14" width="7" height="7" />
+                </svg>
+              </button>
+              <button class="view-toggle" id="list-view" title="List View">
+                <svg class="btn-icon" viewBox="0 0 24 24">
+                  <line x1="8" y1="6" x2="21" y2="6" />
+                  <line x1="8" y1="12" x2="21" y2="12" />
+                  <line x1="8" y1="18" x2="21" y2="18" />
+                  <rect x="3" y="4" width="2" height="2" />
+                  <rect x="3" y="10" width="2" height="2" />
+                  <rect x="3" y="16" width="2" height="2" />
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="images-container">
+            <div class="enhanced-images-grid" id="enhanced-images-grid">
+            </div>
+          </div>
+          <div class="cache-warning">
+            <span class="warning-icon">
+              ⚠
+            </span>
+            <span class="warning-text">
+              UPLOADED FILES ARE CACHE ONLY - WILL DISAPPEAR ON RELOAD
+            </span>
+          </div>
+          <label for="image-upload" class="upload-btn enhanced">
+            <svg class="btn-icon" viewBox="0 0 24 24">
+              <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
+            </svg>
+            UPLOAD IMAGES
+          </label>
+          <input type="file" id="image-upload" accept="image/*" multiple style="display: none" />
+        </div>
+        <div id="images-content" class="tab-content">
+          <div class="images-header">
+            <div class="images-stats">
+              <span id="images-count">
+                0 Images
+              </span>
+              <span id="images-size">
+                0 KB
+              </span>
+            </div>
+            <div class="images-controls">
+              <button class="view-toggle active" id="grid-view" title="Grid View">
+                <svg class="btn-icon" viewBox="0 0 24 24">
+                  <rect x="3" y="3" width="7" height="7" />
+                  <rect x="14" y="3" width="7" height="7" />
+                  <rect x="3" y="14" width="7" height="7" />
+                  <rect x="14" y="14" width="7" height="7" />
+                </svg>
+              </button>
+              <button class="view-toggle" id="list-view" title="List View">
+                <svg class="btn-icon" viewBox="0 0 24 24">
+                  <line x1="8" y1="6" x2="21" y2="6" />
+                  <line x1="8" y1="12" x2="21" y2="12" />
+                  <line x1="8" y1="18" x2="21" y2="18" />
+                  <rect x="3" y="4" width="2" height="2" />
+                  <rect x="3" y="10" width="2" height="2" />
+                  <rect x="3" y="16" width="2" height="2" />
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="images-container">
+            <div class="enhanced-images-grid" id="enhanced-images-grid">
+            </div>
+          </div>
+          <div class="cache-warning">
+            <span class="warning-icon">
+              ⚠
+            </span>
+            <span class="warning-text">
+              UPLOADED FILES ARE CACHE ONLY - WILL DISAPPEAR ON RELOAD
+            </span>
+          </div>
+          <label for="image-upload" class="upload-btn enhanced">
+            <svg class="btn-icon" viewBox="0 0 24 24">
+              <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
+            </svg>
+            UPLOAD IMAGES
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+  <!-- Image Preview Overlay -->
+  <div id="image-preview-overlay" class="overlay">
+    <div class="modern-preview-container">
+      <div class="preview-header">
+        <div class="preview-info">
+          <h3 id="preview-filename">
+            image_1.png
+          </h3>
+          <span id="preview-counter">
+            1 of 24
+          </span>
+        </div>
+        <button class="close-btn" id="closePreview">
+          ×
+        </button>
+      </div>
+      <div class="preview-main">
+        <button class="nav-arrow left" id="prevImageBtn">
+          <svg viewBox="0 0 24 24">
+            <path d="M15,18L9,12L15,6V18Z" />
+          </svg>
+        </button>
+        <div class="image-container">
+          <img id="preview-image" src="" alt="Preview" />
+        </div>
+        <button class="nav-arrow right" id="nextImageBtn">
+          <svg viewBox="0 0 24 24">
+            <path d="M9,18L15,12L9,6V18Z" />
+          </svg>
+        </button>
+      </div>
+      <div class="preview-controls">
+        <button class="control-btn" id="zoomOut">
+          <svg viewBox="0 0 24 24">
+            <path d="M19,13H5V11H19V13Z" />
+          </svg>
+        </button>
+        <span id="zoomLevel">
+          100%
+        </span>
+        <button class="control-btn" id="zoomIn">
+          <svg viewBox="0 0 24 24">
+            <path d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" />
+          </svg>
+        </button>
+        <button class="control-btn" id="resetZoom">
+          <svg viewBox="0 0 24 24">
+            <path
+              d="M12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z" />
+          </svg>
+        </button>
+        <button class="control-btn" id="fitToScreen" title="Fit to Screen">
+          <svg viewBox="0 0 24 24">
+            <path
+              d="M9,12C9,13.31 9.69,14.44 10.75,15.06L8.5,17.31L9.94,18.75L12.19,16.5C12.75,16.81 13.36,17 14,17A5,5 0 0,0 19,12A5,5 0 0,0 14,7A5,5 0 0,0 9,12M14,9A3,3 0 0,1 17,12A3,3 0 0,1 14,15A3,3 0 0,1 11,12A3,3 0 0,1 14,9M5,3A2,2 0 0,0 3,5V9H5V5H9V3H5M15,3V5H19V9H21V5A2,2 0 0,0 19,3H15M19,15V19H15V21H19A2,2 0 0,0 21,19V15H19M9,19V21H5A2,2 0 0,0 3,19V15H5V19H9Z" />
+          </svg>
+        </button>
+        <a id="downloadImageBtn" class="control-btn" download>
+          <svg viewBox="0 0 24 24">
+            <path d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z" />
+          </svg>
+        </a>
+      </div>
+    </div>
+  </div>
+  <div id="protection-overlay" class="protection-overlay" style="display: none;">
+    <div class="protection-panel">
+      <h3>
+        RESTRICTED ACCESS
+      </h3>
+      <p>
+        Enter access code to enable developer functions:
+      </p>
+      <input type="password" id="access-code" placeholder="Access Code">
+      <button onclick="checkAccessCode()">
+        UNLOCK
+      </button>
+      <button onclick="hideProtectionPanel()">
+        CANCEL
+      </button>
+    </div>
+  </div>
+  <script src="script.js">
+  </script>
+</body>
+
+</html>
