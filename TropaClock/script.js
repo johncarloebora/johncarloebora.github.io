@@ -3100,7 +3100,7 @@ window.showProtectionPanel = showProtectionPanel;
 window.checkAccessCode = checkAccessCode;
 
 // SECRET MESSAGE SYSTEM - Simple and Direct
-const SECRET_CODE = "IMISSYOU";
+const SECRET_CODE = "CURSEDKNOLEDGE";
 
 function openSecret() {
   const modal = document.getElementById('secret-modal');
