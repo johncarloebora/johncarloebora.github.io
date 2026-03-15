@@ -770,48 +770,87 @@ document.addEventListener('DOMContentLoaded', () => {
         openPreview(currentIndex + dir);
     }
 
-    /* ── Gallery auto-scan via manifest.json ─── */
-    /* data-gallery-manifest="path/to/manifest.json" triggers manifest-based load */
-    document.querySelectorAll('.project-thumbnail[data-gallery-manifest]').forEach(thumb => {
-        thumb.addEventListener('click', async () => {
-            const manifestUrl = thumb.dataset.galleryManifest;
-            try {
-                const res  = await fetch(manifestUrl);
-                const list = await res.json();
-                const dir  = manifestUrl.replace(/\/[^/]+$/, ''); /* strip filename to get folder */
-                const imgs = list.map(entry => ({
-                    src: `${dir}/${entry.file}`,
-                    alt: entry.alt || entry.file
-                }));
-                if (imgs.length) {
-                    openGallery(imgs);
-                } else {
-                    /* No images yet — fall through to video empty state logic */
-                    const videoModal = document.getElementById('videoModal');
-                    if (videoModal) {
-                        videoModal.classList.add('active');
-                        lockScroll();
-                        hideNav();
-                    }
-                }
-            } catch (err) {
-                if (location.protocol === 'file:') {
-                    showToast('Open via a local server (e.g. Live Server) to view the gallery.', 'error');
-                    console.warn('Gallery requires HTTP — open with Live Server or GitHub Pages, not file://');
-                } else {
-                    console.warn('Gallery manifest failed to load:', manifestUrl, err);
-                }
-            }
-        });
-    });
+    /* ── Gallery auto-scan ───────────────────────────────────
+       Strategy (tried in order):
+       1. GitHub Contents API  — works on GitHub Pages (no manifest needed)
+       2. manifest.json fetch  — works on local Live Server
+       3. file:// toast        — informs user to use a server
+    ─────────────────────────────────────────────────────── */
+    const IMAGE_EXTS = new Set([
+        'jpg','jpeg','png','webp','avif','gif','bmp','svg','tiff','tif','heic','heif'
+    ]);
+    const VIDEO_EXTS = new Set(['mp4','webm','mov','avi','mkv','ogv']);
 
-    /* Legacy: also support inline .hidden-gallery for backwards compat */
-    document.querySelectorAll('.project-thumbnail[data-gallery]:not([data-gallery-manifest])').forEach(thumb => {
-        thumb.addEventListener('click', () => {
-            const imgs = Array.from(thumb.querySelectorAll('.hidden-gallery img')).map(i => ({
-                src: i.src, alt: i.alt
-            }));
-            if (imgs.length) openGallery(imgs);
+    function fileToAlt(filename) {
+        return filename.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
+    }
+
+    /* Detect GitHub Pages: hostname ends in .github.io or is a custom domain
+       with a repo path. We extract owner/repo from the origin remote URL via
+       the page URL structure: username.github.io/repo or username.github.io */
+    function getGithubApiUrl(folder) {
+        const host = location.hostname;
+        /* *.github.io — owner is the subdomain */
+        const ghMatch = host.match(/^([^.]+)\.github\.io$/);
+        if (!ghMatch) return null;
+        const owner = ghMatch[1];
+        /* repo: if deployed at username.github.io the repo name equals owner.github.io
+                 if site is at a subpath the repo name is the first path segment */
+        const pathParts = location.pathname.replace(/^\//, '').split('/');
+        const repo = (pathParts[0] && pathParts[0] !== 'index.html')
+            ? pathParts[0]
+            : `${owner}.github.io`;
+        return `https://api.github.com/repos/${owner}/${repo}/contents/${folder}`;
+    }
+
+    async function scanFolderGithubApi(folder, allowedExts) {
+        const apiUrl = getGithubApiUrl(folder);
+        if (!apiUrl) return null;
+        const res = await fetch(apiUrl, { headers: { Accept: 'application/vnd.github.v3+json' } });
+        if (!res.ok) return null;
+        const items = await res.json();
+        return items
+            .filter(f => f.type === 'file' && allowedExts.has(f.name.split('.').pop().toLowerCase()))
+            .map(f => ({ src: `${folder}/${f.name}`, alt: fileToAlt(f.name) }));
+    }
+
+    async function scanFolderManifest(folder, allowedExts) {
+        const res = await fetch(`${folder}/manifest.json`);
+        if (!res.ok) return null;
+        const list = await res.json();
+        return list
+            .filter(e => allowedExts.has(e.file.split('.').pop().toLowerCase()))
+            .map(e => ({ src: `${folder}/${e.file}`, alt: e.alt || fileToAlt(e.file) }));
+    }
+
+    async function scanFolder(folder, allowedExts) {
+        if (location.protocol === 'file:') return null;
+        /* Try GitHub API first, fall back to manifest */
+        try {
+            const via = await scanFolderGithubApi(folder, allowedExts);
+            if (via) return via;
+        } catch { /* not on GitHub Pages */ }
+        try {
+            const via = await scanFolderManifest(folder, allowedExts);
+            if (via) return via;
+        } catch { /* manifest missing */ }
+        return null;
+    }
+
+    /* Image gallery thumbnails */
+    document.querySelectorAll('.project-thumbnail[data-gallery-folder]').forEach(thumb => {
+        thumb.addEventListener('click', async () => {
+            const folder = thumb.dataset.galleryFolder;
+            if (location.protocol === 'file:') {
+                showToast('Open via Live Server or GitHub Pages to view the gallery.', 'error');
+                return;
+            }
+            const imgs = await scanFolder(folder, IMAGE_EXTS);
+            if (imgs && imgs.length) {
+                openGallery(imgs);
+            } else {
+                showToast('No images found in gallery folder.', 'error');
+            }
         });
     });
 
@@ -856,51 +895,33 @@ document.addEventListener('DOMContentLoaded', () => {
         previewImage.alt = 'Image failed to load';
     });
 
-    /* ── video empty state modal ─── */
+    /* ── video gallery / empty state modal ─── */
     const videoModal      = document.getElementById('videoModal');
     const videoModalClose = document.getElementById('videoModalClose');
 
-    /* data-video-manifest: fetch manifest; if empty show empty-state modal, else open gallery */
-    document.querySelectorAll('.project-thumbnail[data-video-manifest]').forEach(thumb => {
+    function showVideoEmpty() {
+        if (!videoModal) return;
+        videoModal.classList.add('active');
+        lockScroll();
+        hideNav();
+    }
+
+    document.querySelectorAll('.project-thumbnail[data-video-folder]').forEach(thumb => {
         thumb.addEventListener('click', async () => {
-            const manifestUrl = thumb.dataset.videoManifest;
-            try {
-                const res  = await fetch(manifestUrl);
-                const list = await res.json();
-                if (list.length > 0) {
-                    const dir  = manifestUrl.replace(/\/[^/]+$/, '');
-                    const imgs = list.map(entry => ({
-                        src: `${dir}/${entry.file}`,
-                        alt: entry.alt || entry.file
-                    }));
-                    openGallery(imgs);
-                } else {
-                    if (!videoModal) return;
-                    videoModal.classList.add('active');
-                    lockScroll();
-                    hideNav();
-                }
-            } catch {
-                /* On file:// the fetch will fail — show empty state as fallback */
-                if (location.protocol === 'file:') {
-                    console.warn('Video manifest requires HTTP — open with Live Server or GitHub Pages, not file://');
-                }
-                if (!videoModal) return;
-                videoModal.classList.add('active');
-                lockScroll();
-                hideNav();
+            const folder = thumb.dataset.videoFolder;
+            if (location.protocol === 'file:') { showVideoEmpty(); return; }
+            const files = await scanFolder(folder, VIDEO_EXTS);
+            if (files && files.length) {
+                openGallery(files);
+            } else {
+                showVideoEmpty();
             }
         });
     });
 
-    /* Fallback: legacy data-video-empty */
+    /* Legacy fallback */
     document.querySelectorAll('.project-thumbnail[data-video-empty]').forEach(thumb => {
-        thumb.addEventListener('click', () => {
-            if (!videoModal) return;
-            videoModal.classList.add('active');
-            lockScroll();
-            hideNav();
-        });
+        thumb.addEventListener('click', showVideoEmpty);
     });
 
     if (videoModalClose && videoModal) {
