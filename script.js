@@ -302,7 +302,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    window.addEventListener('scroll', updateActiveNav, { passive: true });
+    let navScrollRaf;
+    window.addEventListener('scroll', () => {
+        if (navScrollRaf) return;
+        navScrollRaf = requestAnimationFrame(() => {
+            updateActiveNav();
+            navScrollRaf = null;
+        });
+    }, { passive: true });
 
     /* smooth scroll offset */
     document.querySelectorAll('a[href^="#"]').forEach(a => {
@@ -321,10 +328,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
 /* ── E.5 AMBIENT BUBBLES ─────────────────────────────────── */
 (function initBubbles() {
+    /* Skip on mobile — blurred animated divs are expensive on phone GPUs */
+    if (window.innerWidth <= 768) return;
     const container = document.getElementById('bgShapes');
     if (!container) return;
     const rnd = (a, b) => a + Math.random() * (b - a);
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < 12; i++) {
         const el = document.createElement('div');
         el.className = 'bg-bubble';
         const size = rnd(120, 420);
@@ -351,7 +360,10 @@ document.addEventListener('DOMContentLoaded', () => {
 (function initShapes() {
     const container = document.getElementById('shapes');
     if (!container) return;
-    for (let i = 0; i < 60; i++) {
+    const isMobile = window.innerWidth <= 768;
+    /* 60 on desktop, 15 on mobile */
+    const count = isMobile ? 15 : 60;
+    for (let i = 0; i < count; i++) {
         const s = document.createElement('div');
         s.className = 'shape';
         const size = Math.random() * 80 + 20;
@@ -369,6 +381,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 /* ── G. PARTICLE CONSTELLATION ──────────────────────────── */
 (function initParticles() {
+    /* Skip entirely on mobile — canvas animation is the biggest perf drain */
+    if (window.innerWidth <= 768) return;
     const canvas = document.getElementById('particle-canvas');
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -785,21 +799,18 @@ document.addEventListener('DOMContentLoaded', () => {
         return filename.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
     }
 
-    /* Detect GitHub Pages: hostname ends in .github.io or is a custom domain
-       with a repo path. We extract owner/repo from the origin remote URL via
-       the page URL structure: username.github.io/repo or username.github.io */
+    /* Build GitHub Contents API URL from the current page location */
     function getGithubApiUrl(folder) {
         const host = location.hostname;
-        /* *.github.io — owner is the subdomain */
         const ghMatch = host.match(/^([^.]+)\.github\.io$/);
         if (!ghMatch) return null;
         const owner = ghMatch[1];
-        /* repo: if deployed at username.github.io the repo name equals owner.github.io
-                 if site is at a subpath the repo name is the first path segment */
-        const pathParts = location.pathname.replace(/^\//, '').split('/');
-        const repo = (pathParts[0] && pathParts[0] !== 'index.html')
-            ? pathParts[0]
-            : `${owner}.github.io`;
+        /* Path segments that are real sub-directories (not index.html / empty) */
+        const pathParts = location.pathname.replace(/^\//, '').split('/')
+            .filter(p => p && p !== 'index.html');
+        /* Root deployment: username.github.io  → repo = owner.github.io
+           Sub-path deployment: username.github.io/repo → repo = pathParts[0] */
+        const repo = pathParts.length > 0 ? pathParts[0] : `${owner}.github.io`;
         return `https://api.github.com/repos/${owner}/${repo}/contents/${folder}`;
     }
 
