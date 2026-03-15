@@ -1,0 +1,9 @@
+{
+  "name": "carlo-portfolio",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "sync": "node sync-gallery.js",
+    "watch": "node sync-gallery.js --watch"
+  }
+}
