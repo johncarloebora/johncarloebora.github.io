@@ -3,6 +3,427 @@
    ============================================================ */
 'use strict';
 
+/* ── SITE CONFIG (loaded from R2) ────────────────────────── */
+/* Fetches site-config.json published by the admin panel.
+   On success, updates the DOM in-place so CSS structure stays intact.
+   On failure, the hardcoded HTML shows — zero breakage. */
+var SITE_CFG = null;
+var SITE_CFG_READY = new Promise(function (resolve) {
+    var CONFIG_URL = 'https://pub-f5b0f09119db40a8996c7447f85b44f9.r2.dev/site-config.json';
+    fetch(CONFIG_URL).then(function (r) { return r.json(); }).then(function (cfg) {
+        SITE_CFG = cfg;
+        /* Apply config after DOM is ready */
+        function doApply() {
+            try { applySiteConfig(cfg); } catch (e) { console.warn('[config] apply error', e); }
+        }
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', doApply);
+        } else {
+            doApply();
+        }
+        resolve(cfg);
+    }).catch(function () { resolve(null); });
+});
+
+function esc(s) {
+    var d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+}
+
+function applySiteConfig(cfg) {
+    var s = cfg.settings || {};
+    var r2 = cfg.r2Base || '';
+
+    /* ── Hero ── */
+    var eyebrow = document.querySelector('.hero-eyebrow');
+    if (eyebrow && s.heroEyebrow) eyebrow.textContent = s.heroEyebrow;
+
+    var heroName = document.querySelector('.hero-name');
+    if (heroName && s.heroName) {
+        heroName.textContent = s.heroName;
+        heroName.setAttribute('data-glitch', s.heroGlitchText || s.heroName);
+    }
+
+    var heroDesc = document.querySelector('.hero-desc');
+    if (heroDesc && s.heroDesc) heroDesc.textContent = s.heroDesc;
+
+    var ctaPrimary = document.querySelector('.hero-buttons .cta-button.primary');
+    if (ctaPrimary) {
+        if (s.ctaPrimaryText) ctaPrimary.textContent = s.ctaPrimaryText;
+        if (s.ctaPrimaryLink) ctaPrimary.href = s.ctaPrimaryLink;
+    }
+    var ctaSecondary = document.querySelector('.hero-buttons .cta-button.secondary');
+    if (ctaSecondary) {
+        if (s.ctaSecondaryText) ctaSecondary.textContent = s.ctaSecondaryText;
+        if (s.ctaSecondaryLink) ctaSecondary.href = s.ctaSecondaryLink;
+    }
+
+    /* ── Profile photo from R2 ── */
+    if (cfg.media && cfg.media.profile && cfg.media.profile.length) {
+        var profileUrl = cfg.media.profile[0].url;
+        var heroPhoto = document.getElementById('heroPhoto');
+        var avatarFrame = document.getElementById('avatarFrame');
+        if (heroPhoto && profileUrl) {
+            heroPhoto.src = profileUrl;
+            heroPhoto.style.transition = 'opacity 0.6s ease';
+            heroPhoto.style.opacity = '1';
+            if (avatarFrame) {
+                avatarFrame.classList.remove('avatar-loading', 'show-fallback', 'fallback-visible');
+            }
+            /* Mark that config already loaded the photo so the probe can skip */
+            heroPhoto.dataset.cfgLoaded = '1';
+        }
+    }
+
+    /* ── Profile shape ── */
+    if (s.profileShape && s.profileShape !== 'hexagon') {
+        var frame = document.getElementById('avatarFrame');
+        if (frame) frame.classList.add('shape-' + s.profileShape);
+    }
+
+    /* ── Nav links ── */
+    if (cfg.sections && cfg.sections.length) {
+        var navLinksContainer = document.querySelector('.nav-links');
+        if (navLinksContainer) {
+            /* Remove existing nav links (keep drawer header) */
+            navLinksContainer.querySelectorAll('.nav-link').forEach(function (l) { l.remove(); });
+            var visibleSections = cfg.sections.filter(function (sec) { return sec.visible; })
+                .sort(function (a, b) { return a.sort_order - b.sort_order; });
+            visibleSections.forEach(function (sec) {
+                var a = document.createElement('a');
+                a.href = '#' + sec.id;
+                a.className = 'nav-link' + (sec.id === 'home' ? ' active' : '');
+                a.setAttribute('data-tooltip', sec.nav_label);
+                a.innerHTML = '<i class="' + esc(sec.nav_icon) + '"></i><span>' + esc(sec.nav_label) + '</span>';
+                navLinksContainer.appendChild(a);
+            });
+        }
+    }
+
+    /* ── Section titles ── */
+    if (cfg.sections) {
+        cfg.sections.forEach(function (sec) {
+            if (sec.id === 'home') return;
+            var sectionEl = document.getElementById(sec.id);
+            if (!sectionEl) return;
+            var h2 = sectionEl.querySelector('.section-title');
+            if (h2) {
+                h2.textContent = sec.title;
+                h2.setAttribute('data-scramble', sec.title);
+            }
+        });
+    }
+
+    /* ── About cards ── */
+    if (cfg.about && cfg.about.cards) {
+        var aboutGrid = document.getElementById('aboutCards');
+        if (aboutGrid) {
+            aboutGrid.innerHTML = cfg.about.cards.map(function (card) {
+                var bodyHTML;
+                if (card.type === 'info_list' && Array.isArray(card.content)) {
+                    bodyHTML = '<div class="info-list">' +
+                        card.content.map(function (item) {
+                            return '<div class="info-item"><i class="' + esc(item.icon) + '"></i><span>' + esc(item.text) + '</span></div>';
+                        }).join('') + '</div>';
+                } else {
+                    bodyHTML = '<p>' + esc(typeof card.content === 'string' ? card.content : '') + '</p>';
+                }
+                return '<div class="card about-card' + (card.expanded ? ' about-expanded' : '') + '">' +
+                    '<div class="about-card-header">' +
+                    '<h3>' + esc(card.title) + '</h3>' +
+                    '<div class="about-card-toggle"><i class="fas fa-chevron-down"></i></div>' +
+                    '</div>' +
+                    '<div class="about-card-body">' + bodyHTML + '</div>' +
+                    '</div>';
+            }).join('');
+            /* Re-attach about card toggle listeners */
+            aboutGrid.querySelectorAll('.about-card-header').forEach(function (hdr) {
+                hdr.dataset.toggleBound = '1';
+                hdr.addEventListener('click', function () {
+                    hdr.parentElement.classList.toggle('about-expanded');
+                });
+            });
+        }
+    }
+
+    /* ── Stats ── */
+    if (cfg.about && cfg.about.stats) {
+        var statsRow = document.getElementById('statsRow');
+        if (statsRow) {
+            statsRow.innerHTML = cfg.about.stats.map(function (st) {
+                var display = st.target + st.suffix;
+                return '<div class="stat-card">' +
+                    '<div class="stat-number" data-target="' + esc(st.target) + '" data-suffix="' + esc(st.suffix) + '">' + esc(display) + '</div>' +
+                    '<div class="stat-label">' + esc(st.label) + '</div>' +
+                    '</div>';
+            }).join('');
+        }
+    }
+
+    /* ── Skills ── */
+    if (cfg.skills && cfg.skills.length) {
+        var skillGrid = document.getElementById('skillCardGrid');
+        if (skillGrid) {
+            skillGrid.innerHTML = cfg.skills.map(function (card) {
+                var categoriesHTML = (card.categories || []).map(function (cat) {
+                    var skillsHTML = (cat.skills || []).map(function (sk) {
+                        return '<div class="skill-item">' +
+                            '<i class="' + esc(sk.icon) + ' skill-icon"></i>' +
+                            '<div class="skill-content">' +
+                            '<div class="skill-name">' + esc(sk.name) + '</div>' +
+                            '<div class="skill-description">' + esc(sk.description) + '</div>' +
+                            '<div class="proficiency-bar"><div class="proficiency-level" data-width="' + sk.proficiency + '"></div></div>' +
+                            '</div></div>';
+                    }).join('');
+                    return '<div class="skill-category">' +
+                        '<h4><i class="' + esc(cat.icon) + '"></i> ' + esc(cat.title) + '</h4>' +
+                        skillsHTML + '</div>';
+                }).join('');
+                return '<div class="skill-card' + (card.expanded ? ' expanded' : '') + '">' +
+                    '<div class="skill-card-header">' +
+                    '<h3><i class="' + esc(card.icon) + ' skill-card-icon"></i>' + esc(card.title) + '</h3>' +
+                    '<div class="skill-card-toggle"><i class="fas fa-chevron-down"></i></div>' +
+                    '</div>' +
+                    '<div class="skill-card-body">' + categoriesHTML + '</div>' +
+                    '</div>';
+            }).join('');
+            /* Re-attach skill card toggle listeners */
+            skillGrid.querySelectorAll('.skill-card-header').forEach(function (hdr) {
+                hdr.dataset.toggleBound = '1';
+                hdr.addEventListener('click', function () {
+                    var card = hdr.parentElement;
+                    var wasExpanded = card.classList.contains('expanded');
+                    card.classList.toggle('expanded');
+                    if (!wasExpanded) {
+                        card.querySelectorAll('.proficiency-level[data-width]').forEach(function (bar) {
+                            bar.style.width = '0';
+                            requestAnimationFrame(function () {
+                                requestAnimationFrame(function () {
+                                    bar.style.width = bar.dataset.width + '%';
+                                });
+                            });
+                        });
+                    }
+                });
+            });
+        }
+    }
+
+    /* ── Experience ── */
+    if (cfg.experiences && cfg.experiences.length) {
+        var timeline = document.getElementById('timeline');
+        if (timeline) {
+            timeline.innerHTML = cfg.experiences.map(function (exp) {
+                var bulletsHTML = (exp.bullets || []).map(function (b) { return '<li>' + esc(b) + '</li>'; }).join('');
+                var badgeHTML = exp.badge ? ' <span class="badge' + (exp.badge === 'Current' ? ' current' : '') + '">' + esc(exp.badge) + '</span>' : '';
+                return '<div class="timeline-item' + (exp.expanded ? ' tl-open' : '') + '">' +
+                    '<div class="timeline-marker"></div>' +
+                    '<div class="timeline-content">' +
+                    '<div class="timeline-header">' +
+                    '<div class="timeline-header-info">' +
+                    '<div class="timeline-date"><i class="fas fa-calendar-alt"></i> ' + esc(exp.date_range) + '</div>' +
+                    '<h3>' + esc(exp.title) + badgeHTML + '</h3>' +
+                    '<h4><i class="fas fa-building"></i> ' + esc(exp.company) + '</h4>' +
+                    '</div>' +
+                    '<div class="timeline-toggle"><i class="fas fa-chevron-down"></i></div>' +
+                    '</div>' +
+                    '<div class="timeline-body"><ul>' + bulletsHTML + '</ul></div>' +
+                    '</div></div>';
+            }).join('');
+            /* Re-attach timeline toggle listeners */
+            timeline.querySelectorAll('.timeline-header').forEach(function (hdr) {
+                hdr.dataset.toggleBound = '1';
+                hdr.addEventListener('click', function () {
+                    hdr.closest('.timeline-item').classList.toggle('tl-open');
+                });
+            });
+            timeline.querySelectorAll('.timeline-marker').forEach(function (mkr) {
+                mkr.dataset.toggleBound = '1';
+                mkr.addEventListener('click', function () {
+                    mkr.closest('.timeline-item').classList.toggle('tl-open');
+                });
+            });
+        }
+    }
+
+    /* ── Education ── */
+    if (cfg.education && cfg.education.length) {
+        var eduGrid = document.getElementById('educationCards');
+        if (eduGrid) {
+            eduGrid.innerHTML = cfg.education.map(function (card) {
+                var entriesHTML = (card.entries || []).map(function (entry) {
+                    var linesHTML = (entry.lines || []).map(function (l) { return '<p>' + esc(l) + '</p>'; }).join('');
+                    var dateHTML = entry.date ? '<div class="date">' + esc(entry.date) + '</div>' : '';
+                    return '<div class="experience-item">' +
+                        '<h4>' + esc(entry.title) + '</h4>' +
+                        dateHTML + linesHTML + '</div>';
+                }).join('');
+                return '<div class="card">' +
+                    '<h3>' + esc(card.card_title) + '</h3>' +
+                    entriesHTML + '</div>';
+            }).join('');
+        }
+    }
+
+    /* ── Projects ── */
+    if (cfg.projects && cfg.projects.length) {
+        var projGrid = document.getElementById('projectGrid');
+        if (projGrid) {
+            projGrid.innerHTML = cfg.projects.map(function (proj) {
+                var isVideo = proj.gallery_type === 'video';
+                var thumbSrc = proj.thumbnail_url || (r2 + '/' + proj.thumbnail_path);
+                var tagsHTML = (proj.tags || []).map(function (t) { return '<span class="project-type">' + esc(t) + '</span>'; }).join('');
+                var skillsHTML = (proj.skills || []).length ? '<div class="project-skills">' +
+                    proj.skills.map(function (sk) { return '<span class="project-skill">' + esc(sk) + '</span>'; }).join('') +
+                    '</div>' : '';
+                var overlayIcon = isVideo ? 'fas fa-play-circle' : 'fas fa-images';
+                var overlayText = isVideo ? 'View Videos' : 'View Gallery';
+                var dataAttr = isVideo
+                    ? 'data-video-folder="' + esc(proj.gallery_folder) + '" style="cursor:pointer"'
+                    : 'data-gallery-folder="' + esc(proj.gallery_folder) + '"';
+                return '<div class="project-card">' +
+                    '<div class="project-thumbnail" ' + dataAttr + '>' +
+                    '<img src="' + esc(thumbSrc) + '" alt="' + esc(proj.title) + '" class="main-thumbnail" loading="lazy">' +
+                    '<div class="project-overlay"><span class="overlay-text"><i class="' + overlayIcon + '"></i> ' + overlayText + '</span></div>' +
+                    '</div>' +
+                    '<div class="project-content">' +
+                    '<div class="project-tags">' + tagsHTML + '</div>' +
+                    '<h3 class="project-title">' + esc(proj.title) + '</h3>' +
+                    '<p class="project-desc">' + esc(proj.description) + '</p>' +
+                    skillsHTML +
+                    '</div></div>';
+            }).join('');
+        }
+    }
+
+    /* ── Socials ── */
+    if (cfg.socials && cfg.socials.length) {
+        var socialsGrid = document.getElementById('socialsGrid');
+        if (socialsGrid) {
+            socialsGrid.innerHTML = cfg.socials.map(function (soc) {
+                return '<a href="' + esc(soc.url) + '" target="_blank" rel="noopener noreferrer" class="social-card">' +
+                    '<i class="' + esc(soc.icon) + '"></i><span>' + esc(soc.label) + '</span></a>';
+            }).join('');
+        }
+    }
+
+    /* ── Footer ── */
+    if (s.footerText) {
+        var ft = document.getElementById('footerText');
+        if (ft) ft.innerHTML = s.footerText;
+    }
+
+    /* Re-bind gallery/video click handlers after DOM replacement */
+    if (typeof window._rebindGallery === 'function') window._rebindGallery();
+
+    /* Re-init animations on new elements */
+    reinitAfterConfig();
+}
+
+function reinitAfterConfig() {
+    /* Re-observe new elements for scroll reveal */
+    var revealSelector = '.card, .skill-card, .project-card, .timeline-item, .social-card, .stat-card';
+    var ioReveal = new IntersectionObserver(function (entries, obs) {
+        entries.forEach(function (entry, i) {
+            if (!entry.isIntersecting) return;
+            setTimeout(function () { entry.target.classList.add('visible'); }, i * 80);
+            obs.unobserve(entry.target);
+        });
+    }, { threshold: 0.12 });
+    document.querySelectorAll(revealSelector).forEach(function (el) {
+        if (!el.classList.contains('visible')) ioReveal.observe(el);
+    });
+
+    /* Re-observe proficiency bars */
+    var ioBars = new IntersectionObserver(function (entries, obs) {
+        entries.forEach(function (entry) {
+            if (!entry.isIntersecting) return;
+            entry.target.style.width = entry.target.dataset.width + '%';
+            obs.unobserve(entry.target);
+        });
+    }, { threshold: 0.3 });
+    document.querySelectorAll('.proficiency-level[data-width]').forEach(function (bar) {
+        bar.style.width = '0';
+        ioBars.observe(bar);
+    });
+
+    /* Re-observe stat counters */
+    var ioStats = new IntersectionObserver(function (entries, obs) {
+        entries.forEach(function (entry) {
+            if (!entry.isIntersecting) return;
+            var el = entry.target;
+            var target = parseFloat(el.dataset.target);
+            var suffix = el.dataset.suffix || '';
+            var isDecimal = el.dataset.target.includes('.');
+            var totalFrames = 60;
+            var frame = 0;
+            var interval = setInterval(function () {
+                frame++;
+                if (frame >= totalFrames) {
+                    el.textContent = (isDecimal ? target.toFixed(2) : Math.floor(target)) + suffix;
+                    clearInterval(interval);
+                } else {
+                    var current = (target * frame) / totalFrames;
+                    el.textContent = (isDecimal ? current.toFixed(2) : Math.floor(current)) + suffix;
+                }
+            }, 25);
+            obs.unobserve(el);
+        });
+    }, { threshold: 0.3 });
+    document.querySelectorAll('.stat-number[data-target]').forEach(function (el) {
+        ioStats.observe(el);
+    });
+
+    /* Re-setup 3D tilt on new cards */
+    if (window.matchMedia('(hover: hover)').matches) {
+        document.querySelectorAll('.card, .skill-card, .project-card, .social-card, .stat-card').forEach(function (card) {
+            if (card.dataset.tiltBound) return;
+            card.dataset.tiltBound = '1';
+            card.addEventListener('mousemove', function (e) {
+                var rect = card.getBoundingClientRect();
+                var x = (e.clientX - rect.left) / rect.width - 0.5;
+                var y = (e.clientY - rect.top) / rect.height - 0.5;
+                card.style.transform = 'perspective(600px) rotateY(' + (x * 6) + 'deg) rotateX(' + (-y * 6) + 'deg) scale(1.02)';
+            });
+            card.addEventListener('mouseleave', function () {
+                card.style.transform = '';
+            });
+        });
+    }
+
+    /* Re-attach ripple to new social cards / buttons */
+    document.querySelectorAll('.social-card, .cta-button').forEach(function (el) {
+        if (el.dataset.rippleBound) return;
+        el.dataset.rippleBound = '1';
+        el.addEventListener('click', function (e) {
+            var diameter = Math.max(el.clientWidth, el.clientHeight);
+            var radius = diameter / 2;
+            var rect = el.getBoundingClientRect();
+            var circle = document.createElement('span');
+            circle.className = 'ripple';
+            circle.style.width = circle.style.height = diameter + 'px';
+            circle.style.left = (e.clientX - rect.left - radius) + 'px';
+            circle.style.top = (e.clientY - rect.top - radius) + 'px';
+            var old = el.querySelector('.ripple');
+            if (old) old.remove();
+            el.appendChild(circle);
+        });
+    });
+
+    /* Re-attach cursor hover to new elements */
+    var ring = document.getElementById('cursor-ring');
+    if (ring) {
+        var hoverEls = 'a, button, .cta-button, .card, .skill-card, .project-card, .social-card, .gallery-item, .close-button, .preview-nav, .timeline-header, .skill-card-header';
+        document.querySelectorAll(hoverEls).forEach(function (el) {
+            if (el.dataset.cursorBound) return;
+            el.dataset.cursorBound = '1';
+            el.addEventListener('mouseenter', function () { ring.classList.add('cursor-hover'); });
+            el.addEventListener('mouseleave', function () { ring.classList.remove('cursor-hover'); });
+        });
+    }
+}
+
 /* ── A. THEME ─────────────────────────────────────────────── */
 (function initTheme() {
     const saved = localStorage.getItem('theme') || 'dark';
@@ -88,6 +509,9 @@ function showToast(msg, type = 'success') {
     const avatarFrame = document.getElementById('avatarFrame');
     const heroPhoto   = document.getElementById('heroPhoto');
     if (!avatarFrame || !heroPhoto) return;
+
+    /* If config already loaded the photo from R2, skip probing */
+    if (heroPhoto.dataset.cfgLoaded === '1') return;
 
     /* Supported extensions to probe in order */
     const EXTS = ['jpg', 'jpeg', 'png', 'webp', 'avif', 'gif', 'bmp', 'svg'];
@@ -472,11 +896,12 @@ document.addEventListener('DOMContentLoaded', () => {
 /* ── G.5 SKILL CARD DROPDOWN TOGGLE ─────────────────────── */
 document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.skill-card-header').forEach(header => {
+        if (header.dataset.toggleBound) return;
+        header.dataset.toggleBound = '1';
         header.addEventListener('click', () => {
             const card = header.closest('.skill-card');
             const wasExpanded = card.classList.contains('expanded');
             card.classList.toggle('expanded');
-            /* Trigger proficiency bar animation when expanding */
             if (!wasExpanded) {
                 card.querySelectorAll('.proficiency-level[data-width]').forEach(bar => {
                     bar.style.width = '0';
@@ -494,6 +919,8 @@ document.addEventListener('DOMContentLoaded', () => {
 /* ── G.7 ABOUT CARD DROPDOWN TOGGLE ─────────────────────── */
 document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.about-card-header').forEach(header => {
+        if (header.dataset.toggleBound) return;
+        header.dataset.toggleBound = '1';
         header.addEventListener('click', () => {
             header.closest('.about-card').classList.toggle('about-expanded');
         });
@@ -503,14 +930,17 @@ document.addEventListener('DOMContentLoaded', () => {
 /* ── G.6 TIMELINE DROPDOWN TOGGLE ───────────────────────── */
 document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.timeline-header').forEach(header => {
+        if (header.dataset.toggleBound) return;
+        header.dataset.toggleBound = '1';
         header.addEventListener('click', () => {
             const item = header.closest('.timeline-item');
             item.classList.toggle('tl-open');
         });
     });
 
-    /* Also toggle when clicking the marker */
     document.querySelectorAll('.timeline-marker').forEach(marker => {
+        if (marker.dataset.toggleBound) return;
+        marker.dataset.toggleBound = '1';
         marker.addEventListener('click', () => {
             const item = marker.closest('.timeline-item');
             item.classList.toggle('tl-open');
@@ -535,13 +965,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const el = document.getElementById('hero-subtitle');
     if (!el) return;
 
-    const lines = [
+    const defaultLines = [
         'Computer Engineer',
         'Insurance Operations Analyst',
         'Creative Visual Designer',
         'VBA & Automation Specialist',
         'Full-Stack Problem Solver'
     ];
+    const lines = (SITE_CFG && SITE_CFG.settings && SITE_CFG.settings.typewriterPhrases && SITE_CFG.settings.typewriterPhrases.length)
+        ? SITE_CFG.settings.typewriterPhrases : defaultLines;
 
     let lineIdx = 0, charIdx = 0, deleting = false;
     let typingSpeed = 65, deletingSpeed = 35, pauseMs = 2400;
@@ -848,22 +1280,46 @@ document.addEventListener('DOMContentLoaded', () => {
         return null;
     }
 
+    /* Try to get gallery images from site-config.json media data first */
+    function getMediaFromConfig(folder, allowedExts) {
+        if (!SITE_CFG || !SITE_CFG.media || !SITE_CFG.media[folder]) return null;
+        var items = SITE_CFG.media[folder]
+            .filter(function (m) {
+                var ext = m.filename.split('.').pop().toLowerCase();
+                return allowedExts.has(ext);
+            })
+            .map(function (m) {
+                return { src: m.url, alt: m.alt || fileToAlt(m.filename) };
+            });
+        return items.length ? items : null;
+    }
+
     /* Image gallery thumbnails */
-    document.querySelectorAll('.project-thumbnail[data-gallery-folder]').forEach(thumb => {
-        thumb.addEventListener('click', async () => {
-            const folder = thumb.dataset.galleryFolder;
-            if (location.protocol === 'file:') {
-                showToast('Open via Live Server or GitHub Pages to view the gallery.', 'error');
-                return;
-            }
-            const imgs = await scanFolder(folder, IMAGE_EXTS);
-            if (imgs && imgs.length) {
-                openGallery(imgs);
-            } else {
-                showToast('No images found in gallery folder.', 'error');
-            }
+    /* Expose rebind so applySiteConfig can re-attach after replacing project HTML */
+    window._rebindGallery = function () { bindGalleryClicks(); bindVideoClicks(); };
+
+    function bindGalleryClicks() {
+        document.querySelectorAll('.project-thumbnail[data-gallery-folder]').forEach(thumb => {
+            thumb.addEventListener('click', async () => {
+                const folder = thumb.dataset.galleryFolder;
+                /* Try config media first, then GitHub API, then manifest */
+                var imgs = getMediaFromConfig(folder, IMAGE_EXTS);
+                if (!imgs) {
+                    if (location.protocol === 'file:') {
+                        showToast('Open via Live Server or GitHub Pages to view the gallery.', 'error');
+                        return;
+                    }
+                    imgs = await scanFolder(folder, IMAGE_EXTS);
+                }
+                if (imgs && imgs.length) {
+                    openGallery(imgs);
+                } else {
+                    showToast('No images found in gallery folder.', 'error');
+                }
+            });
         });
-    });
+    }
+    bindGalleryClicks();
 
     /* gallery grid click */
     galleryGrid.addEventListener('click', e => {
@@ -917,18 +1373,24 @@ document.addEventListener('DOMContentLoaded', () => {
         hideNav();
     }
 
-    document.querySelectorAll('.project-thumbnail[data-video-folder]').forEach(thumb => {
-        thumb.addEventListener('click', async () => {
-            const folder = thumb.dataset.videoFolder;
-            if (location.protocol === 'file:') { showVideoEmpty(); return; }
-            const files = await scanFolder(folder, VIDEO_EXTS);
-            if (files && files.length) {
-                openGallery(files);
-            } else {
-                showVideoEmpty();
-            }
+    function bindVideoClicks() {
+        document.querySelectorAll('.project-thumbnail[data-video-folder]').forEach(thumb => {
+            thumb.addEventListener('click', async () => {
+                const folder = thumb.dataset.videoFolder;
+                var files = getMediaFromConfig(folder, VIDEO_EXTS);
+                if (!files) {
+                    if (location.protocol === 'file:') { showVideoEmpty(); return; }
+                    files = await scanFolder(folder, VIDEO_EXTS);
+                }
+                if (files && files.length) {
+                    openGallery(files);
+                } else {
+                    showVideoEmpty();
+                }
+            });
         });
-    });
+    }
+    bindVideoClicks();
 
     /* Legacy fallback */
     document.querySelectorAll('.project-thumbnail[data-video-empty]').forEach(thumb => {

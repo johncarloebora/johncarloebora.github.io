@@ -579,6 +579,7 @@ router.post('/api/publish', authMiddleware, async (request, env) => {
     const projects = projectsRes.results.map(p => ({
       ...p,
       tags: safeParseJson(p.tags, []),
+      skills: safeParseJson(p.skills, []),
       thumbnail_url: p.thumbnail_path ? `${r2Base}/${p.thumbnail_path}` : null,
     }));
 

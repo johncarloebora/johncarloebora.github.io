@@ -130,6 +130,7 @@ CREATE TABLE IF NOT EXISTS projects (
     gallery_type   TEXT,
     gallery_folder TEXT,
     tags           TEXT    DEFAULT '[]',
+    skills         TEXT    DEFAULT '[]',
     sort_order     INTEGER NOT NULL DEFAULT 0
 );
 
