@@ -158,6 +158,23 @@ async function loadMediaPage() {
 // Folder filter
 document.getElementById('mediaFolderFilter').addEventListener('change', loadMediaPage);
 
+// Rescan bucket — syncs D1 from actual R2 object keys
+document.getElementById('rescanBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('rescanBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Scanning...';
+    try {
+        const res = await API.post('/api/media/rescan', {});
+        showToast(`Rescan complete — ${res.synced} file(s) synced, ${res.removed} removed`, 'success');
+        loadMediaPage();
+    } catch (err) {
+        showToast('Rescan failed: ' + err.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-sync-alt"></i> Rescan Bucket';
+    }
+});
+
 window.deleteMediaItem = async function(id) {
     if (await showConfirm('Delete Media', 'This will permanently delete this file from R2.')) {
         try { await API.deleteMedia(id); showToast('Deleted', 'success'); loadMediaPage(); }

@@ -398,6 +398,63 @@ crudRoutes(router, 'socials', 'socials', {
 // MEDIA ENDPOINTS
 // ────────────────────────────────────────────────────────────
 
+// Rescan R2 bucket — lists every real object in R2 and upserts into D1
+// Fixes cases where D1 has wrong/fake filenames not matching actual R2 keys
+router.post('/api/media/rescan', authMiddleware, async (request, env) => {
+  const r2Base = env.R2_PUBLIC_URL;
+  const VALID_FOLDERS = ['layout', 'profile', 'thumbnail', 'videos'];
+  let added = 0, skipped = 0;
+
+  for (const folder of VALID_FOLDERS) {
+    let cursor;
+    do {
+      const listed = await env.MEDIA.list({ prefix: folder + '/', cursor, limit: 1000 });
+      for (const obj of listed.objects) {
+        // key is like "layout/filename.jpg"
+        const parts = obj.key.split('/');
+        if (parts.length < 2) continue;
+        const filename = parts.slice(1).join('/'); // support filenames with slashes (unlikely but safe)
+        if (!filename) continue; // skip bare folder keys
+
+        // Detect mime type from extension
+        const ext = filename.split('.').pop().toLowerCase();
+        const mimeMap = {
+          jpg:'image/jpeg', jpeg:'image/jpeg', png:'image/png', webp:'image/webp',
+          gif:'image/gif', bmp:'image/bmp', svg:'image/svg+xml', avif:'image/avif',
+          tiff:'image/tiff', tif:'image/tiff', heic:'image/heic', heif:'image/heif',
+          mp4:'video/mp4', webm:'video/webm', mov:'video/quicktime',
+          avi:'video/x-msvideo', mkv:'video/x-matroska', ogv:'video/ogg',
+        };
+        const mimeType = mimeMap[ext] || 'application/octet-stream';
+
+        // Upsert: insert if not exists, leave alt_text alone if already set
+        await env.DB.prepare(
+          `INSERT INTO media (folder, filename, alt_text, mime_type, size_bytes)
+           VALUES (?, ?, ?, ?, ?)
+           ON CONFLICT(folder, filename) DO UPDATE SET
+             mime_type = excluded.mime_type,
+             size_bytes = excluded.size_bytes`
+        ).bind(folder, filename, filename.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' '), mimeType, obj.size || null).run();
+        added++;
+      }
+      cursor = listed.truncated ? listed.cursor : undefined;
+    } while (cursor);
+  }
+
+  // Remove D1 records that no longer exist in R2
+  const { results: allRecords } = await env.DB.prepare('SELECT id, folder, filename FROM media').all();
+  for (const rec of allRecords) {
+    const r2Key = `${rec.folder}/${rec.filename}`;
+    const head = await env.MEDIA.head(r2Key);
+    if (!head) {
+      await env.DB.prepare('DELETE FROM media WHERE id = ?').bind(rec.id).run();
+      skipped++;
+    }
+  }
+
+  return json({ success: true, synced: added, removed: skipped });
+});
+
 router.get('/api/media', authMiddleware, async (request, env) => {
   let query = 'SELECT * FROM media';
   const params = [];
