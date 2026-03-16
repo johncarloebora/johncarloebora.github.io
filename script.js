@@ -459,7 +459,7 @@ function showToast(msg, type = 'success') {
 
 /* ── C. CUSTOM CURSOR ─────────────────────────────────────── */
 (function initCursor() {
-    if (window.matchMedia('(hover: none)').matches || window.innerWidth <= 768) return;
+    if (window.matchMedia('(hover: none), (pointer: coarse)').matches) return;
 
     const dot  = document.getElementById('cursor-dot');
     const ring = document.getElementById('cursor-ring');
@@ -500,7 +500,11 @@ function showToast(msg, type = 'success') {
     });
 
     window.addEventListener('resize', () => {
-        if (window.innerWidth <= 768) cancelAnimationFrame(rafId);
+        if (window.matchMedia('(hover: none), (pointer: coarse)').matches) {
+            cancelAnimationFrame(rafId);
+            dot.style.opacity = '0';
+            ring.style.opacity = '0';
+        }
     });
 })();
 
@@ -570,7 +574,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const nav       = document.getElementById('navbar');
     const hamburger = document.getElementById('hamburger');
     const navLinks  = document.querySelector('.nav-links');
-    const allLinks  = document.querySelectorAll('.nav-link');
+    /* Live query — re-evaluated every call so new links added by applySiteConfig are included */
+    const allLinks  = () => document.querySelectorAll('.nav-link');
     const isMobile  = () => window.innerWidth <= 768;
 
     /* Mobile side nav expand/collapse */
@@ -624,7 +629,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Escape') closeNav();
     });
 
-    allLinks.forEach(link => link.addEventListener('click', () => {
+    allLinks().forEach(link => link.addEventListener('click', () => {
         if (isMobile()) collapseSideNav();
         else closeNav();
     }));
@@ -664,9 +669,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         lastY = y;
 
-        /* subtle hero parallax — shapes only */
-        if (y < window.innerHeight) {
+        /* subtle hero parallax — desktop only, shapes only */
+        if (!isMobile() && y < window.innerHeight) {
             if (heroShapes) heroShapes.style.transform = `translateY(${y * 0.35}px)`;
+        } else if (heroShapes) {
+            heroShapes.style.transform = '';
         }
     }, { passive: true });
 
@@ -678,9 +685,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let navInitDone = false;
 
     function updateActiveNav() {
+        const links = allLinks();
         /* At the very top of the page, always activate Home */
         if (window.scrollY < window.innerHeight * 0.25) {
-            allLinks.forEach(l => l.classList.remove('active'));
+            links.forEach(l => l.classList.remove('active'));
             const homeLink = document.querySelector('.nav-link[href="#home"]');
             if (homeLink) homeLink.classList.add('active');
             return;
@@ -698,7 +706,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         if (topSection) {
-            allLinks.forEach(l => l.classList.remove('active'));
+            links.forEach(l => l.classList.remove('active'));
             const t = document.querySelector(`.nav-link[href="#${topSection.id}"]`);
             if (t) t.classList.add('active');
         }
@@ -735,16 +743,21 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }, { passive: true });
 
-    /* smooth scroll offset */
-    document.querySelectorAll('a[href^="#"]').forEach(a => {
-        a.addEventListener('click', function(e) {
-            const target = document.querySelector(this.getAttribute('href'));
-            if (!target) return;
-            e.preventDefault();
-            const navOffset = isMobile() ? 8 : document.querySelector('.nav-header').offsetHeight + 8;
-            const top = target.getBoundingClientRect().top + window.scrollY - navOffset;
-            window.scrollTo({ top, behavior: 'smooth' });
-        });
+    /* smooth scroll — set active immediately on click, don't wait for IntersectionObserver */
+    document.addEventListener('click', function(e) {
+        const a = e.target.closest('a[href^="#"]');
+        if (!a) return;
+        const href = a.getAttribute('href');
+        const target = document.querySelector(href);
+        if (!target) return;
+        e.preventDefault();
+        /* Immediately update active link */
+        allLinks().forEach(l => l.classList.remove('active'));
+        const clicked = document.querySelector(`.nav-link[href="${href}"]`);
+        if (clicked) clicked.classList.add('active');
+        const navOffset = isMobile() ? 8 : (document.querySelector('.nav-header')?.offsetHeight || 0) + 8;
+        const top = target.getBoundingClientRect().top + window.scrollY - navOffset;
+        window.scrollTo({ top, behavior: 'smooth' });
     });
 });
 
@@ -1111,7 +1124,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 /* ── M. MAGNETIC BUTTONS ──────────────────────────────────── */
 (function initMagnetic() {
-    if (window.matchMedia('(hover: none)').matches || window.innerWidth <= 768) return;
+    if (window.matchMedia('(hover: none), (pointer: coarse)').matches) return;
 
     document.querySelectorAll('.cta-button, .theme-toggle-btn').forEach(btn => {
         btn.addEventListener('mousemove', e => {
