@@ -8,7 +8,7 @@
 /* ── CONFIG ──────────────────────────────────────────────── */
 // Replace these with your actual URLs after Cloudflare setup
 const R2_BASE  = window.PORTFOLIO_R2_BASE  || '';
-const API_BASE = window.PORTFOLIO_API_BASE || '';
+const API_BASE = window.PORTFOLIO_API_BASE || 'https://carlo-portfolio-api.johncarloebora.workers.dev';
 
 /* ── A. THEME ─────────────────────────────────────────────── */
 (function initTheme() {

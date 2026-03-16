@@ -3,7 +3,7 @@
 // ============================================================
 
 const API = {
-    base: window.ADMIN_API_BASE || '',
+    base: window.ADMIN_API_BASE || 'https://carlo-portfolio-api.johncarloebora.workers.dev',
 
     getToken() {
         return sessionStorage.getItem('admin_token');
