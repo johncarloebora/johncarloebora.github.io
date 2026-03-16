@@ -516,6 +516,16 @@ router.get('/api/gallery/:folder', async (request, env) => {
 // PUBLISH ENDPOINT
 // ────────────────────────────────────────────────────────────
 
+// Public config endpoint — serves site-config.json with proper CORS
+router.get('/api/config', async (request, env) => {
+  const obj = await env.MEDIA.get('site-config.json');
+  if (!obj) return error(404, 'Config not published yet');
+  const text = await obj.text();
+  return new Response(text, {
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' },
+  });
+});
+
 router.post('/api/publish', authMiddleware, async (request, env) => {
   try {
     // Gather all data from D1

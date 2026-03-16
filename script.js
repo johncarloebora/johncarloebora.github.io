@@ -9,7 +9,7 @@
    On failure, the hardcoded HTML shows — zero breakage. */
 var SITE_CFG = null;
 var SITE_CFG_READY = new Promise(function (resolve) {
-    var CONFIG_URL = 'https://pub-f5b0f09119db40a8996c7447f85b44f9.r2.dev/site-config.json?t=' + Date.now();
+    var CONFIG_URL = 'https://carlo-portfolio-api.johncarloebora.workers.dev/api/config';
     fetch(CONFIG_URL, { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (cfg) {
         SITE_CFG = cfg;
         /* Apply config after DOM is ready */
