@@ -181,8 +181,16 @@ router.post('/api/auth/forgot-password', async (request, env) => {
   const { email } = await request.json();
   if (!email) return error(400, 'Email required');
 
-  const user = await env.DB.prepare('SELECT * FROM users WHERE email = ?').bind(email).first();
-  // Always return success to prevent email enumeration
+  // Only the registered admin email is accepted — silently ignore anything else
+  // This prevents email enumeration and brute-force token generation
+  const ADMIN_EMAIL = env.ADMIN_EMAIL || 'johncarloebora@outlook.com';
+  const normalized = (email || '').trim().toLowerCase();
+  if (normalized !== ADMIN_EMAIL.toLowerCase()) {
+    // Return identical response so attackers can't tell if email was valid
+    return json({ success: true, message: 'If that email exists, a reset link has been sent.' });
+  }
+
+  const user = await env.DB.prepare('SELECT * FROM users WHERE email = ?').bind(normalized).first();
   if (!user) return json({ success: true, message: 'If that email exists, a reset link has been sent.' });
 
   // Generate token
