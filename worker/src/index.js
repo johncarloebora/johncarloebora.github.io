@@ -621,7 +621,10 @@ router.post('/api/publish', authMiddleware, async (request, env) => {
 
     // Write to R2
     await env.MEDIA.put('site-config.json', JSON.stringify(siteConfig, null, 2), {
-      httpMetadata: { contentType: 'application/json' },
+      httpMetadata: {
+        contentType: 'application/json',
+        cacheControl: 'no-cache, no-store, must-revalidate',
+      },
     });
 
     return json({ success: true, publishedAt: siteConfig.publishedAt });
