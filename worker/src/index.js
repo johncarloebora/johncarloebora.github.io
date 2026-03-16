@@ -414,7 +414,7 @@ router.get('/api/media', authMiddleware, async (request, env) => {
   const r2Base = env.R2_PUBLIC_URL;
   const enriched = results.map(r => ({
     ...r,
-    url: `${r2Base}/${r.folder}/${r.filename}`,
+    url: `${r2Base}/${r.folder}/${encodeURIComponent(r.filename)}`,
   }));
   return json(enriched);
 });
@@ -466,7 +466,7 @@ router.post('/api/media/upload', authMiddleware, async (request, env) => {
   const media = await env.DB.prepare('SELECT * FROM media WHERE folder = ? AND filename = ?').bind(folder, filename).first();
   return json({
     ...media,
-    url: `${env.R2_PUBLIC_URL}/${r2Key}`,
+    url: `${env.R2_PUBLIC_URL}/${folder}/${encodeURIComponent(filename)}`,
   }, { status: 201 });
 });
 
@@ -505,7 +505,7 @@ router.get('/api/gallery/:folder', async (request, env) => {
   const files = results.map(r => ({
     name: r.filename,
     alt: r.alt_text || r.filename.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' '),
-    url: `${r2Base}/${folder}/${r.filename}`,
+    url: `${r2Base}/${folder}/${encodeURIComponent(r.filename)}`,
     type: r.mime_type,
   }));
 
@@ -590,7 +590,7 @@ router.post('/api/publish', authMiddleware, async (request, env) => {
       ...p,
       tags: safeParseJson(p.tags, []),
       skills: safeParseJson(p.skills, []),
-      thumbnail_url: p.thumbnail_path ? `${r2Base}/${p.thumbnail_path}` : null,
+      thumbnail_url: p.thumbnail_path ? `${r2Base}/${p.thumbnail_path.split('/').map(encodeURIComponent).join('/')}` : null,
     }));
 
     // Build media index
@@ -600,7 +600,7 @@ router.post('/api/publish', authMiddleware, async (request, env) => {
       mediaByFolder[m.folder].push({
         filename: m.filename,
         alt: m.alt_text || m.filename.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' '),
-        url: `${r2Base}/${m.folder}/${m.filename}`,
+        url: `${r2Base}/${m.folder}/${encodeURIComponent(m.filename)}`,
         type: m.mime_type,
       });
     }
