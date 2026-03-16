@@ -110,10 +110,10 @@ body {
     transition: background var(--trans), color var(--trans);
 }
 
-/* margin-left transition deferred until after first paint to prevent layout shift on reload */
+/* padding-left transition deferred until after first paint to prevent layout shift on reload */
 body.body-ready {
     transition: background var(--trans), color var(--trans),
-                margin-left 0.5s cubic-bezier(0.4,0,0.2,1);
+                padding-left 0.5s cubic-bezier(0.4,0,0.2,1);
 }
 
 body.modal-open    { overflow: hidden; }
@@ -2186,13 +2186,14 @@ footer {
         padding-left: calc(0.75rem - 3px);
     }
 
-    /* Body offset for side nav */
+    /* Body offset for side nav — use padding not margin so vw calculations stay correct */
     body {
-        margin-left: var(--side-nav-w);
+        margin-left: 0;
+        padding-left: var(--side-nav-w);
     }
 
     body.side-expanded {
-        margin-left: 200px;
+        padding-left: 200px;
     }
 
     /* Overlay when expanded */
@@ -2255,6 +2256,16 @@ footer {
 
     /* Skills in mobile */
     .skill-card-grid { grid-template-columns: 1fr; }
+
+    /* Force single-column on narrow screens — minmax(300+px) overflows on real devices */
+    .card-grid { grid-template-columns: 1fr; }
+    .project-grid { grid-template-columns: 1fr; }
+
+    /* reCAPTCHA — scale down to fit narrow containers */
+    .g-recaptcha {
+        transform: scale(0.88);
+        transform-origin: left top;
+    }
 }
 
 /* Flexible spacing — shrink nav gaps on short viewports */

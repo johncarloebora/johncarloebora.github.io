@@ -563,7 +563,7 @@ function showToast(msg, type = 'success') {
 
 /* ── E. NAVIGATION ────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', () => {
-    /* Defer margin-left transition until after first paint to prevent
+    /* Defer padding-left transition until after first paint to prevent
        layout shift when browser restores scroll position on reload */
     requestAnimationFrame(() => {
         requestAnimationFrame(() => {
@@ -643,7 +643,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (window.innerWidth > 768) {
             closeNav();
             collapseSideNav();
-            document.body.style.marginLeft = '';
+            document.body.style.paddingLeft = '';
         }
 
         /* Fire morph animation on breakpoint crossing */
