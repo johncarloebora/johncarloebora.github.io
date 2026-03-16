@@ -1216,12 +1216,13 @@ document.addEventListener('DOMContentLoaded', () => {
         openPreview(currentIndex + dir);
     }
 
-    /* ── Gallery auto-scan ───────────────────────────────────
-       Strategy (tried in order):
-       1. GitHub Contents API  — works on GitHub Pages (no manifest needed)
-       2. manifest.json fetch  — works on local Live Server
-       3. file:// toast        — informs user to use a server
+    /* ── Gallery scan ────────────────────────────────────────
+       Always fetches real filenames from /api/gallery/:folder
+       which reads directly from D1 (populated on every upload).
+       URLs are already encoded by the Worker.
     ─────────────────────────────────────────────────────── */
+    var WORKER_API = 'https://carlo-portfolio-api.johncarloebora.workers.dev';
+
     const IMAGE_EXTS = new Set([
         'jpg','jpeg','png','webp','avif','gif','bmp','svg','tiff','tif','heic','heif'
     ]);
@@ -1231,67 +1232,22 @@ document.addEventListener('DOMContentLoaded', () => {
         return filename.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
     }
 
-    /* Build GitHub Contents API URL from the current page location */
-    function getGithubApiUrl(folder) {
-        const host = location.hostname;
-        const ghMatch = host.match(/^([^.]+)\.github\.io$/);
-        if (!ghMatch) return null;
-        const owner = ghMatch[1];
-        /* Path segments that are real sub-directories (not index.html / empty) */
-        const pathParts = location.pathname.replace(/^\//, '').split('/')
-            .filter(p => p && p !== 'index.html');
-        /* Root deployment: username.github.io  → repo = owner.github.io
-           Sub-path deployment: username.github.io/repo → repo = pathParts[0] */
-        const repo = pathParts.length > 0 ? pathParts[0] : `${owner}.github.io`;
-        return `https://api.github.com/repos/${owner}/${repo}/contents/${folder}`;
-    }
-
-    async function scanFolderGithubApi(folder, allowedExts) {
-        const apiUrl = getGithubApiUrl(folder);
-        if (!apiUrl) return null;
-        const res = await fetch(apiUrl, { headers: { Accept: 'application/vnd.github.v3+json' } });
-        if (!res.ok) return null;
-        const items = await res.json();
-        return items
-            .filter(f => f.type === 'file' && allowedExts.has(f.name.split('.').pop().toLowerCase()))
-            .map(f => ({ src: `${folder}/${f.name}`, alt: fileToAlt(f.name) }));
-    }
-
-    async function scanFolderManifest(folder, allowedExts) {
-        const res = await fetch(`${folder}/manifest.json`);
-        if (!res.ok) return null;
-        const list = await res.json();
-        return list
-            .filter(e => allowedExts.has(e.file.split('.').pop().toLowerCase()))
-            .map(e => ({ src: `${folder}/${e.file}`, alt: e.alt || fileToAlt(e.file) }));
-    }
-
     async function scanFolder(folder, allowedExts) {
-        if (location.protocol === 'file:') return null;
-        /* Try GitHub API first, fall back to manifest */
         try {
-            const via = await scanFolderGithubApi(folder, allowedExts);
-            if (via) return via;
-        } catch { /* not on GitHub Pages */ }
-        try {
-            const via = await scanFolderManifest(folder, allowedExts);
-            if (via) return via;
-        } catch { /* manifest missing */ }
-        return null;
-    }
-
-    /* Try to get gallery images from site-config.json media data first */
-    function getMediaFromConfig(folder, allowedExts) {
-        if (!SITE_CFG || !SITE_CFG.media || !SITE_CFG.media[folder]) return null;
-        var items = SITE_CFG.media[folder]
-            .filter(function (m) {
-                var ext = m.filename.split('.').pop().toLowerCase();
-                return allowedExts.has(ext);
-            })
-            .map(function (m) {
-                return { src: m.url, alt: m.alt || fileToAlt(m.filename) };
-            });
-        return items.length ? items : null;
+            var res = await fetch(WORKER_API + '/api/gallery/' + encodeURIComponent(folder), { cache: 'no-store' });
+            if (!res.ok) return null;
+            var items = await res.json();
+            return items
+                .filter(function (m) {
+                    var ext = (m.name || '').split('.').pop().toLowerCase();
+                    return allowedExts.has(ext);
+                })
+                .map(function (m) {
+                    return { src: m.url, alt: m.alt || fileToAlt(m.name) };
+                });
+        } catch (e) {
+            return null;
+        }
     }
 
     /* Image gallery thumbnails */
@@ -1302,19 +1258,11 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.project-thumbnail[data-gallery-folder]').forEach(thumb => {
             thumb.addEventListener('click', async () => {
                 const folder = thumb.dataset.galleryFolder;
-                /* Try config media first, then GitHub API, then manifest */
-                var imgs = getMediaFromConfig(folder, IMAGE_EXTS);
-                if (!imgs) {
-                    if (location.protocol === 'file:') {
-                        showToast('Open via Live Server or GitHub Pages to view the gallery.', 'error');
-                        return;
-                    }
-                    imgs = await scanFolder(folder, IMAGE_EXTS);
-                }
+                var imgs = await scanFolder(folder, IMAGE_EXTS);
                 if (imgs && imgs.length) {
                     openGallery(imgs);
                 } else {
-                    showToast('No images found in gallery folder.', 'error');
+                    showToast('No images found in this gallery.', 'error');
                 }
             });
         });
@@ -1377,11 +1325,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.project-thumbnail[data-video-folder]').forEach(thumb => {
             thumb.addEventListener('click', async () => {
                 const folder = thumb.dataset.videoFolder;
-                var files = getMediaFromConfig(folder, VIDEO_EXTS);
-                if (!files) {
-                    if (location.protocol === 'file:') { showVideoEmpty(); return; }
-                    files = await scanFolder(folder, VIDEO_EXTS);
-                }
+                var files = await scanFolder(folder, VIDEO_EXTS);
                 if (files && files.length) {
                     openGallery(files);
                 } else {
