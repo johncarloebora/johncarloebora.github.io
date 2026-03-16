@@ -211,18 +211,17 @@ router.post('/api/auth/forgot-password', async (request, env) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         service_id: env.EMAILJS_SERVICE_ID,
-        template_id: env.EMAILJS_TEMPLATE_ID,
+        template_id: env.EMAILJS_RESET_TEMPLATE_ID,
         user_id: env.EMAILJS_PUBLIC_KEY,
+        accessToken: env.EMAILJS_PRIVATE_KEY,
         template_params: {
           to_email: user.email,
-          from_name: 'Carlo Portfolio Admin',
-          subject: 'Password Reset Request',
-          message: `Click this link to reset your password:\n\n${resetUrl}\n\nThis link expires in 1 hour.`,
+          from_name: 'Carlo Portfolio',
+          link: resetUrl,
         },
       }),
     });
   } catch (e) {
-    // Log but don't expose email sending errors
     console.error('Failed to send reset email:', e);
   }
 
