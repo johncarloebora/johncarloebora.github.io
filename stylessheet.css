@@ -720,6 +720,18 @@ header#home {
     flex-shrink: 0;
 }
 
+/* Profile shape variants */
+.avatar-frame.shape-circle {
+    clip-path: circle(50%);
+}
+.avatar-frame.shape-square {
+    clip-path: none;
+}
+.avatar-frame.shape-rounded {
+    clip-path: none;
+    border-radius: 20px;
+}
+
 .hero-photo {
     width: 100%;
     height: 100%;

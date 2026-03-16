@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin — Carlo Portfolio</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/admin.css">
+    <script>(function(){var t=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',t);})()</script>
+</head>
+<body>
+    <div id="toast" class="toast"></div>
+
+    <div class="login-wrapper" id="loginView">
+        <div class="login-card">
+            <div class="login-logo">
+                <h1>CE<span style="font-weight:400">.</span> Admin</h1>
+                <p>Sign in to manage your portfolio</p>
+            </div>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" class="form-input" placeholder="Enter username" autocomplete="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" class="form-input" placeholder="Enter password" autocomplete="current-password" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-full" id="loginBtn">
+                    <span>Sign In</span>
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+            </form>
+            <div class="forgot-link" id="forgotBtn">Forgot password?</div>
+        </div>
+    </div>
+
+    <!-- Forgot Password View -->
+    <div class="login-wrapper" id="forgotView" style="display:none">
+        <div class="login-card">
+            <div class="login-logo">
+                <h1>Reset Password</h1>
+                <p>Enter your email to receive a reset link</p>
+            </div>
+            <form id="forgotForm">
+                <div class="form-group">
+                    <label for="resetEmail">Email Address</label>
+                    <input type="email" id="resetEmail" class="form-input" placeholder="your@email.com" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-full">
+                    <span>Send Reset Link</span>
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </form>
+            <div class="forgot-link" id="backToLogin">Back to login</div>
+        </div>
+    </div>
+
+    <!-- Reset Password View (accessed via #reset?token=xxx) -->
+    <div class="login-wrapper" id="resetView" style="display:none">
+        <div class="login-card">
+            <div class="login-logo">
+                <h1>New Password</h1>
+                <p>Enter your new password</p>
+            </div>
+            <form id="resetForm">
+                <div class="form-group">
+                    <label for="newPassword">New Password</label>
+                    <input type="password" id="newPassword" class="form-input" placeholder="Minimum 8 characters" minlength="8" required>
+                </div>
+                <div class="form-group">
+                    <label for="confirmPassword">Confirm Password</label>
+                    <input type="password" id="confirmPassword" class="form-input" placeholder="Confirm password" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-full">
+                    <span>Reset Password</span>
+                    <i class="fas fa-check"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+</body>
+</html>

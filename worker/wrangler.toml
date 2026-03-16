@@ -1,0 +1,28 @@
+name = "carlo-portfolio-api"
+main = "src/index.js"
+compatibility_date = "2024-12-01"
+
+[vars]
+# Replace with your actual R2 public URL after enabling public access
+R2_PUBLIC_URL = "https://your-r2-public-url.r2.dev"
+# Replace with your GitHub Pages URL
+ALLOWED_ORIGIN = "https://johncarloebora.github.io"
+# Replace with your admin page URL (same origin if in same repo)
+ADMIN_ORIGIN = "https://johncarloebora.github.io"
+# EmailJS config for password reset emails
+EMAILJS_SERVICE_ID = "service_ansc2g4"
+EMAILJS_TEMPLATE_ID = "template_g5u73sh"
+EMAILJS_PUBLIC_KEY = "l9FengsYbeILidGxh"
+
+# D1 Database binding
+[[d1_databases]]
+binding = "DB"
+database_name = "carlo-portfolio-db"
+database_id = "3fc49db4-9c8c-4716-b282-4390f23f82b2"
+
+# R2 Bucket binding
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "carlo-portfolio-media"
+
+# Secret: JWT_SECRET - set via `wrangler secret put JWT_SECRET`
