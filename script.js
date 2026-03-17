@@ -77,9 +77,20 @@ function applySiteConfig(cfg) {
     }
 
     /* ── Profile shape ── */
-    if (s.profileShape && s.profileShape !== 'hexagon') {
-        var frame = document.getElementById('avatarFrame');
-        if (frame) frame.classList.add('shape-' + s.profileShape);
+    if (s.profileShape) {
+        var frame  = document.getElementById('avatarFrame');
+        var avatar = frame && frame.closest('.hero-avatar');
+        // Remove any existing shape classes first
+        if (frame) {
+            ['hexagon','circle','square','rounded','diamond','shield'].forEach(function(sh) {
+                frame.classList.remove('shape-' + sh);
+            });
+            if (s.profileShape !== 'hexagon') {
+                frame.classList.add('shape-' + s.profileShape);
+            }
+        }
+        // Set data attribute on wrapper for CSS :has() ring matching
+        if (avatar) avatar.setAttribute('data-shape', s.profileShape);
     }
 
     /* ── Nav links ── */

@@ -103,12 +103,28 @@ html { scroll-behavior: smooth; }
 body {
     background: var(--bg);
     color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    line-height: 1.6;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 16px;
+    line-height: 1.65;
     overflow-x: hidden;
     position: relative;
     transition: background var(--trans), color var(--trans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
 }
+
+/* ── Typography Scale ── */
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: -0.02em;
+}
+
+p { line-height: 1.75; }
+
+strong { font-weight: 600; }
 
 /* padding-left transition deferred until after first paint to prevent layout shift on reload */
 body.body-ready {
@@ -688,17 +704,7 @@ header#home {
     border-radius: 2px;
 }
 
-/* Outer glow ring that pulses outside the hex */
-.hero-avatar::after {
-    content: '';
-    position: absolute;
-    inset: -6px;
-    clip-path: polygon(50% 0%, 95% 25%, 95% 75%, 50% 100%, 5% 75%, 5% 25%);
-    border: 2px solid rgba(78,205,196,0.5);
-    animation: hudGlowPulse 2.5s ease-in-out infinite;
-    pointer-events: none;
-    z-index: 4;
-}
+/* Outer glow ring — default hex shape; overrides per variant below */
 
 @keyframes hudScan {
     0%   { top: 0%;   opacity: 0; }
@@ -727,13 +733,63 @@ header#home {
 /* Profile shape variants */
 .avatar-frame.shape-circle {
     clip-path: circle(50%);
+    border-radius: 0;
 }
 .avatar-frame.shape-square {
     clip-path: none;
+    border-radius: 0;
+    overflow: hidden;
 }
 .avatar-frame.shape-rounded {
     clip-path: none;
-    border-radius: 20px;
+    border-radius: 24px;
+    overflow: hidden;
+}
+.avatar-frame.shape-diamond {
+    clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+    border-radius: 0;
+}
+.avatar-frame.shape-shield {
+    clip-path: polygon(50% 0%, 100% 20%, 100% 80%, 50% 100%, 0% 80%, 0% 20%);
+    border-radius: 0;
+}
+
+/* Glow ring adapts to active shape */
+.hero-avatar::after {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    clip-path: polygon(50% 0%, 95% 25%, 95% 75%, 50% 100%, 5% 75%, 5% 25%);
+    border: 2px solid rgba(78,205,196,0.5);
+    animation: hudGlowPulse 2.5s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 4;
+    border-radius: 0;
+    transition: clip-path 0.4s ease, border-radius 0.4s ease;
+}
+/* Shape-circle ring */
+.avatar-frame.shape-circle ~ .hero-avatar::after,
+.hero-avatar:has(.avatar-frame.shape-circle)::after {
+    clip-path: circle(calc(50% + 6px));
+    border-radius: 50%;
+}
+/* Shape-square ring */
+.hero-avatar:has(.avatar-frame.shape-square)::after {
+    clip-path: none;
+    border-radius: 4px;
+}
+/* Shape-rounded ring */
+.hero-avatar:has(.avatar-frame.shape-rounded)::after {
+    clip-path: none;
+    border-radius: 30px;
+}
+/* Shape-diamond ring */
+.hero-avatar:has(.avatar-frame.shape-diamond)::after {
+    clip-path: polygon(50% -5%, 105% 50%, 50% 105%, -5% 50%);
+}
+/* Shape-shield ring */
+.hero-avatar:has(.avatar-frame.shape-shield)::after {
+    clip-path: polygon(50% -3%, 103% 20%, 103% 80%, 50% 103%, -3% 80%, -3% 20%);
 }
 
 .hero-photo {
@@ -814,15 +870,34 @@ header#home {
 
 /* ── 8. SECTIONS ──────────────────────────────────────────── */
 section {
-    padding: 6rem 0;
+    padding: 7rem 0;
     position: relative;
     z-index: 3;
 }
 
-.section-title {
-    font-size: clamp(1.8rem, 4vw, 3rem);
-    font-weight: 800;
+.section-header {
     text-align: center;
+    margin-bottom: 4rem;
+}
+
+.section-eyebrow {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent2);
+    margin-bottom: 0.75rem;
+    padding: 0.3rem 0.9rem;
+    border: 1px solid rgba(78,205,196,0.3);
+    border-radius: 20px;
+    background: rgba(78,205,196,0.06);
+}
+
+.section-title {
+    font-size: clamp(1.9rem, 4vw, 3rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
     margin-bottom: 3.5rem;
     background: var(--grad);
     -webkit-background-clip: text;
@@ -831,13 +906,30 @@ section {
     position: relative;
 }
 
+/* When section-title is inside .section-header, remove bottom margin (header handles it) */
+.section-header .section-title {
+    margin-bottom: 0;
+}
+
 .section-title::after {
     content: '';
     display: block;
-    width: 60px; height: 3px;
+    width: 48px; height: 3px;
     background: var(--grad);
     border-radius: 3px;
+    margin: 0.9rem auto 0;
+}
+
+.section-header .section-title::after {
+    display: none;
+}
+
+.section-subtitle {
+    color: var(--muted);
+    font-size: 1rem;
+    max-width: 540px;
     margin: 0.75rem auto 0;
+    line-height: 1.7;
 }
 
 /* ── 9. ABOUT ─────────────────────────────────────────────── */
@@ -853,10 +945,10 @@ section {
     border-radius: var(--radius);
     padding: 2rem;
     border: 1px solid var(--border);
-    box-shadow: 0 4px 16px rgba(0,0,0,0.25);
-    transition: transform 0.3s, box-shadow 0.3s, border-color 0.3s;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
     opacity: 0;
-    transform: translateY(30px);
+    transform: translateY(24px);
     position: relative;
     overflow: hidden;
 }
@@ -877,23 +969,32 @@ section {
 .card.visible {
     opacity: 1;
     transform: translateY(0);
-    transition: opacity 0.6s, transform 0.6s;
+    transition: opacity 0.55s ease, transform 0.55s ease;
 }
 
 .card:hover {
-    box-shadow: var(--glow2), 0 12px 40px rgba(0,0,0,0.35);
-    border-color: rgba(78,205,196,0.35);
+    box-shadow: var(--glow2), 0 16px 40px rgba(0,0,0,0.3);
+    border-color: rgba(78,205,196,0.3);
+    transform: translateY(-3px);
 }
+
+.card.visible:hover { transform: translateY(-3px); }
 
 .card h3 {
     color: var(--accent2);
-    font-size: 1.3rem;
-    margin-bottom: 1rem;
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin-bottom: 0.85rem;
     padding-bottom: 0.5rem;
     border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
-.card p { color: var(--muted); line-height: 1.8; }
+.card h3 i { opacity: 0.85; font-size: 1rem; }
+
+.card p { color: var(--muted); line-height: 1.8; font-size: 0.95rem; }
 
 /* ── 9b. ABOUT CARD EXPAND ────────────────────────────────── */
 
@@ -973,35 +1074,52 @@ section {
 
 .stats-row {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1.5rem;
-    margin-top: 1.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1.25rem;
+    margin-top: 2rem;
 }
 
 .stat-card {
     background: var(--surface2);
     border-radius: var(--radius);
-    padding: 2rem 1rem;
+    padding: 1.75rem 1.25rem;
     text-align: center;
     border: 1px solid var(--border);
-    transition: transform 0.3s, box-shadow 0.3s;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
     opacity: 0;
-    transform: translateY(30px);
+    transform: translateY(24px);
+    position: relative;
+    overflow: hidden;
 }
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--grad);
+    transform: scaleX(0);
+    transition: transform 0.4s ease;
+}
+
+.stat-card:hover::before { transform: scaleX(1); }
 
 .stat-card.visible {
     opacity: 1;
     transform: translateY(0);
-    transition: opacity 0.6s, transform 0.6s;
+    transition: opacity 0.55s ease, transform 0.55s ease;
 }
 
 .stat-card:hover {
-    box-shadow: var(--glow1), 0 12px 40px rgba(0,0,0,0.35);
-    border-color: rgba(255,107,107,0.35);
+    box-shadow: var(--glow1), 0 12px 32px rgba(0,0,0,0.28);
+    border-color: rgba(255,107,107,0.3);
+    transform: translateY(-3px);
 }
 
+.stat-card.visible:hover { transform: translateY(-3px); }
+
 .stat-number {
-    font-size: clamp(2rem, 5vw, 3rem);
+    font-size: clamp(2rem, 5vw, 2.8rem);
     font-weight: 900;
     background: var(--grad);
     -webkit-background-clip: text;
@@ -1009,9 +1127,16 @@ section {
     -webkit-text-fill-color: transparent;
     line-height: 1;
     margin-bottom: 0.5rem;
+    letter-spacing: -0.03em;
 }
 
-.stat-label { color: var(--muted); font-size: 0.85rem; }
+.stat-label {
+    color: var(--muted);
+    font-size: 0.8rem;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
 
 /* ── 10. SKILLS ───────────────────────────────────────────── */
 .skill-card-grid {
@@ -1814,11 +1939,44 @@ section {
 
 /* ── 17. FOOTER ───────────────────────────────────────────── */
 footer {
-    padding: 2rem 0;
+    padding: 3rem 0 2.5rem;
     text-align: center;
     color: var(--muted);
     font-size: 0.85rem;
     border-top: 1px solid var(--border);
+    position: relative;
+    z-index: 3;
+}
+
+footer .footer-logo {
+    font-size: 1.5rem;
+    font-weight: 800;
+    background: var(--grad);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -0.04em;
+    margin-bottom: 0.5rem;
+}
+
+footer .footer-tagline {
+    font-size: 0.82rem;
+    color: var(--muted);
+    margin-bottom: 1.5rem;
+}
+
+footer .footer-divider {
+    width: 48px;
+    height: 2px;
+    background: var(--grad);
+    border-radius: 2px;
+    margin: 0 auto 1.25rem;
+}
+
+footer .footer-copy {
+    font-size: 0.8rem;
+    color: var(--muted);
+    opacity: 0.7;
 }
 
 /* ── BACK TO TOP ──────────────────────────────────────────── */
