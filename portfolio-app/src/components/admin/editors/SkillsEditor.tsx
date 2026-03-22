@@ -26,7 +26,7 @@ function CategoryBlock({ cat }: { cat: SkillCategory }) {
   return (
     <div style={{ marginBottom: '0.5rem', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)' }}>
       <div onClick={() => setOpen(!open)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 0.75rem', cursor: 'pointer', background: 'var(--surface2)' }}>
-        <span style={{ flex: 1, fontSize: '0.825rem', fontWeight: 600 }}>{cat.name}</span>
+        <span style={{ flex: 1, fontSize: '0.825rem', fontWeight: 600 }}>{cat.title}</span>
         <span style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>{cat.skills.length} skills</span>
         <i className={`fa-solid fa-chevron-${open ? 'up' : 'down'}`} style={{ color: 'var(--muted)', fontSize: '0.65rem' }} />
       </div>
@@ -59,14 +59,14 @@ function SkillCardBlock({ card }: { card: SkillCard }) {
       <div onClick={() => setOpen(!open)} style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', padding: '0.75rem 0.875rem', cursor: 'pointer', background: 'var(--surface2)' }}>
         <i className={`fa-solid fa-${card.icon}`} style={{ color: card.color || 'var(--accent2)', fontSize: '0.9rem', width: '16px' }} />
         <span style={{ flex: 1, fontSize: '0.9rem', fontWeight: 600 }}>{card.title}</span>
-        <Toggle checked={card.visible} onChange={(v) => updateSkillCard(card.id, { visible: v })} label="" />
+        <Toggle checked={card.visible ?? true} onChange={(v) => updateSkillCard(card.id, { visible: v })} label="" />
         <i className={`fa-solid fa-chevron-${open ? 'up' : 'down'}`} style={{ color: 'var(--muted)', fontSize: '0.7rem' }} />
       </div>
       {open && (
         <div style={{ padding: '0.875rem' }}>
           <FieldGroup label="Title"><TextInput value={card.title} onChange={(v) => updateSkillCard(card.id, { title: v })} /></FieldGroup>
           <FieldGroup label="Icon"><TextInput value={card.icon} onChange={(v) => updateSkillCard(card.id, { icon: v })} placeholder="code, server, etc." /></FieldGroup>
-          <FieldGroup label="Color (hex)"><TextInput value={card.color} onChange={(v) => updateSkillCard(card.id, { color: v })} placeholder="#ff6b6b" /></FieldGroup>
+          <FieldGroup label="Color (hex)"><TextInput value={card.color ?? ""} onChange={(v) => updateSkillCard(card.id, { color: v })} placeholder="#ff6b6b" /></FieldGroup>
           <Divider label="Categories" />
           {card.categories.sort((a, b) => a.sort_order - b.sort_order).map((cat) => (
             <CategoryBlock key={cat.id} cat={cat} />

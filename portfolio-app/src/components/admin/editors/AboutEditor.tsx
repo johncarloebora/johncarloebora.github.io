@@ -25,8 +25,8 @@ function CardEditor({ card, onUpdate, onDelete }: { card: AboutCard; onUpdate: (
         <div style={{ padding: '0.875rem' }}>
           <FieldGroup label="Title"><TextInput value={card.title} onChange={(v) => onUpdate({ title: v })} /></FieldGroup>
           <FieldGroup label="Icon (FA name)"><TextInput value={card.icon} onChange={(v) => onUpdate({ icon: v })} placeholder="user, briefcase, etc." /></FieldGroup>
-          <FieldGroup label="Content"><TextArea value={card.content} onChange={(v) => onUpdate({ content: v })} rows={4} /></FieldGroup>
-          <Toggle checked={card.visible} onChange={(v) => onUpdate({ visible: v })} label="Visible" />
+          <FieldGroup label="Content"><TextArea value={typeof card.content === 'string' ? card.content : JSON.stringify(card.content)} onChange={(v) => onUpdate({ content: v })} rows={4} /></FieldGroup>
+          <Toggle checked={card.visible ?? true} onChange={(v) => onUpdate({ visible: v })} label="Visible" />
         </div>
       )}
     </div>
@@ -49,7 +49,7 @@ export default function AboutEditor() {
     const res = await api.post('/about-cards', { title: 'New Card', content: '', icon: 'star', card_type: 'text', sort_order: cards.length });
     if (res.ok) {
       const data = await res.json();
-      addAboutCard({ id: data.id, title: 'New Card', content: '', icon: 'star', card_type: 'text', sort_order: cards.length, visible: true });
+      addAboutCard({ id: data.id, title: 'New Card', content: '', icon: 'star', type: 'text', card_type: 'text', sort_order: cards.length, visible: true, expanded: 1 });
     }
   };
 

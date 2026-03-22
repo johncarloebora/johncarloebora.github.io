@@ -72,20 +72,11 @@ function ProjectCard({ project }: { project: Project }) {
           </div>
         )}
 
-        {project.link_url && (
-          <a
-            href={project.link_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: '0.375rem',
-              color: 'var(--accent1)', fontSize: '0.85rem', fontWeight: 600,
-              textDecoration: 'none',
-            }}
-          >
-            {project.link_label || 'View Project'}
-            <i className="fa-solid fa-arrow-right" style={{ fontSize: '0.7rem' }} />
-          </a>
+        {project.gallery_folder && (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', color: 'var(--accent2)', fontSize: '0.85rem', fontWeight: 600 }}>
+            <i className="fa-solid fa-images" style={{ fontSize: '0.7rem' }} />
+            {project.gallery_folder}
+          </span>
         )}
       </div>
     </div>
@@ -93,7 +84,7 @@ function ProjectCard({ project }: { project: Project }) {
 }
 
 export default function ProjectsSection({ projects, preview = false }: Props) {
-  const visible = projects.filter((p) => p.visible).sort((a, b) => a.sort_order - b.sort_order);
+  const visible = [...projects].sort((a, b) => a.sort_order - b.sort_order);
 
   return (
     <section id="projects" className="section">

@@ -20,23 +20,23 @@ interface Props {
 
 function renderSection(section: Section, config: SiteConfig, preview: boolean) {
   if (!section.visible) return null;
-  const key = `${section.type}-${section.id}`;
+  const key = section.id;
 
-  switch (section.type) {
-    case 'hero':
-      return <HeroSection key={key} config={config.hero} settings={config.settings} preview={preview} />;
+  switch (section.id) {
+    case 'home':
+      return <HeroSection key={key} settings={config.settings} preview={preview} />;
     case 'about':
-      return <AboutSection key={key} cards={config.about.cards} stats={config.about.stats} preview={preview} />;
+      return <AboutSection key={key} cards={config.about?.cards ?? []} stats={config.about?.stats ?? []} preview={preview} />;
     case 'skills':
-      return <SkillsSection key={key} skills={config.skills} preview={preview} />;
+      return <SkillsSection key={key} skills={config.skills ?? []} preview={preview} />;
     case 'experience':
-      return <ExperienceSection key={key} experiences={config.experiences} preview={preview} />;
+      return <ExperienceSection key={key} experiences={config.experiences ?? []} preview={preview} />;
     case 'education':
-      return <EducationSection key={key} education={config.education} preview={preview} />;
+      return <EducationSection key={key} education={config.education ?? []} preview={preview} />;
     case 'projects':
-      return <ProjectsSection key={key} projects={config.projects} preview={preview} />;
+      return <ProjectsSection key={key} projects={config.projects ?? []} preview={preview} />;
     case 'socials':
-      return <SocialsSection key={key} socials={config.socials} preview={preview} />;
+      return <SocialsSection key={key} socials={config.socials ?? []} preview={preview} />;
     case 'contact':
       return <ContactSection key={key} settings={config.settings} preview={preview} />;
     default:
@@ -46,7 +46,7 @@ function renderSection(section: Section, config: SiteConfig, preview: boolean) {
 
 export default function PortfolioPage({ config, preview = false }: Props) {
   const visibleSections = config.sections
-    .filter((s) => s.visible)
+    .filter((s) => s.visible === 1 || s.visible === true)
     .sort((a, b) => a.sort_order - b.sort_order);
 
   return (

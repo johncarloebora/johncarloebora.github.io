@@ -16,78 +16,80 @@ const SHAPE_OPTIONS = [
 
 export default function HeroEditor() {
   const config = useConfigStore((s) => s.config);
-  const updateHero = useConfigStore((s) => s.updateHero);
   const updateSettings = useConfigStore((s) => s.updateSettings);
   const [saving, setSaving] = useState(false);
-  const [subtitleInput, setSubtitleInput] = useState('');
+  const [phraseInput, setPhraseInput] = useState('');
 
   if (!config) return null;
 
-  const hero = config.hero;
   const settings = config.settings;
 
   const save = async () => {
     setSaving(true);
     try {
-      await Promise.all([
-        api.put('/settings', {
-          hero_eyebrow: settings.hero_eyebrow,
-          profile_shape: settings.profile_shape,
-        }),
-        ...Object.entries(hero).map(([k, v]) =>
-          api.put('/settings', { [k]: typeof v === 'object' ? JSON.stringify(v) : String(v) })
-        ),
-      ]);
+      await api.put('/settings', {
+        heroEyebrow: settings.heroEyebrow,
+        heroName: settings.heroName,
+        heroSubtitle: settings.heroSubtitle,
+        heroDesc: settings.heroDesc,
+        profileShape: settings.profileShape,
+        profileImageUrl: settings.profileImageUrl,
+        ctaPrimaryText: settings.ctaPrimaryText,
+        ctaPrimaryLink: settings.ctaPrimaryLink,
+        ctaSecondaryText: settings.ctaSecondaryText,
+        ctaSecondaryLink: settings.ctaSecondaryLink,
+        typewriterPhrases: settings.typewriterPhrases,
+      });
     } catch { /* handled in store */ }
     setSaving(false);
   };
 
-  const addSubtitle = () => {
-    const trimmed = subtitleInput.trim();
+  const addPhrase = () => {
+    const trimmed = phraseInput.trim();
     if (!trimmed) return;
-    updateHero({ subtitle: [...(hero.subtitle || []), trimmed] });
-    setSubtitleInput('');
+    updateSettings({ typewriterPhrases: [...(settings.typewriterPhrases || []), trimmed] });
+    setPhraseInput('');
   };
 
-  const removeSubtitle = (i: number) => {
-    updateHero({ subtitle: hero.subtitle.filter((_, idx) => idx !== i) });
+  const removePhrase = (i: number) => {
+    updateSettings({ typewriterPhrases: settings.typewriterPhrases.filter((_, idx) => idx !== i) });
   };
 
   return (
     <div>
       <FieldGroup label="Eyebrow text" hint="Small label above the name">
-        <TextInput value={settings.hero_eyebrow || ''} onChange={(v) => updateSettings({ hero_eyebrow: v })} placeholder="e.g. Welcome to my portfolio" />
+        <TextInput value={settings.heroEyebrow || ''} onChange={(v) => updateSettings({ heroEyebrow: v })} placeholder="Hello, I'm" />
       </FieldGroup>
 
       <FieldGroup label="Name">
-        <TextInput value={hero.name || ''} onChange={(v) => updateHero({ name: v })} placeholder="Carlo" />
+        <TextInput value={settings.heroName || ''} onChange={(v) => updateSettings({ heroName: v })} placeholder="Carlo" />
       </FieldGroup>
 
-      <FieldGroup label="Role / Glitch text">
-        <TextInput value={hero.glitch_text || ''} onChange={(v) => updateHero({ glitch_text: v })} placeholder="Computer Engineer" />
+      <FieldGroup label="Subtitle / Role">
+        <TextInput value={settings.heroSubtitle || ''} onChange={(v) => updateSettings({ heroSubtitle: v })} placeholder="Computer Engineer" />
       </FieldGroup>
 
       <FieldGroup label="Description">
-        <TextArea value={hero.description || ''} onChange={(v) => updateHero({ description: v })} rows={3} placeholder="Multidisciplinary Creative…" />
+        <TextArea value={settings.heroDesc || ''} onChange={(v) => updateSettings({ heroDesc: v })} rows={3} placeholder="Multidisciplinary Creative…" />
       </FieldGroup>
 
       <Divider label="Typewriter phrases" />
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.625rem' }}>
         <input
           type="text"
-          value={subtitleInput}
-          onChange={(e) => setSubtitleInput(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && addSubtitle()}
+          value={phraseInput}
+          onChange={(e) => setPhraseInput(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && addPhrase()}
           placeholder="Add phrase & press Enter"
           style={{ flex: 1, padding: '0.55rem 0.875rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', fontSize: '0.875rem', outline: 'none' }}
         />
-        <button onClick={addSubtitle} className="btn btn-outline" style={{ padding: '0 0.75rem', height: '36px' }}>Add</button>
+        <button onClick={addPhrase} className="btn btn-outline" style={{ padding: '0 0.75rem', height: '36px' }}>Add</button>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', marginBottom: '1.25rem' }}>
-        {(hero.subtitle || []).map((p, i) => (
+        {(settings.typewriterPhrases || []).map((p, i) => (
           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 0.75rem', borderRadius: 'var(--radius-sm)', background: 'var(--surface2)', border: '1px solid var(--border)' }}>
             <span style={{ flex: 1, fontSize: '0.85rem' }}>{p}</span>
-            <button onClick={() => removeSubtitle(i)} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '0.8rem' }}>
+            <button onClick={() => removePhrase(i)} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '0.8rem' }}>
               <i className="fa-solid fa-xmark" />
             </button>
           </div>
@@ -96,24 +98,24 @@ export default function HeroEditor() {
 
       <Divider label="CTA Buttons" />
       <FieldGroup label="Primary button text">
-        <TextInput value={hero.cta_primary_text || ''} onChange={(v) => updateHero({ cta_primary_text: v })} placeholder="View My Work" />
+        <TextInput value={settings.ctaPrimaryText || ''} onChange={(v) => updateSettings({ ctaPrimaryText: v })} placeholder="View My Work" />
       </FieldGroup>
       <FieldGroup label="Primary button link">
-        <TextInput value={hero.cta_primary_href || ''} onChange={(v) => updateHero({ cta_primary_href: v })} placeholder="#projects" />
+        <TextInput value={settings.ctaPrimaryLink || ''} onChange={(v) => updateSettings({ ctaPrimaryLink: v })} placeholder="#projects" />
       </FieldGroup>
       <FieldGroup label="Secondary button text">
-        <TextInput value={hero.cta_secondary_text || ''} onChange={(v) => updateHero({ cta_secondary_text: v })} placeholder="Contact Me" />
+        <TextInput value={settings.ctaSecondaryText || ''} onChange={(v) => updateSettings({ ctaSecondaryText: v })} placeholder="About Me" />
       </FieldGroup>
       <FieldGroup label="Secondary button link">
-        <TextInput value={hero.cta_secondary_href || ''} onChange={(v) => updateHero({ cta_secondary_href: v })} placeholder="#contact" />
+        <TextInput value={settings.ctaSecondaryLink || ''} onChange={(v) => updateSettings({ ctaSecondaryLink: v })} placeholder="#about" />
       </FieldGroup>
 
       <Divider label="Profile" />
-      <FieldGroup label="Profile image URL" hint="Use Media Library to upload, then paste URL here">
-        <TextInput value={hero.profile_image || ''} onChange={(v) => updateHero({ profile_image: v })} placeholder="https://..." />
+      <FieldGroup label="Profile image URL" hint="Upload via Media Library, then paste URL here">
+        <TextInput value={settings.profileImageUrl || ''} onChange={(v) => updateSettings({ profileImageUrl: v })} placeholder="https://..." />
       </FieldGroup>
       <FieldGroup label="Profile shape">
-        <Select value={settings.profile_shape || 'hexagon'} onChange={(v) => updateSettings({ profile_shape: v as typeof settings.profile_shape })} options={SHAPE_OPTIONS} />
+        <Select value={settings.profileShape || 'hexagon'} onChange={(v) => updateSettings({ profileShape: v })} options={SHAPE_OPTIONS} />
       </FieldGroup>
 
       <SaveBtn onClick={save} saving={saving} />

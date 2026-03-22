@@ -29,7 +29,7 @@ export default function SocialsEditor() {
         <div key={s.id} style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '0.875rem', marginBottom: '0.75rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
             <span style={{ fontWeight: 600, fontSize: '0.875rem' }}>{s.platform}</span>
-            <Toggle checked={s.visible} onChange={(v) => handleUpdate(s.id, { visible: v })} label="Visible" />
+            <Toggle checked={s.visible ?? true} onChange={(v) => handleUpdate(s.id, { visible: v })} label="Visible" />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
             <FieldGroup label="Platform"><TextInput value={s.platform} onChange={(v) => handleUpdate(s.id, { platform: v })} /></FieldGroup>
@@ -37,7 +37,7 @@ export default function SocialsEditor() {
           </div>
           <FieldGroup label="URL"><TextInput value={s.url} onChange={(v) => handleUpdate(s.id, { url: v })} type="url" /></FieldGroup>
           <FieldGroup label="Label"><TextInput value={s.label} onChange={(v) => handleUpdate(s.id, { label: v })} placeholder="@username" /></FieldGroup>
-          <FieldGroup label="Color"><TextInput value={s.color} onChange={(v) => handleUpdate(s.id, { color: v })} placeholder="#0077b5" /></FieldGroup>
+          <FieldGroup label="Color"><TextInput value={s.color ?? ""} onChange={(v) => handleUpdate(s.id, { color: v })} placeholder="#0077b5" /></FieldGroup>
         </div>
       ))}
       <SaveBtn onClick={saveAll} saving={saving} />

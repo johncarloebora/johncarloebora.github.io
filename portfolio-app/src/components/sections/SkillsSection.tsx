@@ -18,7 +18,7 @@ function SkillItem({ skill }: { skill: Skill }) {
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          {skill.icon && <i className={`fa-solid fa-${skill.icon}`} style={{ color: 'var(--accent2)', fontSize: '0.75rem' }} />}
+          {skill.icon && <i className={skill.icon} style={{ color: 'var(--accent2)', fontSize: '0.75rem' }} />}
           <span style={{ fontSize: '0.85rem' }}>{skill.name}</span>
         </div>
         <span style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>{skill.proficiency}%</span>
@@ -34,7 +34,7 @@ function CategoryBlock({ cat }: { cat: SkillCategory }) {
   return (
     <div style={{ marginBottom: '1rem' }}>
       <h4 style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--accent1)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
-        {cat.name}
+        {cat.title}
       </h4>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
         {cat.skills.sort((a, b) => a.sort_order - b.sort_order).map((sk) => (
@@ -48,7 +48,7 @@ function CategoryBlock({ cat }: { cat: SkillCategory }) {
 function SkillCardComp({ card }: { card: SkillCard }) {
   const [open, setOpen] = useState(false);
 
-  if (!card.visible) return null;
+  // no visible field on skill cards
 
   return (
     <div className="card reveal" style={{ overflow: 'hidden' }}>
@@ -70,13 +70,13 @@ function SkillCardComp({ card }: { card: SkillCard }) {
         <span style={{
           width: '44px', height: '44px',
           borderRadius: 'var(--radius-sm)',
-          background: card.color ? `${card.color}20` : 'rgba(78,205,196,0.1)',
-          color: card.color || 'var(--accent2)',
+          background: 'rgba(78,205,196,0.1)',
+          color: 'var(--accent2)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: '1.1rem',
           flexShrink: 0,
         }}>
-          <i className={`fa-solid fa-${card.icon}`} />
+          <i className={card.icon} />
         </span>
         <span style={{ fontSize: '1rem', fontWeight: 600, flex: 1, textAlign: 'left' }}>{card.title}</span>
         <span style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
@@ -97,7 +97,7 @@ function SkillCardComp({ card }: { card: SkillCard }) {
 }
 
 export default function SkillsSection({ skills, preview = false }: Props) {
-  const visible = skills.filter((s) => s.visible).sort((a, b) => a.sort_order - b.sort_order);
+  const visible = [...skills].sort((a, b) => a.sort_order - b.sort_order);
 
   return (
     <section id="skills" className="section">

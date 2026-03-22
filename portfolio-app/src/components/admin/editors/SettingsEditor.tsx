@@ -26,11 +26,11 @@ export default function SettingsEditor() {
   const save = async () => {
     setSaving(true);
     const updates: Record<string, string> = {
-      nav_logo: settings.nav_logo,
-      hero_eyebrow: settings.hero_eyebrow,
-      footer_text: settings.footer_text,
-      profile_shape: settings.profile_shape,
-      theme_default: settings.theme_default,
+      navLogo: settings.navLogo,
+      heroEyebrow: settings.heroEyebrow,
+      footerText: settings.footerText,
+      profileShape: settings.profileShape,
+      themeDefault: settings.themeDefault ?? 'dark',
     };
     await Promise.all(Object.entries(updates).map(([k, v]) => api.put(`/settings/${k}`, { value: v })));
     setSaving(false);
@@ -39,16 +39,16 @@ export default function SettingsEditor() {
   return (
     <div>
       <FieldGroup label="Nav Logo text">
-        <TextInput value={settings.nav_logo || ''} onChange={(v) => updateSettings({ nav_logo: v })} placeholder="CE" />
+        <TextInput value={settings.navLogo || ''} onChange={(v) => updateSettings({ navLogo: v })} placeholder="CE" />
       </FieldGroup>
       <FieldGroup label="Footer text">
-        <TextInput value={settings.footer_text || ''} onChange={(v) => updateSettings({ footer_text: v })} placeholder="© 2025 All rights reserved." />
+        <TextInput value={settings.footerText || ''} onChange={(v) => updateSettings({ footerText: v })} placeholder="© 2025 All rights reserved." />
       </FieldGroup>
       <FieldGroup label="Default Theme">
-        <Select value={settings.theme_default || 'dark'} onChange={(v) => updateSettings({ theme_default: v as 'dark' | 'light' })} options={[{ value: 'dark', label: 'Dark' }, { value: 'light', label: 'Light' }]} />
+        <Select value={settings.themeDefault || 'dark'} onChange={(v) => updateSettings({ themeDefault: v as 'dark' | 'light' })} options={[{ value: 'dark', label: 'Dark' }, { value: 'light', label: 'Light' }]} />
       </FieldGroup>
       <FieldGroup label="Profile Shape">
-        <Select value={settings.profile_shape || 'hexagon'} onChange={(v) => updateSettings({ profile_shape: v as typeof settings.profile_shape })} options={SHAPE_OPTIONS} />
+        <Select value={settings.profileShape || 'hexagon'} onChange={(v) => updateSettings({ profileShape: v as typeof settings.profileShape })} options={SHAPE_OPTIONS} />
       </FieldGroup>
       <SaveBtn onClick={save} saving={saving} />
     </div>

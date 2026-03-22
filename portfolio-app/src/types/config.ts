@@ -1,62 +1,60 @@
 // ============================================================
-// SiteConfig — matches the shape published to R2 by the Worker
-// POST /api/publish assembles this from D1 tables
+// SiteConfig — matches the actual shape returned by the Worker
+// GET /api/config
 // ============================================================
 
-export type ProfileShape = 'hexagon' | 'circle' | 'square' | 'rounded' | 'diamond' | 'shield';
-export type GalleryType = 'images' | 'videos';
-export type SectionType =
-  | 'hero' | 'about' | 'skills' | 'experience'
-  | 'education' | 'projects' | 'socials' | 'contact';
-
-// ── Settings ─────────────────────────────────────────────────
+// ── Settings (camelCase from Worker) ─────────────────────────
 export interface SiteSettings {
-  nav_logo: string;
-  hero_eyebrow: string;
-  footer_text: string;
-  profile_shape: ProfileShape;
-  theme_default: 'dark' | 'light';
-  contact_email: string;
-  recaptcha_site_key: string;
-  emailjs_service_id: string;
-  emailjs_template_id: string;
-  emailjs_public_key: string;
+  navLogo: string;
+  heroEyebrow: string;
+  heroName: string;
+  heroGlitchText: string;
+  heroSubtitle: string;
+  heroDesc: string;
+  typewriterPhrases: string[];
+  ctaPrimaryText: string;
+  ctaPrimaryLink: string;
+  ctaSecondaryText: string;
+  ctaSecondaryLink: string;
+  profileShape: string;
+  footerText: string;
+  emailjsServiceId: string;
+  emailjsTemplateId: string;
+  emailjsPublicKey: string;
+  recaptchaSiteKey: string;
+  profileImageUrl?: string;
+  contactEmail?: string;
+  themeDefault?: 'dark' | 'light';
 }
 
-// ── Sections ─────────────────────────────────────────────────
+// ── Section ───────────────────────────────────────────────────
 export interface Section {
-  id: number;
-  type: SectionType;
-  nav_label: string;
+  id: string;           // 'home' | 'about' | 'skills' etc.
+  title: string;
   nav_icon: string;
-  visible: boolean;
+  nav_label: string;
   sort_order: number;
-  config: Record<string, unknown>;
-}
-
-// ── Hero ─────────────────────────────────────────────────────
-export interface HeroConfig {
-  preset: 'centered' | 'split' | 'minimal' | 'fullscreen' | 'video';
-  name: string;
-  glitch_text: string;
-  subtitle: string[];          // typewriter phrases
-  description: string;
-  cta_primary_text: string;
-  cta_primary_href: string;
-  cta_secondary_text: string;
-  cta_secondary_href: string;
-  profile_image: string;
+  visible: number | boolean;
+  type: string;         // 'builtin'
+  config: Record<string, unknown> | null;
 }
 
 // ── About ─────────────────────────────────────────────────────
+export interface InfoListItem {
+  icon: string;
+  text: string;
+}
+
 export interface AboutCard {
   id: number;
   title: string;
-  content: string;
   icon: string;
-  card_type: 'text' | 'info_list';
+  content: string | InfoListItem[];
+  type: string;
+  expanded: number | boolean;
   sort_order: number;
-  visible: boolean;
+  visible?: boolean;
+  card_type?: string;
 }
 
 export interface Stat {
@@ -70,15 +68,19 @@ export interface Stat {
 // ── Skills ────────────────────────────────────────────────────
 export interface Skill {
   id: number;
+  category_id: number;
   name: string;
+  description: string;
   icon: string;
-  proficiency: number;       // 0-100
+  proficiency: number;
   sort_order: number;
 }
 
 export interface SkillCategory {
   id: number;
-  name: string;
+  skill_card_id: number;
+  title: string;
+  icon: string;
   sort_order: number;
   skills: Skill[];
 }
@@ -87,38 +89,37 @@ export interface SkillCard {
   id: number;
   title: string;
   icon: string;
-  color: string;
   sort_order: number;
-  visible: boolean;
+  expanded: number | boolean;
   categories: SkillCategory[];
+  visible?: boolean;
+  color?: string;
 }
 
 // ── Experience ────────────────────────────────────────────────
 export interface Experience {
   id: number;
-  title: string;
-  company: string;
   date_range: string;
-  location: string;
-  type: string;
+  title: string;
+  badge?: string;
+  company: string;
+  description?: string | null;
   bullets: string[];
   sort_order: number;
+  expanded: number | boolean;
 }
 
 // ── Education ─────────────────────────────────────────────────
 export interface EducationEntry {
-  id: number;
-  line: string;
-  sort_order: number;
+  title: string;
+  date: string;
+  lines: string[];
 }
 
 export interface Education {
   id: number;
-  institution: string;
-  degree: string;
-  date_range: string;
-  icon: string;
-  color: string;
+  card_title: string;
+  card_icon: string;
   entries: EducationEntry[];
   sort_order: number;
 }
@@ -128,15 +129,16 @@ export interface Project {
   id: number;
   title: string;
   description: string;
+  thumbnail_path: string;
   thumbnail_url: string;
+  gallery_type: string;
   gallery_folder: string;
-  gallery_type: GalleryType;
   tags: string[];
   skills: string[];
-  link_url: string;
-  link_label: string;
   sort_order: number;
-  visible: boolean;
+  visible?: boolean;
+  link_url?: string;
+  link_label?: string;
 }
 
 // ── Socials ───────────────────────────────────────────────────
@@ -146,30 +148,27 @@ export interface Social {
   url: string;
   icon: string;
   label: string;
-  color: string;
   sort_order: number;
-  visible: boolean;
+  visible?: boolean;
+  color?: string;
 }
 
 // ── Media ─────────────────────────────────────────────────────
 export interface MediaItem {
-  id: number;
-  folder: string;
-  filename: string;
+  key: string;
   url: string;
-  mime_type: string;
   size: number;
-  alt_text: string;
-  uploaded_at: string;
+  uploaded: string;
 }
 
 export type MediaByFolder = Record<string, MediaItem[]>;
 
 // ── Root SiteConfig ───────────────────────────────────────────
 export interface SiteConfig {
+  publishedAt?: string;
+  r2Base?: string;
   settings: SiteSettings;
   sections: Section[];
-  hero: HeroConfig;
   about: {
     cards: AboutCard[];
     stats: Stat[];
@@ -180,5 +179,4 @@ export interface SiteConfig {
   projects: Project[];
   socials: Social[];
   media: MediaByFolder;
-  published_at: string;
 }

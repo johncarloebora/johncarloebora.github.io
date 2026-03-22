@@ -13,7 +13,7 @@ export default function SectionsEditor() {
 
   const sorted = [...config.sections].sort((a, b) => a.sort_order - b.sort_order);
 
-  const handleUpdate = async (id: number, updates: Partial<Section>) => {
+  const handleUpdate = async (id: string, updates: Partial<Section>) => {
     updateSection(id, updates);
     await api.put(`/sections/${id}`, updates);
   };
@@ -27,7 +27,7 @@ export default function SectionsEditor() {
         <div key={sec.id} style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '0.875rem', marginBottom: '0.75rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
             <span style={{ fontWeight: 600, fontSize: '0.875rem', textTransform: 'capitalize' }}>{sec.type}</span>
-            <Toggle checked={sec.visible} onChange={(v) => handleUpdate(sec.id, { visible: v })} label="Visible" />
+            <Toggle checked={!!sec.visible} onChange={(v) => handleUpdate(sec.id, { visible: v })} label="Visible" />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
             <FieldGroup label="Nav Label">

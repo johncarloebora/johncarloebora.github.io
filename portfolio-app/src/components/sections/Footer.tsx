@@ -1,3 +1,5 @@
+'use client';
+
 import type { SiteSettings, Social } from '@/types/config';
 
 interface Props {
@@ -8,7 +10,7 @@ interface Props {
 
 export default function Footer({ settings, socials, preview = false }: Props) {
   const year = new Date().getFullYear();
-  const visible = socials.filter((s) => s.visible).slice(0, 6);
+  const visible = socials.slice(0, 6);
 
   return (
     <footer style={{
@@ -29,10 +31,10 @@ export default function Footer({ settings, socials, preview = false }: Props) {
               backgroundClip: 'text',
               marginBottom: '0.25rem',
             }}>
-              {settings.nav_logo || 'Carlo Ebora'}
+              {settings.navLogo || 'Carlo Ebora'}
             </div>
             <p style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>
-              {settings.footer_text || `© ${year} All rights reserved.`}
+              {settings.footerText || `© ${year} All rights reserved.`}
             </p>
           </div>
 
@@ -67,7 +69,7 @@ export default function Footer({ settings, socials, preview = false }: Props) {
                     el.style.color = 'var(--muted)';
                   }}
                 >
-                  <i className={`fa-brands fa-${s.icon}`} />
+                  <i className={s.icon} />
                 </a>
               ))}
             </div>

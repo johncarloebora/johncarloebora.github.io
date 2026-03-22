@@ -17,10 +17,10 @@ export default function ContactEditor() {
   const save = async () => {
     setSaving(true);
     await api.put('/settings', {
-      contact_email: settings.contact_email,
-      emailjs_service_id: settings.emailjs_service_id,
-      emailjs_template_id: settings.emailjs_template_id,
-      emailjs_public_key: settings.emailjs_public_key,
+      contactEmail: settings.contactEmail,
+      emailjsServiceId: settings.emailjsServiceId,
+      emailjsTemplateId: settings.emailjsTemplateId,
+      emailjsPublicKey: settings.emailjsPublicKey,
     });
     setSaving(false);
   };
@@ -28,16 +28,16 @@ export default function ContactEditor() {
   return (
     <div>
       <FieldGroup label="Contact Email" hint="For display purposes">
-        <TextInput value={settings.contact_email || ''} onChange={(v) => updateSettings({ contact_email: v })} type="email" />
+        <TextInput value={settings.contactEmail || ''} onChange={(v) => updateSettings({ contactEmail: v })} type="email" />
       </FieldGroup>
       <FieldGroup label="EmailJS Service ID">
-        <TextInput value={settings.emailjs_service_id || ''} onChange={(v) => updateSettings({ emailjs_service_id: v })} />
+        <TextInput value={settings.emailjsServiceId || ''} onChange={(v) => updateSettings({ emailjsServiceId: v })} />
       </FieldGroup>
       <FieldGroup label="EmailJS Template ID">
-        <TextInput value={settings.emailjs_template_id || ''} onChange={(v) => updateSettings({ emailjs_template_id: v })} />
+        <TextInput value={settings.emailjsTemplateId || ''} onChange={(v) => updateSettings({ emailjsTemplateId: v })} />
       </FieldGroup>
       <FieldGroup label="EmailJS Public Key">
-        <TextInput value={settings.emailjs_public_key || ''} onChange={(v) => updateSettings({ emailjs_public_key: v })} />
+        <TextInput value={settings.emailjsPublicKey || ''} onChange={(v) => updateSettings({ emailjsPublicKey: v })} />
       </FieldGroup>
       <SaveBtn onClick={save} saving={saving} />
     </div>

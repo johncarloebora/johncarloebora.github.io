@@ -21,7 +21,7 @@ function ProjectCard({ project, onUpdate, onDelete }: { project: Project; onUpda
     <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', marginBottom: '0.75rem', overflow: 'hidden' }}>
       <div onClick={() => setOpen(!open)} style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', padding: '0.75rem 0.875rem', cursor: 'pointer', background: 'var(--surface2)' }}>
         <span style={{ flex: 1, fontSize: '0.875rem', fontWeight: 600 }}>{project.title || 'Untitled Project'}</span>
-        <Toggle checked={project.visible} onChange={(v) => onUpdate({ visible: v })} label="" />
+        <Toggle checked={project.visible ?? true} onChange={(v) => onUpdate({ visible: v })} label="" />
         <button onClick={(e) => { e.stopPropagation(); onDelete(); }} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer' }}>
           <i className="fa-solid fa-trash" style={{ fontSize: '0.8rem' }} />
         </button>
@@ -38,8 +38,8 @@ function ProjectCard({ project, onUpdate, onDelete }: { project: Project; onUpda
           <FieldGroup label="Gallery Type">
             <Select value={project.gallery_type} onChange={(v) => onUpdate({ gallery_type: v as 'images' | 'videos' })} options={[{ value: 'images', label: 'Images' }, { value: 'videos', label: 'Videos' }]} />
           </FieldGroup>
-          <FieldGroup label="Link URL"><TextInput value={project.link_url} onChange={(v) => onUpdate({ link_url: v })} /></FieldGroup>
-          <FieldGroup label="Link Label"><TextInput value={project.link_label} onChange={(v) => onUpdate({ link_label: v })} placeholder="View Project" /></FieldGroup>
+          <FieldGroup label="Link URL"><TextInput value={project.link_url ?? ""} onChange={(v) => onUpdate({ link_url: v })} /></FieldGroup>
+          <FieldGroup label="Link Label"><TextInput value={project.link_label ?? ""} onChange={(v) => onUpdate({ link_label: v })} placeholder="View Project" /></FieldGroup>
 
           <Divider label="Tags" />
           <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
@@ -72,7 +72,7 @@ export default function ProjectsEditor() {
   const sorted = [...config.projects].sort((a, b) => a.sort_order - b.sort_order);
 
   const handleAdd = async () => {
-    const res = await api.post('/projects', { title: 'New Project', description: '', thumbnail_url: '', gallery_folder: '', gallery_type: 'images', tags: [], skills: [], link_url: '', link_label: '', sort_order: sorted.length, visible: true });
+    const res = await api.post('/projects', { title: 'New Project', description: '', thumbnail_url: '', gallery_folder: '', gallery_type: 'images', tags: [], skills: [], link_url: '', link_label: '', sort_order: sorted.length });
     if (res.ok) {
       const data = await res.json();
       addProject({ ...data, tags: [], skills: [] });

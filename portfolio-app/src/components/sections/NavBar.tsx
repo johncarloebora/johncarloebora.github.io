@@ -18,10 +18,10 @@ export default function NavBar({ sections, settings, preview = false }: Props) {
   useEffect(() => {
     if (preview) return;
     const saved = localStorage.getItem('theme') as 'dark' | 'light' | null;
-    const initial = saved ?? settings.theme_default ?? 'dark';
+    const initial = saved ?? 'dark';
     setTheme(initial);
     document.documentElement.setAttribute('data-theme', initial);
-  }, [settings.theme_default, preview]);
+  }, [settings.themeDefault, preview]);
 
   useEffect(() => {
     if (preview) return;
@@ -33,7 +33,7 @@ export default function NavBar({ sections, settings, preview = false }: Props) {
   // Active section tracking
   useEffect(() => {
     if (preview) return;
-    const ids = sections.map((s) => s.type);
+    const ids = sections.map((s) => s.id);
     const observers: IntersectionObserver[] = [];
 
     ids.forEach((id) => {
@@ -95,7 +95,7 @@ export default function NavBar({ sections, settings, preview = false }: Props) {
           textDecoration: 'none',
         }}
       >
-        {settings.nav_logo || 'CE'}
+        {settings.navLogo || 'CE'}
       </a>
 
       {/* Desktop nav */}
@@ -103,23 +103,23 @@ export default function NavBar({ sections, settings, preview = false }: Props) {
         {sections.map((s) => (
           <a
             key={s.id}
-            href={`#${s.type}`}
-            onClick={(e) => { if (!preview) { e.preventDefault(); scrollTo(s.type); } }}
+            href={`#${s.id}`}
+            onClick={(e) => { if (!preview) { e.preventDefault(); scrollTo(s.id); } }}
             style={{
               padding: '0.5rem 0.875rem',
               borderRadius: 'var(--radius-sm)',
               fontSize: '0.875rem',
               fontWeight: 500,
               textDecoration: 'none',
-              color: activeSection === s.type ? 'var(--accent2)' : 'var(--muted)',
-              background: activeSection === s.type ? 'rgba(78,205,196,0.1)' : 'transparent',
+              color: activeSection === s.id ? 'var(--accent2)' : 'var(--muted)',
+              background: activeSection === s.id ? 'rgba(78,205,196,0.1)' : 'transparent',
               transition: 'all 0.2s ease',
               display: 'flex',
               alignItems: 'center',
               gap: '0.375rem',
             }}
           >
-            <i className={`fa-solid fa-${s.nav_icon}`} style={{ fontSize: '0.75rem' }} />
+            <i className={s.nav_icon} style={{ fontSize: '0.75rem' }} />
             <span className="hidden sm:inline">{s.nav_label}</span>
           </a>
         ))}
@@ -180,20 +180,20 @@ export default function NavBar({ sections, settings, preview = false }: Props) {
           {sections.map((s) => (
             <a
               key={s.id}
-              href={`#${s.type}`}
-              onClick={(e) => { e.preventDefault(); scrollTo(s.type); }}
+              href={`#${s.id}`}
+              onClick={(e) => { e.preventDefault(); scrollTo(s.id); }}
               style={{
                 padding: '0.75rem 1rem',
                 borderRadius: 'var(--radius-sm)',
                 textDecoration: 'none',
-                color: activeSection === s.type ? 'var(--accent2)' : 'var(--text)',
+                color: activeSection === s.id ? 'var(--accent2)' : 'var(--text)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.75rem',
                 fontSize: '0.95rem',
               }}
             >
-              <i className={`fa-solid fa-${s.nav_icon}`} />
+              <i className={s.nav_icon} />
               {s.nav_label}
             </a>
           ))}

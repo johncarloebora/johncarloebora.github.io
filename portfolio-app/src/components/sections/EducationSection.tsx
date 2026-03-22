@@ -23,36 +23,32 @@ export default function EducationSection({ education, preview = false }: Props) 
                 <span style={{
                   width: '48px', height: '48px',
                   borderRadius: 'var(--radius-sm)',
-                  background: edu.color ? `${edu.color}20` : 'rgba(255,107,107,0.1)',
-                  color: edu.color || 'var(--accent1)',
+                  background: 'rgba(255,107,107,0.1)',
+                  color: 'var(--accent1)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: '1.25rem', flexShrink: 0,
                 }}>
-                  <i className={`fa-solid fa-${edu.icon || 'graduation-cap'}`} />
+                  <i className={edu.card_icon || 'fa-solid fa-graduation-cap'} />
                 </span>
                 <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
-                    <div>
-                      <h3 style={{ fontWeight: 700, fontSize: '1.05rem' }}>{edu.institution}</h3>
-                      <p style={{ color: 'var(--accent2)', fontWeight: 600, fontSize: '0.9rem' }}>{edu.degree}</p>
+                  <h3 style={{ fontWeight: 700, fontSize: '1.05rem', marginBottom: '1rem' }}>{edu.card_title}</h3>
+                  {edu.entries?.map((entry, i) => (
+                    <div key={i} style={{ marginBottom: i < edu.entries.length - 1 ? '1.25rem' : 0 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.375rem' }}>
+                        <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>{entry.title}</span>
+                        <span style={{
+                          padding: '0.2rem 0.6rem', borderRadius: '999px',
+                          background: 'rgba(255,107,107,0.1)', color: 'var(--accent1)',
+                          fontSize: '0.75rem', fontWeight: 600, height: 'fit-content',
+                        }}>{entry.date}</span>
+                      </div>
+                      <ul style={{ paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                        {entry.lines.map((line, j) => (
+                          <li key={j} style={{ color: 'var(--muted)', fontSize: '0.875rem' }}>{line}</li>
+                        ))}
+                      </ul>
                     </div>
-                    <span style={{
-                      padding: '0.25rem 0.75rem',
-                      borderRadius: '999px',
-                      background: 'rgba(255,107,107,0.1)',
-                      color: 'var(--accent1)',
-                      fontSize: '0.75rem',
-                      fontWeight: 600,
-                      height: 'fit-content',
-                    }}>{edu.date_range}</span>
-                  </div>
-                  {edu.entries?.length > 0 && (
-                    <ul style={{ marginTop: '0.75rem', paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                      {edu.entries.map((e) => (
-                        <li key={e.id} style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>{e.line}</li>
-                      ))}
-                    </ul>
-                  )}
+                  ))}
                 </div>
               </div>
             </div>

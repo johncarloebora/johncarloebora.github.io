@@ -36,7 +36,7 @@ function ExpCard({ exp, onUpdate, onDelete }: { exp: Experience; onUpdate: (u: P
           <FieldGroup label="Job Title"><TextInput value={exp.title} onChange={(v) => onUpdate({ title: v })} /></FieldGroup>
           <FieldGroup label="Company"><TextInput value={exp.company} onChange={(v) => onUpdate({ company: v })} /></FieldGroup>
           <FieldGroup label="Date Range"><TextInput value={exp.date_range} onChange={(v) => onUpdate({ date_range: v })} placeholder="June 2025 – March 2026" /></FieldGroup>
-          <FieldGroup label="Location"><TextInput value={exp.location} onChange={(v) => onUpdate({ location: v })} /></FieldGroup>
+          <FieldGroup label="Badge"><TextInput value={exp.badge || ''} onChange={(v) => onUpdate({ badge: v })} placeholder="Current" /></FieldGroup>
 
           <Divider label="Bullet Points" />
           <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
@@ -74,7 +74,7 @@ export default function ExperienceEditor() {
   const sorted = [...config.experiences].sort((a, b) => a.sort_order - b.sort_order);
 
   const handleAdd = async () => {
-    const res = await api.post('/experiences', { title: 'New Role', company: '', date_range: '', location: '', type: '', bullets: [], sort_order: sorted.length });
+    await api.post('/experiences', { title: 'New Role', company: '', date_range: '', bullets: [], sort_order: sorted.length, expanded: 1 });
     // Refresh would be needed in production; for now, user refreshes
   };
 

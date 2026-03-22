@@ -2,7 +2,7 @@
 
 import { create } from 'zustand';
 import { temporal } from 'zundo';
-import type { SiteConfig, Section, AboutCard, Stat, SkillCard, Experience, Education, Project, Social, HeroConfig, SiteSettings } from '@/types/config';
+import type { SiteConfig, Section, AboutCard, Stat, SkillCard, Experience, Education, Project, Social, SiteSettings } from '@/types/config';
 
 interface ConfigState {
   config: SiteConfig | null;
@@ -11,8 +11,8 @@ interface ConfigState {
   // Setters
   setConfig: (config: SiteConfig) => void;
   updateSettings: (settings: Partial<SiteSettings>) => void;
-  updateHero: (hero: Partial<HeroConfig>) => void;
-  updateSection: (id: number, updates: Partial<Section>) => void;
+  updateHero: (hero: Partial<SiteSettings>) => void;
+  updateSection: (id: string, updates: Partial<Section>) => void;
   reorderSections: (sections: Section[]) => void;
   updateAboutCard: (id: number, updates: Partial<AboutCard>) => void;
   addAboutCard: (card: AboutCard) => void;
@@ -46,7 +46,7 @@ export const useConfigStore = create<ConfigState>()(
       updateHero: (hero) =>
         set((s) => s.config ? ({
           isDirty: true,
-          config: { ...s.config, hero: { ...s.config.hero, ...hero } },
+          config: { ...s.config, settings: { ...s.config.settings, ...hero } },
         }) : s),
 
       updateSection: (id, updates) =>

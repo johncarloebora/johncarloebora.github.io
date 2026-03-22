@@ -19,14 +19,14 @@ export default function ContactSection({ settings, preview = false }: Props) {
     try {
       // EmailJS integration
       const payload = {
-        service_id: settings.emailjs_service_id,
-        template_id: settings.emailjs_template_id,
-        user_id: settings.emailjs_public_key,
+        service_id: settings.emailjsServiceId,
+        template_id: settings.emailjsTemplateId,
+        user_id: settings.emailjsPublicKey,
         template_params: {
           from_name: form.name,
           from_email: form.email,
           message: form.message,
-          to_email: settings.contact_email,
+          to_email: settings.contactEmail,
         },
       };
 

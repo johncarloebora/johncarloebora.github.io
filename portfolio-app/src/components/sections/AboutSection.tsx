@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { AboutCard, Stat } from '@/types/config';
+import type { AboutCard, Stat, InfoListItem } from '@/types/config';
 
 interface Props {
   cards: AboutCard[];
@@ -12,7 +12,7 @@ interface Props {
 function StatCard({ stat }: { stat: Stat }) {
   return (
     <div className="card" style={{ textAlign: 'center', padding: '1.5rem 1rem' }}>
-      {stat.icon && <i className={`fa-solid fa-${stat.icon}`} style={{ fontSize: '1.5rem', color: 'var(--accent2)', marginBottom: '0.5rem', display: 'block' }} />}
+      {stat.icon && <i className={stat.icon} style={{ fontSize: '1.5rem', color: 'var(--accent2)', marginBottom: '0.5rem', display: 'block' }} />}
       <div style={{ fontSize: 'clamp(1.75rem, 3vw, 2.5rem)', fontWeight: 800 }} className="gradient-text">{stat.value}</div>
       <div style={{ color: 'var(--muted)', fontSize: '0.875rem', marginTop: '0.25rem' }}>{stat.label}</div>
     </div>
@@ -22,7 +22,6 @@ function StatCard({ stat }: { stat: Stat }) {
 function AboutCardItem({ card }: { card: AboutCard }) {
   const [expanded, setExpanded] = useState(true);
 
-  if (!card.visible) return null;
 
   return (
     <div className="card reveal">
@@ -50,7 +49,7 @@ function AboutCardItem({ card }: { card: AboutCard }) {
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               color: 'var(--accent2)',
             }}>
-              <i className={`fa-solid fa-${card.icon}`} />
+              <i className={card.icon} />
             </span>
           )}
           <h3 style={{ fontSize: '1rem', fontWeight: 600 }}>{card.title}</h3>
@@ -58,8 +57,19 @@ function AboutCardItem({ card }: { card: AboutCard }) {
         <i className={`fa-solid fa-chevron-${expanded ? 'up' : 'down'}`} style={{ color: 'var(--muted)', fontSize: '0.75rem' }} />
       </button>
       {expanded && (
-        <div style={{ color: 'var(--muted)', fontSize: '0.925rem', lineHeight: 1.65, whiteSpace: 'pre-line' }}>
-          {card.content}
+        <div style={{ color: 'var(--muted)', fontSize: '0.925rem', lineHeight: 1.65 }}>
+          {Array.isArray(card.content) ? (
+            <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {(card.content as InfoListItem[]).map((item, i) => (
+                <li key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+                  <i className={item.icon} style={{ color: 'var(--accent2)', width: '16px', textAlign: 'center', flexShrink: 0 }} />
+                  <span>{item.text}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p style={{ whiteSpace: 'pre-line' }}>{card.content as string}</p>
+          )}
         </div>
       )}
     </div>
@@ -67,7 +77,7 @@ function AboutCardItem({ card }: { card: AboutCard }) {
 }
 
 export default function AboutSection({ cards, stats, preview = false }: Props) {
-  const visibleCards = cards.filter((c) => c.visible).sort((a, b) => a.sort_order - b.sort_order);
+  const visibleCards = [...cards].sort((a, b) => a.sort_order - b.sort_order);
 
   return (
     <section id="about" className="section">

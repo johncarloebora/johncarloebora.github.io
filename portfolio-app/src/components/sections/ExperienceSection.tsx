@@ -50,10 +50,9 @@ export default function ExperienceSection({ experiences, preview = false }: Prop
                       fontSize: '0.75rem',
                       fontWeight: 600,
                     }}>{exp.date_range}</span>
-                    {exp.location && (
-                      <p style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: '0.25rem' }}>
-                        <i className="fa-solid fa-location-dot" style={{ marginRight: '0.25rem' }} />
-                        {exp.location}
+                    {exp.badge && (
+                      <p style={{ fontSize: '0.8rem', color: 'var(--accent1)', marginTop: '0.25rem', fontWeight: 600 }}>
+                        {exp.badge}
                       </p>
                     )}
                   </div>
