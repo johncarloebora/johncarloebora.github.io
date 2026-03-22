@@ -1,15 +1,6 @@
 export const runtime = 'edge';
 
-import { redirect } from 'next/navigation';
-import { getToken } from '@/lib/utils/auth';
-
-export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const token = await getToken();
-
-  // Token check — Worker verifies full validity on each API call
-  if (!token) {
-    redirect('/admin/login');
-  }
-
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  // Auth is handled by middleware — no redirect loop here
   return <>{children}</>;
 }

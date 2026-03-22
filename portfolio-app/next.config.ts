@@ -27,7 +27,7 @@ const nextConfig: NextConfig = {
             value: [
               "default-src 'self'",
               "script-src 'self' 'unsafe-inline' https://www.google.com https://www.gstatic.com https://cdn.emailjs.com",
-              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com",
               "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com",
               "img-src 'self' data: blob: https://pub-f5b0f09119db40a8996c7447f85b44f9.r2.dev https://*.r2.dev",
               "connect-src 'self' https://carlo-portfolio-api.johncarloebora.workers.dev https://api.emailjs.com",

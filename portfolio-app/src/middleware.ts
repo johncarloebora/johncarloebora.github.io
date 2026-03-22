@@ -28,9 +28,9 @@ export function middleware(req: NextRequest) {
   }
 
   // Protect admin routes — check cookie exists (full verify happens server-side)
-  if (pathname.startsWith('/admin') && !pathname.startsWith('/admin/login')) {
+  if (pathname.startsWith('/admin') && pathname !== '/admin/login' && !pathname.startsWith('/admin/login')) {
     const token = req.cookies.get('admin_token')?.value;
-    if (!token && !pathname.startsWith('/api/')) {
+    if (!token) {
       return NextResponse.redirect(new URL('/admin/login', req.url));
     }
   }
@@ -39,5 +39,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/api/auth/login'],
+  matcher: ['/admin/((?!login).+)', '/admin', '/api/auth/login'],
 };
