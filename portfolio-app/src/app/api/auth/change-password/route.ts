@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getTokenFromRequest, getCsrfFromRequest } from '@/lib/utils/auth';
 import { verifyCsrfToken } from '@/lib/utils/csrf';
 
-const WORKER = process.env.WORKER_API_BASE ?? 'https://carlo-portfolio-api.johncarloebora.workers.dev';
+const WORKER = 'https://carlo-portfolio-api.johncarloebora.workers.dev';
 
 export async function POST(req: NextRequest) {
   const csrf = getCsrfFromRequest(req);

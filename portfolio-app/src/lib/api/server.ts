@@ -1,7 +1,7 @@
 // Server-side fetch to the Cloudflare Worker — uses the auth cookie
 import { getToken } from '@/lib/utils/auth';
 
-const BASE = process.env.WORKER_API_BASE ?? 'https://carlo-portfolio-api.johncarloebora.workers.dev';
+const BASE = 'https://carlo-portfolio-api.johncarloebora.workers.dev';
 
 interface FetchOptions extends RequestInit {
   auth?: boolean;

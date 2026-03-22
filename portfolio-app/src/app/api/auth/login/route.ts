@@ -7,7 +7,7 @@ const COOKIE_MAX_AGE = 60 * 60 * 24; // 24h
 
 export async function POST(req: NextRequest) {
   try {
-    const WORKER = process.env.WORKER_API_BASE ?? 'https://carlo-portfolio-api.johncarloebora.workers.dev';
+    const WORKER = 'https://carlo-portfolio-api.johncarloebora.workers.dev';
     const body = await req.json();
 
     const res = await fetch(`${WORKER}/api/auth/login`, {
