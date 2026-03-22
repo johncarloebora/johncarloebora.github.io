@@ -1,7 +1,29 @@
 node_modules/
 .DS_Store
 Thumbs.db
+
+# Wrangler
 .wrangler/
 worker/.wrangler/
 worker/node_modules/
 worker/package-lock.json
+
+# Next.js
+portfolio-app/.next/
+portfolio-app/node_modules/
+portfolio-app/.env.local
+portfolio-app/.env*.local
+
+# Build outputs
+out/
+dist/
+
+# Environment files (never commit secrets)
+.env
+.env.local
+.env.production
+*.env
+
+# OS
+Thumbs.db
+.DS_Store
