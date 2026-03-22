@@ -31,12 +31,12 @@ function ProjectCard({ project, onUpdate, onDelete }: { project: Project; onUpda
         <div style={{ padding: '0.875rem' }}>
           <FieldGroup label="Title"><TextInput value={project.title} onChange={(v) => onUpdate({ title: v })} /></FieldGroup>
           <FieldGroup label="Description"><TextArea value={project.description} onChange={(v) => onUpdate({ description: v })} /></FieldGroup>
-          <FieldGroup label="Thumbnail URL" hint="Paste URL from Media Library">
-            <TextInput value={project.thumbnail_url} onChange={(v) => onUpdate({ thumbnail_url: v })} placeholder="https://..." />
+          <FieldGroup label="Thumbnail Path (R2 key)" hint="e.g. projects/my-image.jpg">
+            <TextInput value={project.thumbnail_path} onChange={(v) => onUpdate({ thumbnail_path: v })} placeholder="projects/image.jpg" />
           </FieldGroup>
           <FieldGroup label="Gallery Folder"><TextInput value={project.gallery_folder} onChange={(v) => onUpdate({ gallery_folder: v })} placeholder="layout" /></FieldGroup>
           <FieldGroup label="Gallery Type">
-            <Select value={project.gallery_type} onChange={(v) => onUpdate({ gallery_type: v as 'images' | 'videos' })} options={[{ value: 'images', label: 'Images' }, { value: 'videos', label: 'Videos' }]} />
+            <Select value={project.gallery_type} onChange={(v) => onUpdate({ gallery_type: v })} options={[{ value: 'image', label: 'Images' }, { value: 'video', label: 'Videos' }]} />
           </FieldGroup>
           <FieldGroup label="Link URL"><TextInput value={project.link_url ?? ""} onChange={(v) => onUpdate({ link_url: v })} /></FieldGroup>
           <FieldGroup label="Link Label"><TextInput value={project.link_label ?? ""} onChange={(v) => onUpdate({ link_label: v })} placeholder="View Project" /></FieldGroup>
@@ -72,7 +72,7 @@ export default function ProjectsEditor() {
   const sorted = [...config.projects].sort((a, b) => a.sort_order - b.sort_order);
 
   const handleAdd = async () => {
-    const res = await api.post('/projects', { title: 'New Project', description: '', thumbnail_url: '', gallery_folder: '', gallery_type: 'images', tags: [], skills: [], link_url: '', link_label: '', sort_order: sorted.length });
+    const res = await api.post('/projects', { title: 'New Project', description: '', thumbnail_url: '', gallery_folder: '', gallery_type: 'image', tags: [], skills: [], link_url: '', link_label: '', sort_order: sorted.length });
     if (res.ok) {
       const data = await res.json();
       addProject({ ...data, tags: [], skills: [] });

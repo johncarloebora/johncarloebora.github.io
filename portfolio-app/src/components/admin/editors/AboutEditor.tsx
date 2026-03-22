@@ -65,7 +65,7 @@ export default function AboutEditor() {
 
   const saveStats = async () => {
     setSaving(true);
-    await Promise.all(stats.map((s) => api.put(`/stats/${s.id}`, { value: s.value, label: s.label, icon: s.icon })));
+    await Promise.all(stats.map((s) => api.put(`/stats/${s.id}`, { target: s.target, suffix: s.suffix, label: s.label })));
     setSaving(false);
   };
 
@@ -92,18 +92,18 @@ export default function AboutEditor() {
       <Divider label="Stats" />
 
       {stats.map((stat) => (
-        <div key={stat.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 80px', gap: '0.5rem', marginBottom: '0.625rem' }}>
+        <div key={stat.id} style={{ display: 'grid', gridTemplateColumns: '1fr 80px 1fr', gap: '0.5rem', marginBottom: '0.625rem' }}>
           <div>
-            <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--muted)', marginBottom: '0.25rem' }}>Value</label>
-            <TextInput value={stat.value} onChange={(v) => updateStat(stat.id, { value: v })} placeholder="1.21" />
+            <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--muted)', marginBottom: '0.25rem' }}>Target</label>
+            <TextInput value={stat.target} onChange={(v) => updateStat(stat.id, { target: v })} placeholder="1.21" />
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--muted)', marginBottom: '0.25rem' }}>Suffix</label>
+            <TextInput value={stat.suffix} onChange={(v) => updateStat(stat.id, { suffix: v })} placeholder="+" />
           </div>
           <div>
             <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--muted)', marginBottom: '0.25rem' }}>Label</label>
             <TextInput value={stat.label} onChange={(v) => updateStat(stat.id, { label: v })} placeholder="GWA" />
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--muted)', marginBottom: '0.25rem' }}>Icon</label>
-            <TextInput value={stat.icon} onChange={(v) => updateStat(stat.id, { icon: v })} placeholder="star" />
           </div>
         </div>
       ))}

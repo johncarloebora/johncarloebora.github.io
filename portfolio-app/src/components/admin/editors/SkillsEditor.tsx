@@ -6,15 +6,15 @@ import { api } from '@/lib/api/client';
 import { FieldGroup, TextInput, Toggle, Divider } from '../shared/FieldGroup';
 import type { SkillCard, SkillCategory, Skill } from '@/types/config';
 
-function SkillRow({ skill }: { skill: Skill }) {
+function SkillRow({ skill, onUpdate }: { skill: Skill; onUpdate: (updates: Partial<Skill>) => void }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 60px', gap: '0.375rem', padding: '0.5rem', background: 'var(--surface3)', borderRadius: 'var(--radius-sm)', marginBottom: '0.25rem' }}>
-      <TextInput value={skill.name} onChange={() => {}} placeholder="Skill name" />
+      <TextInput value={skill.name} onChange={(v) => onUpdate({ name: v })} placeholder="Skill name" />
       <input
         type="number"
         min={0} max={100}
         value={skill.proficiency}
-        onChange={() => {}}
+        onChange={(e) => onUpdate({ proficiency: Number(e.target.value) })}
         style={{ padding: '0.55rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)', fontSize: '0.85rem', outline: 'none', textAlign: 'center' }}
       />
     </div>
@@ -22,7 +22,14 @@ function SkillRow({ skill }: { skill: Skill }) {
 }
 
 function CategoryBlock({ cat }: { cat: SkillCategory }) {
+  const updateSkill = useConfigStore((s) => s.updateSkill);
   const [open, setOpen] = useState(false);
+
+  const handleSkillUpdate = async (skill: Skill, updates: Partial<Skill>) => {
+    updateSkill(skill.id, updates);
+    await api.put(`/skills/${skill.id}`, updates);
+  };
+
   return (
     <div style={{ marginBottom: '0.5rem', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)' }}>
       <div onClick={() => setOpen(!open)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 0.75rem', cursor: 'pointer', background: 'var(--surface2)' }}>
@@ -33,11 +40,8 @@ function CategoryBlock({ cat }: { cat: SkillCategory }) {
       {open && (
         <div style={{ padding: '0.5rem 0.75rem' }}>
           {cat.skills.sort((a, b) => a.sort_order - b.sort_order).map((sk) => (
-            <SkillRow key={sk.id} skill={sk} />
+            <SkillRow key={sk.id} skill={sk} onUpdate={(u) => handleSkillUpdate(sk, u)} />
           ))}
-          <button className="btn btn-outline" style={{ width: '100%', justifyContent: 'center', height: '28px', fontSize: '0.75rem', marginTop: '0.375rem' }}>
-            <i className="fa-solid fa-plus" /> Add Skill
-          </button>
         </div>
       )}
     </div>

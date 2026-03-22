@@ -2,7 +2,7 @@
 
 import { create } from 'zustand';
 import { temporal } from 'zundo';
-import type { SiteConfig, Section, AboutCard, Stat, SkillCard, Experience, Education, Project, Social, SiteSettings } from '@/types/config';
+import type { SiteConfig, Section, AboutCard, Stat, SkillCard, Skill, Experience, Education, Project, Social, SiteSettings } from '@/types/config';
 
 interface ConfigState {
   config: SiteConfig | null;
@@ -19,6 +19,7 @@ interface ConfigState {
   removeAboutCard: (id: number) => void;
   updateStat: (id: number, updates: Partial<Stat>) => void;
   updateSkillCard: (id: number, updates: Partial<SkillCard>) => void;
+  updateSkill: (skillId: number, updates: Partial<Skill>) => void;
   updateExperience: (id: number, updates: Partial<Experience>) => void;
   updateEducation: (id: number, updates: Partial<Education>) => void;
   updateProject: (id: number, updates: Partial<Project>) => void;
@@ -103,6 +104,21 @@ export const useConfigStore = create<ConfigState>()(
           config: {
             ...s.config,
             skills: s.config.skills.map((sk) => sk.id === id ? { ...sk, ...updates } : sk),
+          },
+        }) : s),
+
+      updateSkill: (skillId, updates) =>
+        set((s) => s.config ? ({
+          isDirty: true,
+          config: {
+            ...s.config,
+            skills: s.config.skills.map((card) => ({
+              ...card,
+              categories: card.categories.map((cat) => ({
+                ...cat,
+                skills: cat.skills.map((sk) => sk.id === skillId ? { ...sk, ...updates } : sk),
+              })),
+            })),
           },
         }) : s),
 
