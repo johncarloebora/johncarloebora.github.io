@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 import { redirect } from 'next/navigation';
 import { getToken } from '@/lib/utils/auth';
 import { workerGet } from '@/lib/api/server';

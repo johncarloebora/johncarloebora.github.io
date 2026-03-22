@@ -23,10 +23,17 @@ jobs:
           cache-dependency-path: portfolio-app/package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --legacy-peer-deps
 
-      - name: Build
+      - name: Build Next.js
         run: npm run build
+        env:
+          WORKER_API_BASE: ${{ secrets.WORKER_API_BASE }}
+          REVALIDATE_SECRET: ${{ secrets.REVALIDATE_SECRET }}
+          NEXT_PUBLIC_R2_URL: ${{ secrets.NEXT_PUBLIC_R2_URL }}
+
+      - name: Build for Cloudflare Pages
+        run: npx @cloudflare/next-on-pages
         env:
           WORKER_API_BASE: ${{ secrets.WORKER_API_BASE }}
           REVALIDATE_SECRET: ${{ secrets.REVALIDATE_SECRET }}
@@ -37,7 +44,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy .next --project-name=carlo-portfolio --commit-dirty=true
+          command: pages deploy .vercel/output/static --project-name=carlo-portfolio --commit-dirty=true
           workingDirectory: portfolio-app
 
   deploy-worker:

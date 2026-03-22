@@ -1,3 +1,4 @@
+export const runtime = 'edge';
 import { NextRequest, NextResponse } from 'next/server';
 import { getTokenFromRequest, getCsrfFromRequest } from '@/lib/utils/auth';
 import { verifyCsrfToken } from '@/lib/utils/csrf';
