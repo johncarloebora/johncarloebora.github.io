@@ -25,19 +25,13 @@ jobs:
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
 
-      - name: Build Next.js
-        run: npm run build
-        env:
-          WORKER_API_BASE: ${{ secrets.WORKER_API_BASE }}
-          REVALIDATE_SECRET: ${{ secrets.REVALIDATE_SECRET }}
-          NEXT_PUBLIC_R2_URL: ${{ secrets.NEXT_PUBLIC_R2_URL }}
-
       - name: Build for Cloudflare Pages
-        run: npx @cloudflare/next-on-pages
+        run: npx @cloudflare/next-on-pages@1
         env:
           WORKER_API_BASE: ${{ secrets.WORKER_API_BASE }}
           REVALIDATE_SECRET: ${{ secrets.REVALIDATE_SECRET }}
           NEXT_PUBLIC_R2_URL: ${{ secrets.NEXT_PUBLIC_R2_URL }}
+          NODE_VERSION: '20'
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
