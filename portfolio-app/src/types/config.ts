@@ -59,9 +59,10 @@ export interface AboutCard {
 
 export interface Stat {
   id: number;
-  value: string;
+  target: string;
+  suffix: string;
   label: string;
-  icon: string;
+  icon?: string;
   sort_order: number;
 }
 

@@ -45,7 +45,7 @@ export default function SocialsSection({ socials, preview = false }: Props) {
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: '1.1rem', flexShrink: 0,
               }}>
-                <i className={`fa-brands fa-${s.icon}`} />
+                <i className={s.icon} />
               </span>
               <div>
                 <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{s.platform}</div>

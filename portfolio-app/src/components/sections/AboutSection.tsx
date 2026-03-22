@@ -13,7 +13,7 @@ function StatCard({ stat }: { stat: Stat }) {
   return (
     <div className="card" style={{ textAlign: 'center', padding: '1.5rem 1rem' }}>
       {stat.icon && <i className={stat.icon} style={{ fontSize: '1.5rem', color: 'var(--accent2)', marginBottom: '0.5rem', display: 'block' }} />}
-      <div style={{ fontSize: 'clamp(1.75rem, 3vw, 2.5rem)', fontWeight: 800 }} className="gradient-text">{stat.value}</div>
+      <div style={{ fontSize: 'clamp(1.75rem, 3vw, 2.5rem)', fontWeight: 800 }} className="gradient-text">{stat.target}{stat.suffix}</div>
       <div style={{ color: 'var(--muted)', fontSize: '0.875rem', marginTop: '0.25rem' }}>{stat.label}</div>
     </div>
   );
