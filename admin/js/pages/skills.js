@@ -34,13 +34,13 @@ async function loadSkillsPage() {
                         </h3>
                         <div style="display:flex;gap:6px;flex-wrap:wrap">
                             <button class="btn btn-secondary btn-sm" onclick="addSkillCategory(${card.id})" title="Add a category inside this skill card">
-                                <i class="fas fa-folder-plus"></i> Add Category
+                                <i class="fas fa-folder-plus" aria-hidden="true"></i> Add Category
                             </button>
-                            <button class="btn btn-secondary btn-sm" onclick="editSkillCard(${card.id})" title="Edit this card's title and icon">
-                                <i class="fas fa-edit"></i>
+                            <button class="btn btn-secondary btn-sm" aria-label="Edit this card's title and icon" onclick="editSkillCard(${card.id})" title="Edit this card's title and icon">
+                                <i class="fas fa-edit" aria-hidden="true"></i>
                             </button>
-                            <button class="btn btn-danger btn-sm" onclick="deleteSkillCard(${card.id})" title="Delete entire card and all skills inside">
-                                <i class="fas fa-trash"></i>
+                            <button class="btn btn-danger btn-sm" aria-label="Delete entire card and all skills inside" onclick="deleteSkillCard(${card.id})" title="Delete entire card and all skills inside">
+                                <i class="fas fa-trash" aria-hidden="true"></i>
                             </button>
                         </div>
                     </div>`;
@@ -60,13 +60,13 @@ async function loadSkillsPage() {
                             </h4>
                             <div style="display:flex;gap:4px">
                                 <button class="btn btn-secondary btn-sm" onclick="addSkill(${cat.id})" title="Add a skill to this category">
-                                    <i class="fas fa-plus"></i> Add Skill
+                                    <i class="fas fa-plus" aria-hidden="true"></i> Add Skill
                                 </button>
-                                <button class="btn btn-secondary btn-sm" onclick="editSkillCategory(${cat.id})" title="Edit category">
-                                    <i class="fas fa-edit"></i>
+                                <button class="btn btn-secondary btn-sm" aria-label="Edit category" onclick="editSkillCategory(${cat.id})" title="Edit category">
+                                    <i class="fas fa-edit" aria-hidden="true"></i>
                                 </button>
-                                <button class="btn btn-danger btn-sm" onclick="deleteSkillCategory(${cat.id})" title="Delete category">
-                                    <i class="fas fa-trash"></i>
+                                <button class="btn btn-danger btn-sm" aria-label="Delete category" onclick="deleteSkillCategory(${cat.id})" title="Delete category">
+                                    <i class="fas fa-trash" aria-hidden="true"></i>
                                 </button>
                             </div>
                         </div>
@@ -89,8 +89,8 @@ async function loadSkillsPage() {
                                 </div>
                             </div>
                             <div class="data-item-actions">
-                                <button class="btn btn-secondary btn-sm" onclick="editSkill(${skill.id})"><i class="fas fa-edit"></i></button>
-                                <button class="btn btn-danger btn-sm" onclick="deleteSkill(${skill.id})"><i class="fas fa-trash"></i></button>
+                                <button class="btn btn-secondary btn-sm" aria-label="Edit" onclick="editSkill(${skill.id})"><i class="fas fa-edit" aria-hidden="true"></i></button>
+                                <button class="btn btn-danger btn-sm" aria-label="Delete" onclick="deleteSkill(${skill.id})"><i class="fas fa-trash" aria-hidden="true"></i></button>
                             </div>
                         </div>`;
                 }
@@ -143,12 +143,12 @@ function buildIconPickerField(fieldId, currentIcon, label) {
             <div class="field-hint" style="margin-bottom:8px"><i class="fas fa-info-circle"></i>Type a Font Awesome class or pick one below:</div>
             <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(36px,1fr));gap:4px;max-height:160px;overflow-y:auto;padding:8px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border)">
                 ${COMMON_ICONS.map(ic => `
-                    <button type="button" title="${ic}"
+                    <button type="button" aria-label="${ic}" title="${ic}"
                         style="aspect-ratio:1;background:none;border:1px solid transparent;border-radius:6px;cursor:pointer;color:var(--muted);font-size:1rem;transition:all 0.15s;padding:4px"
                         onmouseenter="this.style.borderColor='var(--accent2)';this.style.color='var(--accent2)'"
                         onmouseleave="this.style.borderColor='transparent';this.style.color='var(--muted)'"
                         onclick="document.getElementById('${fieldId}').value='${ic}';document.getElementById('${fieldId}_preview').className='${ic}'">
-                        <i class="${ic}"></i>
+                        <i class="${ic}" aria-hidden="true"></i>
                     </button>`).join('')}
             </div>
         </div>`;

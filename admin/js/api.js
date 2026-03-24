@@ -3,7 +3,7 @@
 // ============================================================
 
 const API = {
-    base: window.ADMIN_API_BASE || 'https://carlo-portfolio-api.johncarloebora.workers.dev',
+    base: (window.ADMIN_CONFIG && window.ADMIN_CONFIG.API_BASE) || 'https://carlo-portfolio-api.johncarloebora.workers.dev',
 
     // Default request timeout in milliseconds
     TIMEOUT_MS: 15000,

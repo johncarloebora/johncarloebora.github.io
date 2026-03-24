@@ -31,8 +31,8 @@ async function loadEducationPage() {
                             ${esc(edu.card_title)}
                         </div>
                         <div class="data-item-actions">
-                            <button class="btn btn-secondary btn-sm" onclick="editEducation(${edu.id})"><i class="fas fa-edit"></i> Edit</button>
-                            <button class="btn btn-danger btn-sm" onclick="deleteEducation(${edu.id})"><i class="fas fa-trash"></i></button>
+                            <button class="btn btn-secondary btn-sm" onclick="editEducation(${edu.id})"><i class="fas fa-edit" aria-hidden="true"></i> Edit</button>
+                            <button class="btn btn-danger btn-sm" aria-label="Delete" onclick="deleteEducation(${edu.id})"><i class="fas fa-trash" aria-hidden="true"></i></button>
                         </div>
                     </div>
                     ${entries.length ? `
@@ -121,7 +121,7 @@ function buildEduEntryCard(entry, idx) {
         <div class="entry-card" id="eduEntry_${idx}">
             <div class="entry-card-header">
                 <span>Entry ${idx + 1}</span>
-                <button type="button" class="btn btn-danger btn-icon btn-sm" onclick="this.closest('.entry-card').remove()" title="Remove entry"><i class="fas fa-times"></i></button>
+                <button type="button" class="btn btn-danger btn-icon btn-sm" aria-label="Remove entry" onclick="this.closest('.entry-card').remove()" title="Remove entry"><i class="fas fa-times" aria-hidden="true"></i></button>
             </div>
             <div class="form-row" style="margin-bottom:10px">
                 <div class="form-group" style="margin-bottom:0">
@@ -138,7 +138,7 @@ function buildEduEntryCard(entry, idx) {
                 ${lines.map(l => `
                     <div class="entry-line-row">
                         <input type="text" class="form-input edu-line-input" value="${esc(l)}" placeholder="e.g. GWA: 1.21 — Academic Distinction">
-                        <button type="button" class="btn btn-danger btn-icon btn-sm" onclick="this.closest('.entry-line-row').remove()" title="Remove"><i class="fas fa-times"></i></button>
+                        <button type="button" class="btn btn-danger btn-icon btn-sm" aria-label="Remove" onclick="this.closest('.entry-line-row').remove()" title="Remove"><i class="fas fa-times" aria-hidden="true"></i></button>
                     </div>`).join('')}
             </div>
             <button type="button" class="btn btn-secondary btn-sm" style="margin-top:8px;font-size:0.78rem" onclick="addEduLine(this.previousElementSibling)">
@@ -159,7 +159,7 @@ window.addEduLine = function(linesDiv) {
     const row = document.createElement('div');
     row.className = 'entry-line-row';
     row.innerHTML = `<input type="text" class="form-input edu-line-input" placeholder="e.g. Graduated with Distinction">
-        <button type="button" class="btn btn-danger btn-icon btn-sm" onclick="this.closest('.entry-line-row').remove()" title="Remove"><i class="fas fa-times"></i></button>`;
+        <button type="button" class="btn btn-danger btn-icon btn-sm" aria-label="Remove" onclick="this.closest('.entry-line-row').remove()" title="Remove"><i class="fas fa-times" aria-hidden="true"></i></button>`;
     linesDiv.appendChild(row);
     row.querySelector('input').focus();
 };

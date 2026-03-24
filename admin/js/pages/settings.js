@@ -119,35 +119,25 @@ router.register('settings', async () => {
             document.getElementById('uploadProfileBtn').style.display = 'inline-flex';
         });
 
-        document.getElementById('uploadProfileBtn').addEventListener('click', async () => {
+        document.getElementById('uploadProfileBtn').addEventListener('click', function() {
             if (!pendingProfileFile) return;
-            const btn = document.getElementById('uploadProfileBtn');
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner"></span> Uploading…';
-            try {
+            withButtonLock(this, async () => {
                 await API.uploadMedia(pendingProfileFile, 'profile', 'Profile Picture');
                 showToast('Profile picture uploaded! Hit Publish to go live.', 'success');
-                btn.style.display = 'none';
-            } catch (err) { showToast(err.message, 'error'); }
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-upload"></i> Upload to R2';
+                document.getElementById('uploadProfileBtn').style.display = 'none';
+            }, 'Uploading…').catch(err => showToast(err.message, 'error'));
         });
 
         // Save settings
-        document.getElementById('saveSettings').addEventListener('click', async () => {
-            const btn = document.getElementById('saveSettings');
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner"></span> Saving…';
-            try {
+        document.getElementById('saveSettings').addEventListener('click', function() {
+            withButtonLock(this, async () => {
                 await API.updateSettings({
                     navLogo:      document.getElementById('settNavLogo').value,
                     footerText:   document.getElementById('settFooter').value,
                     profileShape: document.getElementById('settProfileShape').value,
                 });
                 showToast('Settings saved! Hit Publish to apply.', 'success');
-            } catch (err) { showToast(err.message, 'error'); }
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-save"></i> Save Settings';
+            }, 'Saving…').catch(err => showToast(err.message, 'error'));
         });
 
     } catch (err) {

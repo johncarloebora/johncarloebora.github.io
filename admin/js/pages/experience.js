@@ -37,8 +37,8 @@ async function loadExperiencePage() {
                             </div>
                         </div>
                         <div class="data-item-actions" style="flex-shrink:0">
-                            <button class="btn btn-secondary btn-sm" onclick="editExperience(${exp.id})"><i class="fas fa-edit"></i> Edit</button>
-                            <button class="btn btn-danger btn-sm" onclick="deleteExperience(${exp.id})"><i class="fas fa-trash"></i></button>
+                            <button class="btn btn-secondary btn-sm" onclick="editExperience(${exp.id})"><i class="fas fa-edit" aria-hidden="true"></i> Edit</button>
+                            <button class="btn btn-danger btn-sm" aria-label="Delete" onclick="deleteExperience(${exp.id})"><i class="fas fa-trash" aria-hidden="true"></i></button>
                         </div>
                     </div>
                     ${bullets.length ? `
@@ -94,7 +94,7 @@ async function openExpModal(exp = null) {
                 ${bullets.map(b => `
                     <div class="bullet-item">
                         <textarea class="form-input bullet-input" rows="2" placeholder="e.g. Automated compliance tracking using VBA, reducing errors by 40%">${esc(b)}</textarea>
-                        <button class="btn btn-danger btn-icon btn-sm" onclick="this.parentElement.remove()" title="Remove bullet"><i class="fas fa-times"></i></button>
+                        <button class="btn btn-danger btn-icon btn-sm" aria-label="Remove bullet" onclick="this.parentElement.remove()" title="Remove bullet"><i class="fas fa-times" aria-hidden="true"></i></button>
                     </div>`).join('')}
             </div>
             <button class="btn btn-secondary btn-sm bullet-add-btn" onclick="addBullet()"><i class="fas fa-plus"></i> Add Bullet Point</button>
@@ -133,7 +133,7 @@ window.addBullet = function() {
     const div = document.createElement('div');
     div.className = 'bullet-item';
     div.innerHTML = `<textarea class="form-input bullet-input" rows="2" placeholder="e.g. Led a team of 3 to deliver project on time"></textarea>
-        <button class="btn btn-danger btn-icon btn-sm" onclick="this.parentElement.remove()" title="Remove"><i class="fas fa-times"></i></button>`;
+        <button class="btn btn-danger btn-icon btn-sm" aria-label="Remove" onclick="this.parentElement.remove()" title="Remove"><i class="fas fa-times" aria-hidden="true"></i></button>`;
     list.appendChild(div);
     div.querySelector('textarea').focus();
 };

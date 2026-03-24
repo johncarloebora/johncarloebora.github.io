@@ -89,8 +89,8 @@ async function loadMediaPage() {
                                 : `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted)"><i class="fas fa-file" style="font-size:2rem"></i></div>`}
                         <div class="media-item-overlay">${esc(m.filename)}</div>
                         <div class="media-item-actions">
-                            <button class="btn btn-danger btn-icon btn-sm" onclick="event.stopPropagation();deleteMediaItem(${m.id})" title="Delete">
-                                <i class="fas fa-trash"></i>
+                            <button class="btn btn-danger btn-icon btn-sm" aria-label="Delete" onclick="event.stopPropagation();deleteMediaItem(${m.id})" title="Delete">
+                                <i class="fas fa-trash" aria-hidden="true"></i>
                             </button>
                         </div>
                     </div>`;

@@ -42,8 +42,8 @@ async function loadProjectsPage() {
                         </div>
                     </div>
                     <div class="data-item-actions">
-                        <button class="btn btn-secondary btn-sm" onclick="editProject(${proj.id})"><i class="fas fa-edit"></i> Edit</button>
-                        <button class="btn btn-danger btn-sm" onclick="deleteProject(${proj.id})"><i class="fas fa-trash"></i></button>
+                        <button class="btn btn-secondary btn-sm" onclick="editProject(${proj.id})"><i class="fas fa-edit" aria-hidden="true"></i> Edit</button>
+                        <button class="btn btn-danger btn-sm" aria-label="Delete" onclick="deleteProject(${proj.id})"><i class="fas fa-trash" aria-hidden="true"></i></button>
                     </div>
                 </div>`;
         }
@@ -117,7 +117,7 @@ async function openProjectModal(proj = null) {
         <div class="form-group">
             <label>Tags <span style="font-size:0.72rem;color:var(--muted)">— tech stack, keywords</span></label>
             <div class="tag-editor" id="tagEditor" onclick="document.getElementById('tagInput').focus()">
-                ${tags.map(t => `<span class="tag-chip">${esc(t)}<button type="button" onclick="removeTag(this,event)"><i class="fas fa-times"></i></button></span>`).join('')}
+                ${tags.map(t => `<span class="tag-chip">${esc(t)}<button type="button" aria-label="Remove" onclick="removeTag(this,event)"><i class="fas fa-times" aria-hidden="true"></i></button></span>`).join('')}
                 <input type="text" class="tag-input" id="tagInput" placeholder="Type a tag and press Enter…"
                        onkeydown="if(event.key==='Enter'||event.key===','){event.preventDefault();addTagFromInput()}"
                        onblur="addTagFromInput()">
@@ -178,7 +178,7 @@ window.addTagFromInput = function() {
     const editor = document.getElementById('tagEditor');
     const chip = document.createElement('span');
     chip.className = 'tag-chip';
-    chip.innerHTML = `${val}<button type="button" onclick="removeTag(this,event)"><i class="fas fa-times"></i></button>`;
+    chip.innerHTML = `${val}<button type="button" aria-label="Remove" onclick="removeTag(this,event)"><i class="fas fa-times" aria-hidden="true"></i></button>`;
     editor.insertBefore(chip, input);
     input.value = '';
 };

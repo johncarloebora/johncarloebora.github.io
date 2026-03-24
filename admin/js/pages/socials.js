@@ -48,8 +48,8 @@ async function loadSocialsPage() {
                         <div class="data-item-subtitle" style="word-break:break-all">${esc(s.url)}</div>
                     </div>
                     <div class="data-item-actions">
-                        <button class="btn btn-secondary btn-sm" onclick="editSocial(${s.id})"><i class="fas fa-edit"></i> Edit</button>
-                        <button class="btn btn-danger btn-sm" onclick="deleteSocial(${s.id})"><i class="fas fa-trash"></i></button>
+                        <button class="btn btn-secondary btn-sm" onclick="editSocial(${s.id})"><i class="fas fa-edit" aria-hidden="true"></i> Edit</button>
+                        <button class="btn btn-danger btn-sm" aria-label="Delete" onclick="deleteSocial(${s.id})"><i class="fas fa-trash" aria-hidden="true"></i></button>
                     </div>
                 </div>`;
         }
@@ -98,8 +98,8 @@ async function openSocialModal(social = null) {
 
         <div class="form-group">
             <label>URL / Link</label>
-            <input type="url" class="form-input" id="modalUrl" value="${esc(social?.url || '')}" placeholder="https://linkedin.com/in/yourname">
-            <div class="field-hint"><i class="fas fa-info-circle"></i>Full URL including https://. For Email use <code>mailto:you@email.com</code>.</div>
+            <input type="text" class="form-input" id="modalUrl" value="${esc(social?.url || '')}" placeholder="https://linkedin.com/in/yourname">
+            <div class="field-hint"><i class="fas fa-info-circle"></i>Full URL including https://. For email links use <code>mailto:you@email.com</code>.</div>
         </div>
     `;
 

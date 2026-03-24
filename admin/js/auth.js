@@ -2,7 +2,7 @@
 // Admin Auth — Login, Forgot/Reset Password, Token Management
 // ============================================================
 
-const API_BASE = window.ADMIN_API_BASE || 'https://carlo-portfolio-api.johncarloebora.workers.dev';
+const API_BASE = (window.ADMIN_CONFIG && window.ADMIN_CONFIG.API_BASE) || 'https://carlo-portfolio-api.johncarloebora.workers.dev';
 
 // ── Toast ──
 function showToast(msg, type = 'info') {

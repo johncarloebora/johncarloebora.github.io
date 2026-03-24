@@ -49,10 +49,10 @@ function renderAboutEditor(container, cards, stats) {
                 </div>
                 <div class="data-item-actions">
                     <button class="btn btn-secondary btn-sm" onclick="editAboutCard(${card.id})" title="Edit card">
-                        <i class="fas fa-edit"></i> Edit
+                        <i class="fas fa-edit" aria-hidden="true"></i> Edit
                     </button>
-                    <button class="btn btn-danger btn-sm" onclick="deleteAboutCard(${card.id})" title="Delete card">
-                        <i class="fas fa-trash"></i>
+                    <button class="btn btn-danger btn-sm" aria-label="Delete card" onclick="deleteAboutCard(${card.id})" title="Delete card">
+                        <i class="fas fa-trash" aria-hidden="true"></i>
                     </button>
                 </div>
             </div>`;
@@ -80,8 +80,8 @@ function renderAboutEditor(container, cards, stats) {
                     <div class="data-item-subtitle">Counts from 0 to ${esc(stat.target)} on scroll</div>
                 </div>
                 <div class="data-item-actions">
-                    <button class="btn btn-secondary btn-sm" onclick="editStat(${stat.id})"><i class="fas fa-edit"></i> Edit</button>
-                    <button class="btn btn-danger btn-sm" onclick="deleteStat(${stat.id})"><i class="fas fa-trash"></i></button>
+                    <button class="btn btn-secondary btn-sm" onclick="editStat(${stat.id})"><i class="fas fa-edit" aria-hidden="true"></i> Edit</button>
+                    <button class="btn btn-danger btn-sm" aria-label="Delete" onclick="deleteStat(${stat.id})"><i class="fas fa-trash" aria-hidden="true"></i></button>
                 </div>
             </div>`;
     }
@@ -195,7 +195,7 @@ function buildInfoItemRow(icon, text, idx) {
                    oninput="document.getElementById('infoIcon_preview_${idx}').className=this.value">
         </div>
         <input type="text" class="form-input info-text-input" value="${esc(text)}" placeholder="e.g. Caloocan City" style="flex:1">
-        <button type="button" class="btn btn-danger btn-icon btn-sm" onclick="this.closest('.info-item-row').remove()" title="Remove"><i class="fas fa-times"></i></button>
+        <button type="button" class="btn btn-danger btn-icon btn-sm" aria-label="Remove" onclick="this.closest('.info-item-row').remove()" title="Remove"><i class="fas fa-times" aria-hidden="true"></i></button>
     </div>`;
 }
 

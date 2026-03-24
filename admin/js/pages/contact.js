@@ -73,11 +73,8 @@ router.register('contact', async () => {
             <button class="btn btn-primary" id="saveContact"><i class="fas fa-save"></i> Save Contact Settings</button>
         `;
 
-        document.getElementById('saveContact').addEventListener('click', async () => {
-            const btn = document.getElementById('saveContact');
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner"></span> Saving…';
-            try {
+        document.getElementById('saveContact').addEventListener('click', function() {
+            withButtonLock(this, async () => {
                 await API.updateSettings({
                     emailjsServiceId:  document.getElementById('contactServiceId').value,
                     emailjsTemplateId: document.getElementById('contactTemplateId').value,
@@ -85,9 +82,7 @@ router.register('contact', async () => {
                     recaptchaSiteKey:  document.getElementById('contactRecaptcha').value,
                 });
                 showToast('Contact settings saved! Hit Publish to apply.', 'success');
-            } catch (err) { showToast(err.message, 'error'); }
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-save"></i> Save Contact Settings';
+            }, 'Saving…').catch(err => showToast(err.message, 'error'));
         });
     } catch (err) {
         renderPageError(container, err);

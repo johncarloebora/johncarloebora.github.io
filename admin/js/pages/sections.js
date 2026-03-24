@@ -31,8 +31,8 @@ async function loadSectionsPage() {
             html += `
                 <div class="section-list-item" data-id="${esc(s.id)}">
                     <div style="display:flex;flex-direction:column;gap:2px">
-                        <button class="btn btn-icon btn-sm btn-secondary" onclick="moveSectionUp('${esc(s.id)}')" ${i === 0 ? 'disabled' : ''} title="Move up"><i class="fas fa-chevron-up"></i></button>
-                        <button class="btn btn-icon btn-sm btn-secondary" onclick="moveSectionDown('${esc(s.id)}')" ${i === sections.length - 1 ? 'disabled' : ''} title="Move down"><i class="fas fa-chevron-down"></i></button>
+                        <button class="btn btn-icon btn-sm btn-secondary" aria-label="Move up" onclick="moveSectionUp('${esc(s.id)}')" ${i === 0 ? 'disabled' : ''} title="Move up"><i class="fas fa-chevron-up" aria-hidden="true"></i></button>
+                        <button class="btn btn-icon btn-sm btn-secondary" aria-label="Move down" onclick="moveSectionDown('${esc(s.id)}')" ${i === sections.length - 1 ? 'disabled' : ''} title="Move down"><i class="fas fa-chevron-down" aria-hidden="true"></i></button>
                     </div>
                     <div class="section-icon"><i class="${esc(s.nav_icon || 'fas fa-circle')}"></i></div>
                     <div class="section-info">
@@ -42,11 +42,11 @@ async function loadSectionsPage() {
                     <span class="status-badge ${s.visible ? 'visible' : 'hidden'}" style="margin-right:4px">
                         <i class="fas fa-${s.visible ? 'eye' : 'eye-slash'}"></i> ${s.visible ? 'Visible' : 'Hidden'}
                     </span>
-                    <button class="btn btn-secondary btn-sm" onclick="toggleSectionVisibility('${esc(s.id)}', ${s.visible ? 0 : 1})" title="${s.visible ? 'Hide section' : 'Show section'}">
-                        <i class="fas fa-${s.visible ? 'eye-slash' : 'eye'}"></i>
+                    <button class="btn btn-secondary btn-sm" aria-label="${s.visible ? 'Hide section' : 'Show section'}" onclick="toggleSectionVisibility('${esc(s.id)}', ${s.visible ? 0 : 1})" title="${s.visible ? 'Hide section' : 'Show section'}">
+                        <i class="fas fa-${s.visible ? 'eye-slash' : 'eye'}" aria-hidden="true"></i>
                     </button>
-                    <button class="btn btn-secondary btn-sm" onclick="editSection('${esc(s.id)}')" title="Edit section"><i class="fas fa-edit"></i></button>
-                    ${isCustom ? `<button class="btn btn-danger btn-sm" onclick="deleteSection('${esc(s.id)}')" title="Delete section"><i class="fas fa-trash"></i></button>` : ''}
+                    <button class="btn btn-secondary btn-sm" aria-label="Edit section" onclick="editSection('${esc(s.id)}')" title="Edit section"><i class="fas fa-edit" aria-hidden="true"></i></button>
+                    ${isCustom ? `<button class="btn btn-danger btn-sm" aria-label="Delete section" onclick="deleteSection('${esc(s.id)}')" title="Delete section"><i class="fas fa-trash" aria-hidden="true"></i></button>` : ''}
                 </div>
             `;
         }
@@ -217,7 +217,7 @@ function buildSectionIconGrid() {
     ];
     let grid = '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">';
     icons.forEach(ic => {
-        grid += `<button type="button" onclick="pickSectionIcon('${ic}')" title="${ic}" style="width:32px;height:32px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);transition:all 0.15s" onmouseover="this.style.borderColor='var(--accent2)';this.style.color='var(--accent2)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-secondary)'"><i class="${ic}" style="font-size:0.85rem;pointer-events:none"></i></button>`;
+        grid += `<button type="button" aria-label="${ic}" onclick="pickSectionIcon('${ic}')" title="${ic}" style="width:32px;height:32px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);transition:all 0.15s" onmouseover="this.style.borderColor='var(--accent2)';this.style.color='var(--accent2)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-secondary)'"><i class="${ic}" aria-hidden="true" style="font-size:0.85rem;pointer-events:none"></i></button>`;
     });
     grid += '</div>';
     return grid;

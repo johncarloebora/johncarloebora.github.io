@@ -85,7 +85,7 @@ router.register('hero', async () => {
                     ${(settings.typewriterPhrases || []).map((p, i) => `
                         <div class="bullet-item" id="tw_${i}">
                             <input type="text" class="form-input tw-phrase-input" value="${esc(p)}" placeholder="e.g. Computer Engineer" maxlength="60">
-                            <button class="btn btn-danger btn-icon btn-sm" onclick="removeTypewriterPhrase(this)" title="Remove"><i class="fas fa-times"></i></button>
+                            <button class="btn btn-danger btn-icon btn-sm" aria-label="Remove" onclick="removeTypewriterPhrase(this)" title="Remove"><i class="fas fa-times" aria-hidden="true"></i></button>
                         </div>
                     `).join('')}
                 </div>
@@ -165,7 +165,7 @@ window.addTypewriterPhrase = function() {
     div.className = 'bullet-item';
     div.id = 'tw_' + idx;
     div.innerHTML = `<input type="text" class="form-input tw-phrase-input" placeholder="e.g. Web Developer" maxlength="60">
-        <button class="btn btn-danger btn-icon btn-sm" onclick="removeTypewriterPhrase(this)" title="Remove"><i class="fas fa-times"></i></button>`;
+        <button class="btn btn-danger btn-icon btn-sm" aria-label="Remove" onclick="removeTypewriterPhrase(this)" title="Remove"><i class="fas fa-times" aria-hidden="true"></i></button>`;
     list.appendChild(div);
     div.querySelector('input').focus();
 };
