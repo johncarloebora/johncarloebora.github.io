@@ -689,6 +689,32 @@
             </div>
         </div>
 
+        <!-- Webpage Preview Modal -->
+        <div class="gallery-modal webpage-modal" id="webpageModal" role="dialog" aria-modal="true" aria-label="Webpage Preview">
+            <div class="webpage-modal-inner">
+                <div class="webpage-modal-toolbar">
+                    <span class="webpage-modal-title" id="webpageModalTitle">Live Preview</span>
+                    <a class="webpage-open-btn" id="webpageOpenBtn" href="#" target="_blank" rel="noopener noreferrer" aria-label="Open in new tab">
+                        <i class="fas fa-external-link-alt"></i> Open
+                    </a>
+                    <button class="close-button webpage-close-btn" id="webpageModalClose" aria-label="Close preview">
+                        <svg viewBox="0 0 40 40"><path class="close-x" d="M 10,10 L 30,30 M 30,10 L 10,30"/></svg>
+                    </button>
+                </div>
+                <div class="webpage-frame-wrap" id="webpageFrameWrap">
+                    <div class="webpage-loading" id="webpageLoading">
+                        <i class="fas fa-spinner fa-spin"></i><span>Loading preview…</span>
+                    </div>
+                    <div class="webpage-error" id="webpageError" style="display:none">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <p>This page cannot be previewed (X-Frame-Options blocked).</p>
+                        <a id="webpageErrorLink" href="#" target="_blank" rel="noopener noreferrer" class="cta-button primary" style="margin-top:14px;display:inline-block">Open in New Tab</a>
+                    </div>
+                    <iframe id="webpageFrame" title="Webpage Preview" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" loading="lazy"></iframe>
+                </div>
+            </div>
+        </div>
+
     </section>
 
     <!-- Socials -->
@@ -737,6 +763,22 @@
                     <span>Send Message</span><i class="fas fa-paper-plane"></i>
                 </button>
             </form>
+        </div>
+    </section>
+
+    <!-- Mini-Game Section (hidden by default; shown when section is visible in admin) -->
+    <section id="minigame" style="display:none" aria-hidden="true">
+        <div class="container">
+            <h2 class="section-title" data-scramble="Quick Challenges">Quick Challenges</h2>
+            <p class="section-intro">Test your reflexes with a quick mini-game. Each challenge is lightweight and loads on demand.</p>
+            <div class="minigame-tabs" id="minigameTabs">
+                <button class="minigame-tab active" data-game="reaction" aria-selected="true">⚡ Reaction Test</button>
+                <button class="minigame-tab" data-game="typing" aria-selected="false">⌨️ Typing Speed</button>
+                <button class="minigame-tab" data-game="click" aria-selected="false">🖱️ Click Speed</button>
+            </div>
+            <div class="minigame-arena" id="minigameArena">
+                <!-- Populated by JS -->
+            </div>
         </div>
     </section>
 

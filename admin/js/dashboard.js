@@ -175,5 +175,38 @@ router.register('overview', async () => {
     }
 });
 
+// ── System Page ──
+router.register('system', () => {
+    const btn = document.getElementById('runMigrateBtn');
+    if (!btn) return;
+    btn.addEventListener('click', async () => {
+        const resultsDiv = document.getElementById('migrateResults');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span> Running…';
+        try {
+            const data = await API.request('/api/admin/migrate', { method: 'POST' });
+            let html = '<div style="margin-top:12px;display:flex;flex-direction:column;gap:6px">';
+            (data.results || []).forEach(r => {
+                const icon = r.status === 'applied' ? 'check-circle' : 'info-circle';
+                const color = r.status === 'applied' ? 'var(--accent2)' : 'var(--muted)';
+                html += `<div style="font-size:0.82rem;display:flex;gap:8px;align-items:flex-start">
+                    <i class="fas fa-${icon}" style="color:${color};margin-top:2px;flex-shrink:0"></i>
+                    <span style="color:var(--text-secondary)">${esc(r.sql.substring(0,80))}…<br>
+                    <em style="color:${color}">${esc(r.status)}</em>${r.detail ? ' — ' + esc(r.detail) : ''}</span>
+                </div>`;
+            });
+            html += '</div>';
+            resultsDiv.innerHTML = html;
+            resultsDiv.style.display = '';
+            showToast('Migrations complete!', 'success');
+        } catch (err) {
+            showToast('Migration failed: ' + err.message, 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-play"></i> Run Migrations';
+        }
+    });
+});
+
 // ── Initialize ──
 router.init();

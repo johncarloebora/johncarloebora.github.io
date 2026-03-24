@@ -63,6 +63,9 @@
             <a href="#password" class="sidebar-link" data-page="password">
                 <i class="fas fa-lock"></i><span>Password</span>
             </a>
+            <a href="#system" class="sidebar-link" data-page="system">
+                <i class="fas fa-database"></i><span>System</span>
+            </a>
         </nav>
     </aside>
 
@@ -259,6 +262,27 @@
         <div class="page" id="page-password">
             <div class="page-header"><h1>Change Password</h1></div>
             <div id="passwordEditor"></div>
+        </div>
+
+        <!-- System Page -->
+        <div class="page" id="page-system">
+            <div class="page-header"><h1>System</h1></div>
+            <div class="help-banner" style="margin-bottom:20px">
+                <i class="fas fa-info-circle"></i>
+                <div>
+                    <strong>Database Migration</strong> — Run this once after updating the admin panel to apply schema changes (new columns, new built-in sections). It is safe to run multiple times.
+                </div>
+            </div>
+            <div class="admin-card">
+                <div class="admin-card-header"><h3><i class="fas fa-database"></i> Database Migrations</h3></div>
+                <div style="display:flex;flex-direction:column;gap:12px">
+                    <p style="font-size:0.88rem;color:var(--text-secondary)">Applies pending schema upgrades to your D1 database. Adds new columns and seeds missing built-in sections (like the Mini-Game section). Safe to run multiple times — already-applied migrations are skipped.</p>
+                    <button class="btn btn-primary" id="runMigrateBtn" style="width:fit-content">
+                        <i class="fas fa-play"></i> Run Migrations
+                    </button>
+                    <div id="migrateResults" style="display:none"></div>
+                </div>
+            </div>
         </div>
     </main>
 

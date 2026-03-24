@@ -36,8 +36,9 @@ async function loadProjectsPage() {
                         <div class="data-item-subtitle" style="margin-top:2px">${esc((proj.description || '').substring(0, 80))}${(proj.description || '').length > 80 ? '…' : ''}</div>
                         <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px">
                             ${tags.map(t => `<span class="tag-chip" style="font-size:0.7rem;padding:2px 7px">${esc(t)}</span>`).join('')}
-                            ${proj.gallery_type ? `<span class="status-badge ${proj.gallery_type === 'video' ? 'unpublished' : 'visible'}" style="font-size:0.68rem">
-                                <i class="fas fa-${proj.gallery_type === 'video' ? 'film' : 'images'}"></i> ${proj.gallery_type === 'video' ? 'Video Gallery' : 'Image Gallery'}
+                            ${proj.category && proj.category !== 'standard' ? `<span class="status-badge" style="font-size:0.68rem;background:var(--surface3)"><i class="fas fa-tag"></i> ${esc(proj.category)}</span>` : ''}
+                            ${proj.gallery_type ? `<span class="status-badge ${proj.gallery_type === 'video' ? 'unpublished' : proj.gallery_type === 'webpage' ? 'hidden' : 'visible'}" style="font-size:0.68rem">
+                                <i class="fas fa-${proj.gallery_type === 'video' ? 'film' : proj.gallery_type === 'webpage' ? 'globe' : 'images'}"></i> ${proj.gallery_type === 'video' ? 'Video Gallery' : proj.gallery_type === 'webpage' ? 'Webpage Preview' : 'Image Gallery'}
                             </span>` : ''}
                         </div>
                     </div>
@@ -99,19 +100,39 @@ async function openProjectModal(proj = null) {
 
         <div class="form-row">
             <div class="form-group">
-                <label>Gallery Type</label>
-                <select class="form-input" id="modalGalleryType">
-                    <option value=""     ${!proj?.gallery_type                   ? 'selected' : ''}>No Gallery — card opens nothing</option>
-                    <option value="image"${proj?.gallery_type === 'image'        ? 'selected' : ''}>Image Gallery — shows photos</option>
-                    <option value="video"${proj?.gallery_type === 'video'        ? 'selected' : ''}>Video Gallery — shows videos</option>
+                <label>Category</label>
+                <select class="form-input" id="modalCategory">
+                    <option value="standard"     ${(!proj?.category || proj?.category === 'standard')   ? 'selected' : ''}>Standard</option>
+                    <option value="featured"     ${proj?.category === 'featured'                         ? 'selected' : ''}>Featured</option>
+                    <option value="experimental" ${proj?.category === 'experimental'                     ? 'selected' : ''}>Experimental</option>
+                    <option value="archived"     ${proj?.category === 'archived'                         ? 'selected' : ''}>Archived</option>
                 </select>
-                <div class="field-hint"><i class="fas fa-info-circle"></i>When a visitor clicks the project, it opens this gallery type.</div>
+                <div class="field-hint"><i class="fas fa-info-circle"></i>Used to categorise projects (for filtering or display).</div>
             </div>
+            <div class="form-group">
+                <label>Gallery / Preview Type</label>
+                <select class="form-input" id="modalGalleryType" onchange="toggleWebpageField()">
+                    <option value=""       ${!proj?.gallery_type                   ? 'selected' : ''}>No Gallery — card opens nothing</option>
+                    <option value="image"  ${proj?.gallery_type === 'image'        ? 'selected' : ''}>Image Gallery — shows photos</option>
+                    <option value="video"  ${proj?.gallery_type === 'video'        ? 'selected' : ''}>Video Gallery — shows videos</option>
+                    <option value="webpage"${proj?.gallery_type === 'webpage'      ? 'selected' : ''}>Webpage Preview — iframe / live site</option>
+                </select>
+                <div class="field-hint"><i class="fas fa-info-circle"></i>When a visitor clicks the project, it opens this type.</div>
+            </div>
+        </div>
+
+        <div class="form-row" id="galleryFolderRow" style="${proj?.gallery_type === 'webpage' ? 'display:none' : ''}">
             <div class="form-group">
                 <label>Gallery Folder</label>
                 <input type="text" class="form-input" id="modalGalleryFolder" value="${esc(proj?.gallery_folder || '')}" placeholder="e.g. layout">
                 <div class="field-hint"><i class="fas fa-info-circle"></i>The folder name in your R2 Media Library that holds this project's gallery files.</div>
             </div>
+        </div>
+
+        <div class="form-group" id="webpageUrlRow" style="${proj?.gallery_type === 'webpage' ? '' : 'display:none'}">
+            <label>Webpage URL</label>
+            <input type="text" class="form-input" id="modalWebpageUrl" value="${esc(proj?.webpage_url || '')}" placeholder="https://yourwebsite.com">
+            <div class="field-hint"><i class="fas fa-info-circle"></i>The full URL of the live webpage to preview in an iframe.</div>
         </div>
 
         <div class="form-group">
@@ -132,12 +153,15 @@ async function openProjectModal(proj = null) {
     const tagChips = document.querySelectorAll('#tagEditor .tag-chip');
     const newTags = Array.from(tagChips).map(c => c.textContent.trim().replace(/×$/, '').trim()).filter(Boolean);
 
+    const galleryType = document.getElementById('modalGalleryType').value || null;
     const data = {
         title:          document.getElementById('modalTitle').value,
         description:    document.getElementById('modalDesc').value,
         thumbnail_path: document.getElementById('modalThumb').value || null,
-        gallery_type:   document.getElementById('modalGalleryType').value || null,
-        gallery_folder: document.getElementById('modalGalleryFolder').value || null,
+        gallery_type:   galleryType,
+        gallery_folder: galleryType === 'webpage' ? null : (document.getElementById('modalGalleryFolder').value || null),
+        webpage_url:    galleryType === 'webpage' ? (document.getElementById('modalWebpageUrl').value || null) : null,
+        category:       document.getElementById('modalCategory').value || 'standard',
         tags:           JSON.stringify(newTags),
         sort_order:     proj?.sort_order ?? 99,
     };
@@ -153,6 +177,15 @@ async function openProjectModal(proj = null) {
         loadProjectsPage();
     } catch (err) { showToast(err.message, 'error'); }
 }
+
+window.toggleWebpageField = function() {
+    const type = document.getElementById('modalGalleryType')?.value;
+    const isWebpage = type === 'webpage';
+    const folderRow = document.getElementById('galleryFolderRow');
+    const webpageRow = document.getElementById('webpageUrlRow');
+    if (folderRow)  folderRow.style.display  = isWebpage ? 'none' : '';
+    if (webpageRow) webpageRow.style.display = isWebpage ? '' : 'none';
+};
 
 window.pickThumb = function(url) {
     if (!url) return;

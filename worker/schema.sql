@@ -129,6 +129,8 @@ CREATE TABLE IF NOT EXISTS projects (
     thumbnail_path TEXT,
     gallery_type   TEXT,
     gallery_folder TEXT,
+    webpage_url    TEXT,
+    category       TEXT    DEFAULT 'standard',
     tags           TEXT    DEFAULT '[]',
     skills         TEXT    DEFAULT '[]',
     sort_order     INTEGER NOT NULL DEFAULT 0

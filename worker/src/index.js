@@ -467,7 +467,7 @@ crudRoutes(router, 'education', 'education', {
   allowedFields: ['card_title', 'card_icon', 'entries', 'sort_order'],
 });
 crudRoutes(router, 'projects', 'projects', {
-  allowedFields: ['title', 'description', 'thumbnail_path', 'gallery_type', 'gallery_folder', 'tags', 'sort_order'],
+  allowedFields: ['title', 'description', 'thumbnail_path', 'gallery_type', 'gallery_folder', 'webpage_url', 'category', 'tags', 'sort_order'],
 });
 crudRoutes(router, 'socials', 'socials', {
   allowedFields: ['platform', 'url', 'icon', 'label', 'sort_order'],
@@ -625,13 +625,39 @@ router.delete('/api/media/:id', authMiddleware, async (request, env) => {
 });
 
 // ────────────────────────────────────────────────────────────
+// DB MIGRATION ENDPOINT (safe, idempotent — adds new columns)
+// ────────────────────────────────────────────────────────────
+
+router.post('/api/admin/migrate', authMiddleware, async (request, env) => {
+  const migrations = [
+    // Add webpage_url to projects (safe — SQLite ignores if column exists via try/catch)
+    'ALTER TABLE projects ADD COLUMN webpage_url TEXT',
+    // Add category to projects
+    "ALTER TABLE projects ADD COLUMN category TEXT DEFAULT 'standard'",
+    // Seed minigame section (hidden by default — admin can enable it)
+    "INSERT OR IGNORE INTO sections (id, title, nav_icon, nav_label, sort_order, visible, type) VALUES ('minigame', 'Quick Challenges', 'fas fa-gamepad', 'Fun Zone', 8, 0, 'builtin')",
+  ];
+  const results = [];
+  for (const sql of migrations) {
+    try {
+      await env.DB.prepare(sql).run();
+      results.push({ sql, status: 'applied' });
+    } catch (e) {
+      /* "duplicate column" error means it already exists — safe to ignore */
+      results.push({ sql, status: 'already_exists', detail: e.message });
+    }
+  }
+  return json({ ok: true, results });
+});
+
+// ────────────────────────────────────────────────────────────
 // PUBLIC GALLERY ENDPOINT (replaces GitHub Contents API)
 // ────────────────────────────────────────────────────────────
 
 router.get('/api/gallery/:folder', async (request, env) => {
   const folder = request.params.folder;
-  const allowedFolders = ['layout', 'videos', 'profile', 'thumbnail'];
-  if (!allowedFolders.includes(folder)) return error(400, 'Invalid folder');
+  /* Allow any alphanumeric folder name (letters, digits, hyphens, underscores) */
+  if (!/^[a-zA-Z0-9_-]{1,64}$/.test(folder)) return error(400, 'Invalid folder name');
 
   const { results } = await env.DB.prepare(
     'SELECT filename, alt_text, mime_type FROM media WHERE folder = ? ORDER BY filename'

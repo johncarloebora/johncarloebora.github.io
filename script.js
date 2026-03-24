@@ -112,6 +112,55 @@ function applySiteConfig(cfg) {
         }
     }
 
+    /* ── Section DOM visibility + custom section injection ── */
+    if (cfg.sections && cfg.sections.length) {
+        /* Remove stale custom sections no longer in config */
+        document.querySelectorAll('section[data-custom-section]').forEach(function(el) {
+            var stillExists = cfg.sections.some(function(s) { return s.id === el.id && s.type === 'custom'; });
+            if (!stillExists) el.remove();
+        });
+
+        cfg.sections.forEach(function(sec) {
+            if (sec.id === 'home') return;
+
+            if (sec.type === 'custom') {
+                var config = sec.config || {};
+                var html   = config.html || '';
+                var existing = document.getElementById(sec.id);
+
+                if (!sec.visible) {
+                    if (existing) { existing.style.display = 'none'; existing.setAttribute('aria-hidden', 'true'); }
+                    return;
+                }
+                if (!existing) {
+                    existing = document.createElement('section');
+                    existing.id = sec.id;
+                    existing.setAttribute('data-custom-section', '1');
+                    var footer = document.querySelector('footer');
+                    if (footer) footer.parentNode.insertBefore(existing, footer);
+                }
+                existing.style.display = '';
+                existing.removeAttribute('aria-hidden');
+                existing.innerHTML = '<div class="container">' +
+                    '<h2 class="section-title" data-scramble="' + esc(sec.title) + '">' + esc(sec.title) + '</h2>' +
+                    '<div class="custom-section-content">' + html + '</div>' +
+                    '</div>';
+                return;
+            }
+
+            /* Built-in sections */
+            var sectionEl = document.getElementById(sec.id);
+            if (!sectionEl) return;
+            if (!sec.visible) {
+                sectionEl.style.display = 'none';
+                sectionEl.setAttribute('aria-hidden', 'true');
+            } else {
+                sectionEl.style.display = '';
+                sectionEl.removeAttribute('aria-hidden');
+            }
+        });
+    }
+
     /* ── Section titles ── */
     if (cfg.sections) {
         cfg.sections.forEach(function (sec) {
@@ -282,20 +331,33 @@ function applySiteConfig(cfg) {
         var projGrid = document.getElementById('projectGrid');
         if (projGrid) {
             projGrid.innerHTML = cfg.projects.map(function (proj) {
-                var isVideo = proj.gallery_type === 'video';
-                var thumbSrc = proj.thumbnail_url || (r2 + '/' + proj.thumbnail_path);
+                var isVideo   = proj.gallery_type === 'video';
+                var isWebpage = proj.gallery_type === 'webpage';
+                var hasGallery = proj.gallery_type === 'image';
+                /* Fallback to coming-soon thumbnail if none supplied */
+                var thumbSrc = proj.thumbnail_url || (proj.thumbnail_path ? r2 + '/' + proj.thumbnail_path : 'thumbnail/Coming Soon.gif');
                 var tagsHTML = (proj.tags || []).map(function (t) { return '<span class="project-type">' + esc(t) + '</span>'; }).join('');
                 var skillsHTML = (proj.skills || []).length ? '<div class="project-skills">' +
                     proj.skills.map(function (sk) { return '<span class="project-skill">' + esc(sk) + '</span>'; }).join('') +
                     '</div>' : '';
-                var overlayIcon = isVideo ? 'fas fa-play-circle' : 'fas fa-images';
-                var overlayText = isVideo ? 'View Videos' : 'View Gallery';
-                var dataAttr = isVideo
-                    ? 'data-video-folder="' + esc(proj.gallery_folder) + '" style="cursor:pointer"'
-                    : 'data-gallery-folder="' + esc(proj.gallery_folder) + '"';
+                var overlayIcon, overlayText, dataAttr;
+                if (isVideo) {
+                    overlayIcon = 'fas fa-play-circle'; overlayText = 'View Videos';
+                    dataAttr = 'data-video-folder="' + esc(proj.gallery_folder) + '" style="cursor:pointer"';
+                } else if (isWebpage) {
+                    overlayIcon = 'fas fa-globe'; overlayText = 'Live Preview';
+                    dataAttr = 'data-webpage-url="' + esc(proj.webpage_url || '') + '" data-webpage-title="' + esc(proj.title) + '" style="cursor:pointer"';
+                } else if (hasGallery) {
+                    overlayIcon = 'fas fa-images'; overlayText = 'View Gallery';
+                    dataAttr = 'data-gallery-folder="' + esc(proj.gallery_folder) + '"';
+                } else {
+                    overlayIcon = 'fas fa-info-circle'; overlayText = 'View Project';
+                    dataAttr = '';
+                }
                 return '<div class="project-card">' +
                     '<div class="project-thumbnail" ' + dataAttr + '>' +
-                    '<img src="' + esc(thumbSrc) + '" alt="' + esc(proj.title) + '" class="main-thumbnail" loading="lazy">' +
+                    '<img src="' + esc(thumbSrc) + '" alt="' + esc(proj.title) + '" class="main-thumbnail" loading="lazy" ' +
+                    'onerror="this.src=\'thumbnail/Coming Soon.gif\'">' +
                     '<div class="project-overlay"><span class="overlay-text"><i class="' + overlayIcon + '"></i> ' + overlayText + '</span></div>' +
                     '</div>' +
                     '<div class="project-content">' +
@@ -325,7 +387,7 @@ function applySiteConfig(cfg) {
         if (ft) ft.innerHTML = s.footerText;
     }
 
-    /* Re-bind gallery/video click handlers after DOM replacement */
+    /* Re-bind gallery/video/webpage click handlers after DOM replacement */
     if (typeof window._rebindGallery === 'function') window._rebindGallery();
 
     /* Re-init animations on new elements */
@@ -1276,7 +1338,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /* Image gallery thumbnails */
     /* Expose rebind so applySiteConfig can re-attach after replacing project HTML */
-    window._rebindGallery = function () { bindGalleryClicks(); bindVideoClicks(); };
+    window._rebindGallery = function () { bindGalleryClicks(); bindVideoClicks(); bindWebpageClicks(); };
 
     function bindGalleryClicks() {
         document.querySelectorAll('.project-thumbnail[data-gallery-folder]').forEach(thumb => {
@@ -1359,6 +1421,83 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     bindVideoClicks();
+
+    /* ── Webpage preview modal ─── */
+    var webpageModal     = document.getElementById('webpageModal');
+    var webpageFrame     = document.getElementById('webpageFrame');
+    var webpageModalClose= document.getElementById('webpageModalClose');
+    var webpageOpenBtn   = document.getElementById('webpageOpenBtn');
+    var webpageTitle     = document.getElementById('webpageModalTitle');
+    var webpageLoading   = document.getElementById('webpageLoading');
+    var webpageError     = document.getElementById('webpageError');
+    var webpageErrorLink = document.getElementById('webpageErrorLink');
+
+    function openWebpageModal(url, title) {
+        if (!webpageModal || !webpageFrame) return;
+        if (!url) { showToast('No URL configured for this project.', 'error'); return; }
+        if (webpageTitle) webpageTitle.textContent = title || 'Live Preview';
+        if (webpageOpenBtn) webpageOpenBtn.href = url;
+        if (webpageErrorLink) webpageErrorLink.href = url;
+        /* Reset state */
+        if (webpageLoading) webpageLoading.style.display = '';
+        if (webpageError) webpageError.style.display = 'none';
+        webpageFrame.style.opacity = '0';
+        webpageFrame.src = '';
+        webpageModal.classList.add('active');
+        lockScroll();
+        hideNav();
+        /* Load iframe */
+        webpageFrame.onload = function() {
+            if (webpageLoading) webpageLoading.style.display = 'none';
+            webpageFrame.style.opacity = '1';
+        };
+        webpageFrame.onerror = function() {
+            if (webpageLoading) webpageLoading.style.display = 'none';
+            if (webpageError) webpageError.style.display = '';
+        };
+        /* Detect X-Frame-Options block (iframe stays blank) */
+        var loadTimeout = setTimeout(function() {
+            if (webpageFrame.style.opacity === '0') {
+                if (webpageLoading) webpageLoading.style.display = 'none';
+                if (webpageError) webpageError.style.display = '';
+            }
+        }, 8000);
+        webpageFrame.onload = function() {
+            clearTimeout(loadTimeout);
+            if (webpageLoading) webpageLoading.style.display = 'none';
+            try { webpageFrame.style.opacity = '1'; } catch(e) {}
+        };
+        webpageFrame.src = url;
+    }
+
+    function closeWebpageModal() {
+        if (!webpageModal) return;
+        webpageModal.classList.remove('active');
+        if (webpageFrame) webpageFrame.src = '';
+        unlockScroll();
+        restoreNav();
+    }
+
+    function bindWebpageClicks() {
+        document.querySelectorAll('.project-thumbnail[data-webpage-url]').forEach(function(thumb) {
+            if (thumb.dataset.webpageBound) return;
+            thumb.dataset.webpageBound = '1';
+            thumb.addEventListener('click', function() {
+                openWebpageModal(thumb.dataset.webpageUrl, thumb.dataset.webpageTitle);
+            });
+        });
+    }
+    bindWebpageClicks();
+
+    if (webpageModalClose) webpageModalClose.addEventListener('click', closeWebpageModal);
+    if (webpageModal) {
+        webpageModal.addEventListener('click', function(e) {
+            if (e.target === webpageModal) closeWebpageModal();
+        });
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && webpageModal.classList.contains('active')) closeWebpageModal();
+        });
+    }
 
     /* Legacy fallback */
     document.querySelectorAll('.project-thumbnail[data-video-empty]').forEach(thumb => {
@@ -1466,6 +1605,248 @@ document.addEventListener('DOMContentLoaded', () => {
         '.mobile-nav-toggle, .theme-toggle-btn, .back-to-top'
     );
     rippleTargets.forEach(el => el.addEventListener('click', createRipple));
+})();
+
+/* ── S. MINI-GAME ─────────────────────────────────────────── */
+(function initMiniGame() {
+    const arena = document.getElementById('minigameArena');
+    const tabs  = document.getElementById('minigameTabs');
+    if (!arena || !tabs) return;
+
+    let activeGame = 'reaction';
+
+    /* ── REACTION TEST ── */
+    const reactionGame = (function() {
+        let state = 'idle'; /* idle | waiting | ready | done */
+        let startTime = 0, timer = null;
+        const RESULTS_MAX = 5;
+        let results = [];
+
+        function avgMs(arr) { return arr.length ? Math.round(arr.reduce((a,b) => a+b,0) / arr.length) : 0; }
+
+        function render() {
+            if (state === 'idle') {
+                arena.innerHTML =
+                    '<div class="mg-reaction">' +
+                    '<div class="mg-pad mg-pad--idle" id="mgPad" tabindex="0" role="button" aria-label="Start reaction test">' +
+                    '<div class="mg-pad-text">Click to Start</div>' +
+                    '</div>' +
+                    '<div class="mg-results" id="mgResults"></div>' +
+                    '</div>';
+            } else if (state === 'waiting') {
+                arena.innerHTML =
+                    '<div class="mg-reaction">' +
+                    '<div class="mg-pad mg-pad--wait" id="mgPad" tabindex="0" role="button" aria-label="Wait for green">' +
+                    '<div class="mg-pad-text">Wait for green…</div>' +
+                    '</div>' +
+                    '<div class="mg-results" id="mgResults">' + resultsHTML() + '</div>' +
+                    '</div>';
+            } else if (state === 'ready') {
+                arena.innerHTML =
+                    '<div class="mg-reaction">' +
+                    '<div class="mg-pad mg-pad--go" id="mgPad" tabindex="0" role="button" aria-label="Click now!">' +
+                    '<div class="mg-pad-text">CLICK NOW!</div>' +
+                    '</div>' +
+                    '<div class="mg-results" id="mgResults">' + resultsHTML() + '</div>' +
+                    '</div>';
+            } else if (state === 'done') {
+                const last = results[results.length - 1];
+                arena.innerHTML =
+                    '<div class="mg-reaction">' +
+                    '<div class="mg-pad mg-pad--result" id="mgPad" tabindex="0" role="button" aria-label="Try again">' +
+                    '<div class="mg-pad-text"><span class="mg-ms">' + last + ' ms</span><br><small>Click to try again</small></div>' +
+                    '</div>' +
+                    '<div class="mg-results" id="mgResults">' + resultsHTML() + '</div>' +
+                    '</div>';
+            }
+            bind();
+        }
+
+        function resultsHTML() {
+            if (!results.length) return '';
+            const avg = avgMs(results);
+            return '<div class="mg-score-row">' +
+                results.map(function(r,i) { return '<span class="mg-score-chip">#' + (i+1) + ': ' + r + 'ms</span>'; }).join('') +
+                (results.length > 1 ? '<span class="mg-score-chip mg-score-avg">Avg: ' + avg + 'ms</span>' : '') +
+                '</div>';
+        }
+
+        function bind() {
+            const pad = document.getElementById('mgPad');
+            if (!pad) return;
+            function handleClick() {
+                if (state === 'idle' || state === 'done') {
+                    startWaiting();
+                } else if (state === 'waiting') {
+                    /* Clicked too early */
+                    clearTimeout(timer);
+                    state = 'idle';
+                    arena.querySelector('.mg-pad-text').textContent = 'Too early! Click to try again.';
+                } else if (state === 'ready') {
+                    const ms = Date.now() - startTime;
+                    results.push(ms);
+                    if (results.length > RESULTS_MAX) results.shift();
+                    state = 'done';
+                    render();
+                }
+            }
+            pad.addEventListener('click', handleClick);
+            pad.addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === ' ') handleClick(); });
+        }
+
+        function startWaiting() {
+            state = 'waiting';
+            render();
+            const delay = 1500 + Math.random() * 3000;
+            timer = setTimeout(function() {
+                state = 'ready';
+                startTime = Date.now();
+                render();
+            }, delay);
+        }
+
+        return { init: render, reset: function() { state = 'idle'; results = []; clearTimeout(timer); render(); } };
+    })();
+
+    /* ── TYPING SPEED TEST ── */
+    const typingGame = (function() {
+        const SENTENCES = [
+            'The quick brown fox jumps over the lazy dog.',
+            'Computer engineering is the backbone of modern technology.',
+            'Design, data, and automation define the future of work.',
+            'Precision and creativity are two sides of the same coin.',
+            'Every line of code is a step toward solving a real problem.',
+        ];
+        let sentence = '', started = false, startTime = 0, finished = false;
+
+        function pick() { sentence = SENTENCES[Math.floor(Math.random() * SENTENCES.length)]; }
+
+        function render() {
+            pick();
+            finished = false; started = false;
+            arena.innerHTML =
+                '<div class="mg-typing">' +
+                '<div class="mg-typing-target" id="mgTypingTarget" aria-live="polite">' + highlightTyping('') + '</div>' +
+                '<input class="mg-typing-input" id="mgTypingInput" type="text" placeholder="Start typing here…" autocomplete="off" spellcheck="false" aria-label="Typing input">' +
+                '<div class="mg-typing-status" id="mgTypingStatus">Type the sentence above as fast as you can!</div>' +
+                '</div>';
+            const inp = document.getElementById('mgTypingInput');
+            if (inp) {
+                inp.addEventListener('input', function() {
+                    if (finished) return;
+                    if (!started) { started = true; startTime = Date.now(); }
+                    const val = inp.value;
+                    document.getElementById('mgTypingTarget').innerHTML = highlightTyping(val);
+                    if (val === sentence) {
+                        finished = true;
+                        const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
+                        const words = sentence.split(' ').length;
+                        const wpm = Math.round((words / elapsed) * 60);
+                        document.getElementById('mgTypingStatus').innerHTML =
+                            '<strong>Done in ' + elapsed + 's — ' + wpm + ' WPM!</strong> ' +
+                            '<button class="cta-button primary" id="mgTypingReset" style="margin-left:12px;padding:6px 16px;font-size:0.82rem">Try Again</button>';
+                        inp.disabled = true;
+                        const rst = document.getElementById('mgTypingReset');
+                        if (rst) rst.addEventListener('click', render);
+                    }
+                });
+                inp.focus();
+            }
+        }
+
+        function highlightTyping(val) {
+            return sentence.split('').map(function(ch, i) {
+                if (i >= val.length) return '<span class="mg-t-pending">' + esc(ch) + '</span>';
+                if (val[i] === ch) return '<span class="mg-t-correct">' + esc(ch) + '</span>';
+                return '<span class="mg-t-wrong">' + esc(ch) + '</span>';
+            }).join('');
+        }
+
+        return { init: render, reset: render };
+    })();
+
+    /* ── CLICK SPEED TEST ── */
+    const clickGame = (function() {
+        const DURATION = 5;
+        let count = 0, running = false, timeLeft = DURATION, timerInterval = null;
+
+        function render() {
+            count = 0; running = false; timeLeft = DURATION;
+            clearInterval(timerInterval);
+            arena.innerHTML =
+                '<div class="mg-click">' +
+                '<div class="mg-click-info">' +
+                '<span class="mg-click-count" id="mgClickCount">0</span>' +
+                '<span class="mg-click-label">clicks</span>' +
+                '<span class="mg-click-timer" id="mgClickTimer">' + DURATION + 's</span>' +
+                '</div>' +
+                '<button class="mg-click-btn" id="mgClickBtn" aria-label="Click here as fast as you can">Click Me!</button>' +
+                '<div class="mg-click-status" id="mgClickStatus">Click the button as many times as you can in ' + DURATION + ' seconds!</div>' +
+                '</div>';
+            const btn = document.getElementById('mgClickBtn');
+            if (!btn) return;
+            btn.addEventListener('click', function() {
+                if (!running) {
+                    running = true;
+                    timerInterval = setInterval(function() {
+                        timeLeft--;
+                        const timerEl = document.getElementById('mgClickTimer');
+                        if (timerEl) timerEl.textContent = timeLeft + 's';
+                        if (timeLeft <= 0) {
+                            clearInterval(timerInterval);
+                            running = false;
+                            btn.disabled = true;
+                            const cps = (count / DURATION).toFixed(1);
+                            const status = document.getElementById('mgClickStatus');
+                            if (status) status.innerHTML = '<strong>' + count + ' clicks in ' + DURATION + 's (' + cps + ' CPS)</strong> ' +
+                                '<button class="cta-button primary" id="mgClickReset" style="margin-left:12px;padding:6px 16px;font-size:0.82rem">Try Again</button>';
+                            const rst = document.getElementById('mgClickReset');
+                            if (rst) rst.addEventListener('click', render);
+                        }
+                    }, 1000);
+                }
+                if (running) {
+                    count++;
+                    const el = document.getElementById('mgClickCount');
+                    if (el) el.textContent = count;
+                }
+            });
+        }
+
+        return { init: render, reset: render };
+    })();
+
+    /* ── Tab switching ── */
+    const games = { reaction: reactionGame, typing: typingGame, click: clickGame };
+
+    function switchGame(name) {
+        activeGame = name;
+        tabs.querySelectorAll('.minigame-tab').forEach(function(t) {
+            const active = t.dataset.game === name;
+            t.classList.toggle('active', active);
+            t.setAttribute('aria-selected', active ? 'true' : 'false');
+        });
+        games[name].init();
+    }
+
+    tabs.addEventListener('click', function(e) {
+        const tab = e.target.closest('.minigame-tab');
+        if (tab) switchGame(tab.dataset.game);
+    });
+
+    /* Only init when section becomes visible (IntersectionObserver lazy load) */
+    var mgSection = document.getElementById('minigame');
+    if (mgSection) {
+        var mgInited = false;
+        var mgObs = new IntersectionObserver(function(entries) {
+            if (entries[0].isIntersecting && !mgInited) {
+                mgInited = true;
+                switchGame('reaction');
+                mgObs.disconnect();
+            }
+        }, { threshold: 0.1 });
+        mgObs.observe(mgSection);
+    }
 })();
 
 /* ── P. EASTER EGG — KONAMI CODE ─────────────────────────── */

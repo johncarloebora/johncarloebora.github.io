@@ -32,7 +32,8 @@ INSERT OR REPLACE INTO sections (id, title, nav_icon, nav_label, sort_order, vis
 ('education',  'Education & Certifications',  'fas fa-graduation-cap', 'Education',  4, 1, 'builtin'),
 ('projects',   'Projects',                    'fas fa-folder-open',    'Projects',   5, 1, 'builtin'),
 ('socials',    'Connect with Me',             'fas fa-share-alt',      'Socials',    6, 1, 'builtin'),
-('contact',    'Get In Touch',                'fas fa-envelope',       'Contact',    7, 1, 'builtin');
+('contact',    'Get In Touch',                'fas fa-envelope',       'Contact',    7, 1, 'builtin'),
+('minigame',   'Quick Challenges',            'fas fa-gamepad',        'Fun Zone',   8, 0, 'builtin');
 
 -- About Cards
 INSERT INTO about_cards (title, icon, content, type, expanded, sort_order) VALUES
