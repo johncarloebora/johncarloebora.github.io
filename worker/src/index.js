@@ -441,7 +441,7 @@ function crudRoutes(router, path, table, options = {}) {
 
 // Register CRUD routes for all content tables
 crudRoutes(router, 'sections', 'sections', {
-  allowedFields: ['id', 'title', 'nav_icon', 'nav_label', 'sort_order', 'visible', 'type', 'config'],
+  allowedFields: ['id', 'title', 'subtitle', 'nav_icon', 'nav_label', 'sort_order', 'visible', 'type', 'config'],
 });
 crudRoutes(router, 'about-cards', 'about_cards', {
   allowedFields: ['title', 'icon', 'content', 'type', 'expanded', 'sort_order'],
@@ -467,7 +467,9 @@ crudRoutes(router, 'education', 'education', {
   allowedFields: ['card_title', 'card_icon', 'entries', 'sort_order'],
 });
 crudRoutes(router, 'projects', 'projects', {
-  allowedFields: ['title', 'description', 'thumbnail_path', 'gallery_type', 'gallery_folder', 'webpage_url', 'category', 'tags', 'sort_order'],
+  allowedFields: ['title', 'description', 'thumbnail_path', 'gallery_type', 'gallery_folder',
+                  'webpage_url', 'category', 'tags', 'skills', 'sort_order',
+                  'status', 'featured', 'visibility'],
 });
 crudRoutes(router, 'socials', 'socials', {
   allowedFields: ['platform', 'url', 'icon', 'label', 'sort_order'],
@@ -630,11 +632,21 @@ router.delete('/api/media/:id', authMiddleware, async (request, env) => {
 
 router.post('/api/admin/migrate', authMiddleware, async (request, env) => {
   const migrations = [
-    // Add webpage_url to projects (safe — SQLite ignores if column exists via try/catch)
+    // Add webpage_url to projects
     'ALTER TABLE projects ADD COLUMN webpage_url TEXT',
     // Add category to projects
     "ALTER TABLE projects ADD COLUMN category TEXT DEFAULT 'standard'",
-    // Seed minigame section (hidden by default — admin can enable it)
+    // Add skills JSON array to projects
+    "ALTER TABLE projects ADD COLUMN skills TEXT DEFAULT '[]'",
+    // Add status: draft | published | archived
+    "ALTER TABLE projects ADD COLUMN status TEXT DEFAULT 'published'",
+    // Add featured flag (0/1)
+    "ALTER TABLE projects ADD COLUMN featured INTEGER DEFAULT 0",
+    // Add visibility flag (0/1) — 0 = hidden from published site
+    "ALTER TABLE projects ADD COLUMN visibility INTEGER DEFAULT 1",
+    // Add subtitle to sections
+    "ALTER TABLE sections ADD COLUMN subtitle TEXT",
+    // Seed minigame section (hidden by default)
     "INSERT OR IGNORE INTO sections (id, title, nav_icon, nav_label, sort_order, visible, type) VALUES ('minigame', 'Quick Challenges', 'fas fa-gamepad', 'Fun Zone', 8, 0, 'builtin')",
   ];
   const results = [];
@@ -748,12 +760,18 @@ router.post('/api/publish', authMiddleware, async (request, env) => {
       entries: safeParseJson(e.entries, []),
     }));
 
-    const projects = projectsRes.results.map(p => ({
-      ...p,
-      tags: safeParseJson(p.tags, []),
-      skills: safeParseJson(p.skills, []),
-      thumbnail_url: p.thumbnail_path ? `${r2Base}/${p.thumbnail_path.split('/').map(encodeURIComponent).join('/')}` : null,
-    }));
+    const projects = projectsRes.results
+      .filter(p => p.visibility !== 0 && p.status !== 'draft')
+      .map(p => ({
+        ...p,
+        tags:          safeParseJson(p.tags, []),
+        skills:        safeParseJson(p.skills, []),
+        featured:      p.featured ? 1 : 0,
+        visibility:    p.visibility !== 0 ? 1 : 0,
+        thumbnail_url: p.thumbnail_path
+          ? `${r2Base}/${p.thumbnail_path.split('/').map(encodeURIComponent).join('/')}`
+          : null,
+      }));
 
     // Build media index
     const mediaByFolder = {};

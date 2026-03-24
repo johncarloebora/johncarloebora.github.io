@@ -126,6 +126,10 @@ window.editSection = async function(id) {
             <input type="text" class="form-input" id="modalTitle" value="${esc(s.title)}">
         </div>
         <div class="form-group">
+            <label>Subtitle <span style="font-size:0.72rem;color:var(--muted)">— optional tagline shown below the section heading</span></label>
+            <input type="text" class="form-input" id="modalSubtitle" value="${esc(s.subtitle || '')}" placeholder="e.g. A selection of my recent work">
+        </div>
+        <div class="form-group">
             <label>Nav Label</label>
             <input type="text" class="form-input" id="modalLabel" value="${esc(s.nav_label)}">
             <div class="field-hint"><i class="fas fa-info-circle"></i> Short text shown in the navigation bar.</div>
@@ -149,7 +153,8 @@ window.editSection = async function(id) {
     if (!ok) return;
 
     const data = {
-        title:     document.getElementById('modalTitle').value,
+        title:    document.getElementById('modalTitle').value,
+        subtitle: document.getElementById('modalSubtitle')?.value || null,
         nav_icon:  document.getElementById('modalIcon').value,
         nav_label: document.getElementById('modalLabel').value,
     };

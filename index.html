@@ -604,6 +604,8 @@
     <section id="projects">
         <div class="container">
             <h2 class="section-title" data-scramble="Projects">Projects</h2>
+            <!-- Project filter bar — populated dynamically by initProjectFilterSystem() -->
+            <div id="projectFilterBar" class="project-filter-bar"></div>
             <div class="project-grid" id="projectGrid">
 
                 <div class="project-card">
@@ -694,6 +696,21 @@
             <div class="webpage-modal-inner">
                 <div class="webpage-modal-toolbar">
                     <span class="webpage-modal-title" id="webpageModalTitle">Live Preview</span>
+                    <!-- Device simulation -->
+                    <div class="wp-device-group" role="group" aria-label="Device simulation">
+                        <button class="wp-device-btn" data-device="mobile"  onclick="wpSetDevice('mobile')"  title="Mobile (390px)"  aria-label="Mobile view"><i class="fas fa-mobile-alt"></i></button>
+                        <button class="wp-device-btn" data-device="tablet"  onclick="wpSetDevice('tablet')"  title="Tablet (768px)"  aria-label="Tablet view"><i class="fas fa-tablet-alt"></i></button>
+                        <button class="wp-device-btn" data-device="desktop" onclick="wpSetDevice('desktop')" title="Desktop (1280px)" aria-label="Desktop view"><i class="fas fa-desktop"></i></button>
+                        <button class="wp-device-btn wp-device-btn--active" data-device="full" onclick="wpSetDevice('full')" title="Full width" aria-label="Full width"><i class="fas fa-expand-arrows-alt"></i></button>
+                    </div>
+                    <!-- Zoom -->
+                    <div class="wp-zoom-group" title="Zoom level">
+                        <button class="wp-zoom-btn" onclick="wpSetZoom((window._wpZoom||1)-0.25)" aria-label="Zoom out"><i class="fas fa-search-minus"></i></button>
+                        <span class="wp-zoom-val" id="wpZoomVal">100%</span>
+                        <button class="wp-zoom-btn" onclick="wpSetZoom((window._wpZoom||1)+0.25)" aria-label="Zoom in"><i class="fas fa-search-plus"></i></button>
+                    </div>
+                    <!-- Reload -->
+                    <button class="wp-reload-btn" onclick="wpReload()" title="Reload preview" aria-label="Reload preview"><i class="fas fa-redo-alt"></i></button>
                     <a class="webpage-open-btn" id="webpageOpenBtn" href="#" target="_blank" rel="noopener noreferrer" aria-label="Open in new tab">
                         <i class="fas fa-external-link-alt"></i> Open
                     </a>

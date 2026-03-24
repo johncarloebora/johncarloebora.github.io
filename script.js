@@ -132,6 +132,7 @@ function applySiteConfig(cfg) {
                     if (existing) { existing.style.display = 'none'; existing.setAttribute('aria-hidden', 'true'); }
                     return;
                 }
+                var isNew = !existing;
                 if (!existing) {
                     existing = document.createElement('section');
                     existing.id = sec.id;
@@ -145,6 +146,8 @@ function applySiteConfig(cfg) {
                     '<h2 class="section-title" data-scramble="' + esc(sec.title) + '">' + esc(sec.title) + '</h2>' +
                     '<div class="custom-section-content">' + html + '</div>' +
                     '</div>';
+                /* Register newly injected sections with the nav IntersectionObserver */
+                if (isNew && window._ioNav) window._ioNav.observe(existing);
                 return;
             }
 
@@ -328,46 +331,10 @@ function applySiteConfig(cfg) {
 
     /* ── Projects ── */
     if (cfg.projects && cfg.projects.length) {
-        var projGrid = document.getElementById('projectGrid');
-        if (projGrid) {
-            projGrid.innerHTML = cfg.projects.map(function (proj) {
-                var isVideo   = proj.gallery_type === 'video';
-                var isWebpage = proj.gallery_type === 'webpage';
-                var hasGallery = proj.gallery_type === 'image';
-                /* Fallback to coming-soon thumbnail if none supplied */
-                var thumbSrc = proj.thumbnail_url || (proj.thumbnail_path ? r2 + '/' + proj.thumbnail_path : 'thumbnail/Coming Soon.gif');
-                var tagsHTML = (proj.tags || []).map(function (t) { return '<span class="project-type">' + esc(t) + '</span>'; }).join('');
-                var skillsHTML = (proj.skills || []).length ? '<div class="project-skills">' +
-                    proj.skills.map(function (sk) { return '<span class="project-skill">' + esc(sk) + '</span>'; }).join('') +
-                    '</div>' : '';
-                var overlayIcon, overlayText, dataAttr;
-                if (isVideo) {
-                    overlayIcon = 'fas fa-play-circle'; overlayText = 'View Videos';
-                    dataAttr = 'data-video-folder="' + esc(proj.gallery_folder) + '" style="cursor:pointer"';
-                } else if (isWebpage) {
-                    overlayIcon = 'fas fa-globe'; overlayText = 'Live Preview';
-                    dataAttr = 'data-webpage-url="' + esc(proj.webpage_url || '') + '" data-webpage-title="' + esc(proj.title) + '" style="cursor:pointer"';
-                } else if (hasGallery) {
-                    overlayIcon = 'fas fa-images'; overlayText = 'View Gallery';
-                    dataAttr = 'data-gallery-folder="' + esc(proj.gallery_folder) + '"';
-                } else {
-                    overlayIcon = 'fas fa-info-circle'; overlayText = 'View Project';
-                    dataAttr = '';
-                }
-                return '<div class="project-card">' +
-                    '<div class="project-thumbnail" ' + dataAttr + '>' +
-                    '<img src="' + esc(thumbSrc) + '" alt="' + esc(proj.title) + '" class="main-thumbnail" loading="lazy" ' +
-                    'onerror="this.src=\'thumbnail/Coming Soon.gif\'">' +
-                    '<div class="project-overlay"><span class="overlay-text"><i class="' + overlayIcon + '"></i> ' + overlayText + '</span></div>' +
-                    '</div>' +
-                    '<div class="project-content">' +
-                    '<div class="project-tags">' + tagsHTML + '</div>' +
-                    '<h3 class="project-title">' + esc(proj.title) + '</h3>' +
-                    '<p class="project-desc">' + esc(proj.description) + '</p>' +
-                    skillsHTML +
-                    '</div></div>';
-            }).join('');
-        }
+        /* Store projects data globally so filter system can access it */
+        window._cfgProjects = cfg.projects;
+        window._cfgR2       = r2;
+        initProjectFilterSystem(cfg.projects, r2);
     }
 
     /* ── Socials ── */
@@ -387,12 +354,274 @@ function applySiteConfig(cfg) {
         if (ft) ft.innerHTML = s.footerText;
     }
 
+    /* ── Section subtitles ── */
+    if (cfg.sections) {
+        cfg.sections.forEach(function(sec) {
+            if (!sec.subtitle) return;
+            var sectionEl = document.getElementById(sec.id);
+            if (!sectionEl) return;
+            var sub = sectionEl.querySelector('.section-subtitle');
+            if (!sub) {
+                sub = document.createElement('p');
+                sub.className = 'section-subtitle';
+                var h2 = sectionEl.querySelector('.section-title');
+                if (h2 && h2.parentNode) h2.parentNode.insertBefore(sub, h2.nextSibling);
+            }
+            sub.textContent = sec.subtitle;
+        });
+    }
+
     /* Re-bind gallery/video/webpage click handlers after DOM replacement */
     if (typeof window._rebindGallery === 'function') window._rebindGallery();
 
     /* Re-init animations on new elements */
     reinitAfterConfig();
 }
+
+/* ── PROJECT FILTER SYSTEM ─────────────────────────────────── */
+(function() {
+    /* Filter state */
+    var _activeFilters = { categories: [], search: '', sort: 'default' };
+    var _allProjData   = [];
+    var _r2            = '';
+
+    window.initProjectFilterSystem = function(projects, r2Base) {
+        _allProjData = projects;
+        _r2          = r2Base;
+        renderFilterBar(projects);
+        renderProjectGrid(projects);
+    };
+
+    function getCategories(projects) {
+        var cats = {};
+        projects.forEach(function(p) {
+            var c = (p.category || 'standard').toLowerCase();
+            cats[c] = (cats[c] || 0) + 1;
+        });
+        return cats;
+    }
+
+    function renderFilterBar(projects) {
+        var bar = document.getElementById('projectFilterBar');
+        if (!bar) return;
+
+        var cats    = getCategories(projects);
+        var allCats = Object.keys(cats).sort();
+        var hasFeatured = projects.some(function(p) { return p.featured; });
+
+        var catBtns = ['<button class="pf-btn pf-btn--active" data-cat="all" onclick="pfToggleCat(this)">All <span class="pf-count">' + projects.length + '</span></button>'];
+        if (hasFeatured) {
+            catBtns.push('<button class="pf-btn" data-cat="__featured__" onclick="pfToggleCat(this)">★ Featured <span class="pf-count">' + projects.filter(function(p){return p.featured;}).length + '</span></button>');
+        }
+        allCats.forEach(function(c) {
+            var label = c.charAt(0).toUpperCase() + c.slice(1);
+            catBtns.push('<button class="pf-btn" data-cat="' + c + '" onclick="pfToggleCat(this)">' + label + ' <span class="pf-count">' + cats[c] + '</span></button>');
+        });
+
+        bar.innerHTML =
+            '<div class="pf-cats" id="pfCats">' + catBtns.join('') + '</div>' +
+            '<div class="pf-controls">' +
+            '<div class="pf-search-wrap">' +
+            '<i class="fas fa-search pf-search-icon"></i>' +
+            '<input class="pf-search" id="pfSearch" type="text" placeholder="Search projects…" oninput="pfSearch(this.value)" autocomplete="off">' +
+            '<button class="pf-clear-search" id="pfClearSearch" onclick="pfClearSearch()" style="display:none" aria-label="Clear search"><i class="fas fa-times"></i></button>' +
+            '</div>' +
+            '<select class="pf-sort" id="pfSort" onchange="pfSetSort(this.value)">' +
+            '<option value="default">Default Order</option>' +
+            '<option value="featured">Featured First</option>' +
+            '<option value="az">Name A → Z</option>' +
+            '<option value="za">Name Z → A</option>' +
+            '</select>' +
+            '</div>' +
+            '<div class="pf-active-tags" id="pfActiveTags" style="display:none"></div>';
+    }
+
+    function applyFilters() {
+        var results = _allProjData.filter(function(p) {
+            /* category filter */
+            if (_activeFilters.categories.length && !_activeFilters.categories.includes('all')) {
+                var cat = (p.category || 'standard').toLowerCase();
+                var matchCat = _activeFilters.categories.some(function(fc) {
+                    return fc === '__featured__' ? !!p.featured : fc === cat;
+                });
+                if (!matchCat) return false;
+            }
+            /* text search */
+            var q = _activeFilters.search.trim().toLowerCase();
+            if (q) {
+                var tags   = Array.isArray(p.tags)   ? p.tags   : [];
+                var skills = Array.isArray(p.skills) ? p.skills : [];
+                var haystack = [p.title, p.description].concat(tags).concat(skills).join(' ').toLowerCase();
+                if (!haystack.includes(q)) return false;
+            }
+            return true;
+        });
+
+        /* sort */
+        if (_activeFilters.sort === 'featured') {
+            results = results.slice().sort(function(a,b) { return (b.featured ? 1 : 0) - (a.featured ? 1 : 0); });
+        } else if (_activeFilters.sort === 'az') {
+            results = results.slice().sort(function(a,b) { return (a.title||'').localeCompare(b.title||''); });
+        } else if (_activeFilters.sort === 'za') {
+            results = results.slice().sort(function(a,b) { return (b.title||'').localeCompare(a.title||''); });
+        }
+        renderProjectGrid(results);
+        updateActiveTags();
+    }
+
+    function updateActiveTags() {
+        var tagsDiv = document.getElementById('pfActiveTags');
+        if (!tagsDiv) return;
+        var chips = [];
+        _activeFilters.categories.forEach(function(c) {
+            if (c === 'all') return;
+            var label = c === '__featured__' ? '★ Featured' : c.charAt(0).toUpperCase() + c.slice(1);
+            chips.push('<span class="pf-active-chip">' + label + '<button onclick="pfRemoveCat(\'' + c + '\')" aria-label="Remove filter"><i class="fas fa-times"></i></button></span>');
+        });
+        if (_activeFilters.search) {
+            chips.push('<span class="pf-active-chip">Search: "' + _activeFilters.search + '"<button onclick="pfClearSearch()" aria-label="Clear search"><i class="fas fa-times"></i></button></span>');
+        }
+        if (chips.length) {
+            tagsDiv.innerHTML = chips.join('') + '<button class="pf-clear-all" onclick="pfClearAll()">Clear All</button>';
+            tagsDiv.style.display = 'flex';
+        } else {
+            tagsDiv.style.display = 'none';
+        }
+    }
+
+    function renderProjectGrid(projects) {
+        var projGrid = document.getElementById('projectGrid');
+        if (!projGrid) return;
+
+        if (!projects.length) {
+            projGrid.innerHTML = '<div class="pf-empty"><i class="fas fa-search"></i><p>No projects match your filters. <button class="cta-button secondary" style="margin-top:12px;padding:8px 20px;font-size:0.85rem" onclick="pfClearAll()">Clear Filters</button></p></div>';
+            return;
+        }
+
+        projGrid.innerHTML = projects.map(function(proj) {
+            return buildProjectCardHTML(proj);
+        }).join('');
+
+        /* Re-bind interaction handlers */
+        if (typeof window._rebindGallery === 'function') window._rebindGallery();
+        reinitAfterConfig();
+    }
+
+    window.buildProjectCardHTML = function(proj) {
+        var isVideo    = proj.gallery_type === 'video';
+        var isWebpage  = proj.gallery_type === 'webpage';
+        var hasGallery = proj.gallery_type === 'image';
+        var thumbSrc   = proj.thumbnail_url || (proj.thumbnail_path ? _r2 + '/' + proj.thumbnail_path : 'thumbnail/Coming Soon.gif');
+        var tagsHTML   = (proj.tags || []).map(function(t) { return '<span class="project-type">' + esc(t) + '</span>'; }).join('');
+        var skillsHTML = (proj.skills || []).length
+            ? '<div class="project-skills">' + (proj.skills || []).map(function(sk) {
+                return '<span class="project-skill">' + esc(sk) + '</span>';
+              }).join('') + '</div>' : '';
+        var catLabel   = (proj.category && proj.category !== 'standard') ? proj.category : null;
+        var catBadge   = catLabel ? '<span class="project-category-badge project-category-badge--' + catLabel.replace(/\s+/g,'-') + '">' + catLabel + '</span>' : '';
+        var featBadge  = proj.featured ? '<span class="project-featured-badge">★ Featured</span>' : '';
+        var overlayIcon, overlayText, dataAttr;
+        if (isVideo) {
+            overlayIcon = 'fas fa-play-circle'; overlayText = 'View Videos';
+            dataAttr = 'data-video-folder="' + esc(proj.gallery_folder) + '" style="cursor:pointer"';
+        } else if (isWebpage) {
+            overlayIcon = 'fas fa-globe'; overlayText = 'Live Preview';
+            dataAttr = 'data-webpage-url="' + esc(proj.webpage_url || '') + '" data-webpage-title="' + esc(proj.title) + '" style="cursor:pointer"';
+        } else if (hasGallery) {
+            overlayIcon = 'fas fa-images'; overlayText = 'View Gallery';
+            dataAttr = 'data-gallery-folder="' + esc(proj.gallery_folder) + '"';
+        } else {
+            overlayIcon = 'fas fa-info-circle'; overlayText = 'View Project';
+            dataAttr = '';
+        }
+        return '<div class="project-card' + (proj.featured ? ' project-card--featured' : '') + '">' +
+            '<div class="project-thumbnail" ' + dataAttr + '>' +
+            '<img src="' + esc(thumbSrc) + '" alt="' + esc(proj.title) + '" class="main-thumbnail" loading="lazy" ' +
+            'onerror="this.src=\'thumbnail/Coming Soon.gif\'">' +
+            '<div class="project-overlay"><span class="overlay-text"><i class="' + overlayIcon + '"></i> ' + overlayText + '</span></div>' +
+            '</div>' +
+            '<div class="project-content">' +
+            '<div class="project-tags">' + tagsHTML + '</div>' +
+            '<h3 class="project-title">' + esc(proj.title) + '</h3>' +
+            '<p class="project-desc">' + esc(proj.description) + '</p>' +
+            skillsHTML +
+            (catBadge || featBadge ? '<div class="project-meta-badges">' + catBadge + featBadge + '</div>' : '') +
+            '</div></div>';
+    };
+
+    /* ── Public API ── */
+    window.pfToggleCat = function(btn) {
+        var cat = btn.dataset.cat;
+        if (cat === 'all') {
+            _activeFilters.categories = ['all'];
+        } else {
+            _activeFilters.categories = _activeFilters.categories.filter(function(c) { return c !== 'all'; });
+            var idx = _activeFilters.categories.indexOf(cat);
+            if (idx >= 0) {
+                _activeFilters.categories.splice(idx, 1);
+                if (!_activeFilters.categories.length) _activeFilters.categories = ['all'];
+            } else {
+                _activeFilters.categories.push(cat);
+            }
+        }
+        /* Update button states */
+        document.querySelectorAll('#pfCats .pf-btn').forEach(function(b) {
+            var bc = b.dataset.cat;
+            var active = _activeFilters.categories.includes(bc) || (_activeFilters.categories.includes('all') && bc === 'all');
+            b.classList.toggle('pf-btn--active', active);
+        });
+        applyFilters();
+    };
+
+    window.pfSearch = function(val) {
+        _activeFilters.search = val;
+        var clearBtn = document.getElementById('pfClearSearch');
+        if (clearBtn) clearBtn.style.display = val ? '' : 'none';
+        applyFilters();
+    };
+
+    window.pfClearSearch = function() {
+        _activeFilters.search = '';
+        var inp = document.getElementById('pfSearch');
+        if (inp) inp.value = '';
+        var clearBtn = document.getElementById('pfClearSearch');
+        if (clearBtn) clearBtn.style.display = 'none';
+        applyFilters();
+    };
+
+    window.pfSetSort = function(val) {
+        _activeFilters.sort = val;
+        applyFilters();
+    };
+
+    window.pfRemoveCat = function(cat) {
+        _activeFilters.categories = _activeFilters.categories.filter(function(c) { return c !== cat; });
+        if (!_activeFilters.categories.length) _activeFilters.categories = ['all'];
+        document.querySelectorAll('#pfCats .pf-btn').forEach(function(b) {
+            b.classList.toggle('pf-btn--active', _activeFilters.categories.includes(b.dataset.cat));
+        });
+        applyFilters();
+    };
+
+    window.pfClearAll = function() {
+        _activeFilters = { categories: ['all'], search: '', sort: 'default' };
+        var inp = document.getElementById('pfSearch');
+        if (inp) inp.value = '';
+        var clearBtn = document.getElementById('pfClearSearch');
+        if (clearBtn) clearBtn.style.display = 'none';
+        var sortSel = document.getElementById('pfSort');
+        if (sortSel) sortSel.value = 'default';
+        document.querySelectorAll('#pfCats .pf-btn').forEach(function(b) {
+            b.classList.toggle('pf-btn--active', b.dataset.cat === 'all');
+        });
+        applyFilters();
+    };
+
+    /* Initialize on page load for hardcoded projects (if any) */
+    document.addEventListener('DOMContentLoaded', function() {
+        _activeFilters = { categories: ['all'], search: '', sort: 'default' };
+    });
+})();
 
 function reinitAfterConfig() {
     /* Re-observe new elements for scroll reveal */
@@ -798,6 +1027,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }, { rootMargin: `-${Math.round(window.innerHeight * 0.35)}px 0px -40%` });
 
     sections.forEach(s => ioNav.observe(s));
+
+    /* Expose globally so applySiteConfig() can add newly-injected custom sections */
+    window._ioNav = ioNav;
 
     /* Delay enabling intersection-based updates until after initial render */
     requestAnimationFrame(() => {
@@ -1425,6 +1657,7 @@ document.addEventListener('DOMContentLoaded', () => {
     /* ── Webpage preview modal ─── */
     var webpageModal     = document.getElementById('webpageModal');
     var webpageFrame     = document.getElementById('webpageFrame');
+    var webpageFrameWrap = document.getElementById('webpageFrameWrap');
     var webpageModalClose= document.getElementById('webpageModalClose');
     var webpageOpenBtn   = document.getElementById('webpageOpenBtn');
     var webpageTitle     = document.getElementById('webpageModalTitle');
@@ -1432,38 +1665,97 @@ document.addEventListener('DOMContentLoaded', () => {
     var webpageError     = document.getElementById('webpageError');
     var webpageErrorLink = document.getElementById('webpageErrorLink');
 
+    /* Device simulation presets */
+    var WP_DEVICES = {
+        mobile:  { width: '390px',  label: '📱 Mobile',  icon: 'fas fa-mobile-alt' },
+        tablet:  { width: '768px',  label: '⬛ Tablet',  icon: 'fas fa-tablet-alt' },
+        desktop: { width: '1280px', label: '🖥 Desktop', icon: 'fas fa-desktop'    },
+        full:    { width: '100%',   label: '⤢ Full',    icon: 'fas fa-expand'     },
+    };
+    var _wpActiveDevice = 'full';
+    var _wpZoom         = 1;
+    var _wpCurrentUrl   = '';
+    var _wpLoadTimeout  = null;
+
+    function applyDeviceSimulation() {
+        if (!webpageFrameWrap) return;
+        var preset = WP_DEVICES[_wpActiveDevice] || WP_DEVICES.full;
+        var wrap   = document.getElementById('webpageFrameWrap');
+        if (!wrap) return;
+        if (_wpActiveDevice === 'full') {
+            wrap.style.maxWidth = '';
+            wrap.style.margin   = '';
+            wrap.style.transition = 'max-width 0.3s ease';
+        } else {
+            wrap.style.maxWidth   = preset.width;
+            wrap.style.margin     = '0 auto';
+            wrap.style.transition = 'max-width 0.3s ease';
+        }
+        /* Update active state on toolbar buttons */
+        document.querySelectorAll('.wp-device-btn').forEach(function(b) {
+            b.classList.toggle('wp-device-btn--active', b.dataset.device === _wpActiveDevice);
+        });
+        /* Apply zoom */
+        if (webpageFrame) {
+            webpageFrame.style.transform      = _wpZoom !== 1 ? 'scale(' + _wpZoom + ')' : '';
+            webpageFrame.style.transformOrigin = 'top left';
+            webpageFrame.style.width          = _wpZoom !== 1 ? (100 / _wpZoom) + '%' : '';
+            webpageFrame.style.height         = _wpZoom !== 1 ? (100 / _wpZoom) + '%' : '';
+        }
+        /* Update zoom display */
+        var zoomDisplay = document.getElementById('wpZoomVal');
+        if (zoomDisplay) zoomDisplay.textContent = Math.round(_wpZoom * 100) + '%';
+    }
+
+    window.wpSetDevice = function(device) {
+        _wpActiveDevice = device;
+        applyDeviceSimulation();
+    };
+
+    window.wpSetZoom = function(val) {
+        _wpZoom = Math.max(0.25, Math.min(2, parseFloat(val)));
+        applyDeviceSimulation();
+    };
+
+    window.wpReload = function() {
+        if (!webpageFrame || !_wpCurrentUrl) return;
+        webpageFrame.style.opacity = '0';
+        if (webpageLoading) webpageLoading.style.display = '';
+        if (webpageError)   webpageError.style.display   = 'none';
+        webpageFrame.src = '';
+        setTimeout(function() {
+            if (webpageFrame) webpageFrame.src = _wpCurrentUrl;
+        }, 100);
+    };
+
     function openWebpageModal(url, title) {
         if (!webpageModal || !webpageFrame) return;
         if (!url) { showToast('No URL configured for this project.', 'error'); return; }
-        if (webpageTitle) webpageTitle.textContent = title || 'Live Preview';
+        _wpCurrentUrl   = url;
+        _wpActiveDevice = 'full';
+        _wpZoom         = 1;
+        if (webpageTitle)   webpageTitle.textContent = title || 'Live Preview';
         if (webpageOpenBtn) webpageOpenBtn.href = url;
         if (webpageErrorLink) webpageErrorLink.href = url;
         /* Reset state */
         if (webpageLoading) webpageLoading.style.display = '';
-        if (webpageError) webpageError.style.display = 'none';
+        if (webpageError)   webpageError.style.display   = 'none';
         webpageFrame.style.opacity = '0';
         webpageFrame.src = '';
         webpageModal.classList.add('active');
         lockScroll();
         hideNav();
-        /* Load iframe */
-        webpageFrame.onload = function() {
-            if (webpageLoading) webpageLoading.style.display = 'none';
-            webpageFrame.style.opacity = '1';
-        };
-        webpageFrame.onerror = function() {
-            if (webpageLoading) webpageLoading.style.display = 'none';
-            if (webpageError) webpageError.style.display = '';
-        };
-        /* Detect X-Frame-Options block (iframe stays blank) */
-        var loadTimeout = setTimeout(function() {
-            if (webpageFrame.style.opacity === '0') {
+        applyDeviceSimulation();
+        /* X-Frame timeout (8s) */
+        if (_wpLoadTimeout) clearTimeout(_wpLoadTimeout);
+        _wpLoadTimeout = setTimeout(function() {
+            if (webpageFrame && webpageFrame.style.opacity === '0') {
                 if (webpageLoading) webpageLoading.style.display = 'none';
-                if (webpageError) webpageError.style.display = '';
+                if (webpageError)   webpageError.style.display   = '';
             }
         }, 8000);
         webpageFrame.onload = function() {
-            clearTimeout(loadTimeout);
+            clearTimeout(_wpLoadTimeout);
             if (webpageLoading) webpageLoading.style.display = 'none';
             try { webpageFrame.style.opacity = '1'; } catch(e) {}
         };
@@ -1472,8 +1764,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function closeWebpageModal() {
         if (!webpageModal) return;
+        clearTimeout(_wpLoadTimeout);
         webpageModal.classList.remove('active');
-        if (webpageFrame) webpageFrame.src = '';
+        if (webpageFrame) {
+            webpageFrame.src = '';
+            webpageFrame.style.opacity = '';
+            webpageFrame.style.transform = '';
+            webpageFrame.style.width     = '';
+            webpageFrame.style.height    = '';
+        }
+        var wrap = document.getElementById('webpageFrameWrap');
+        if (wrap) { wrap.style.maxWidth = ''; wrap.style.margin = ''; }
         unlockScroll();
         restoreNav();
     }
@@ -1609,95 +1910,151 @@ document.addEventListener('DOMContentLoaded', () => {
 
 /* ── S. MINI-GAME ─────────────────────────────────────────── */
 (function initMiniGame() {
-    const arena = document.getElementById('minigameArena');
-    const tabs  = document.getElementById('minigameTabs');
+    var arena = document.getElementById('minigameArena');
+    var tabs  = document.getElementById('minigameTabs');
     if (!arena || !tabs) return;
 
-    let activeGame = 'reaction';
+    var activeGame = 'reaction';
+
+    /* ── LocalStorage helpers ── */
+    function getHigh(key) {
+        var v = localStorage.getItem('mg_best_' + key);
+        return v ? parseFloat(v) : null;
+    }
+    function setHigh(key, val) {
+        var current = getHigh(key);
+        /* For reaction + typing: lower is better. For click: higher is better */
+        var betterFn = (key === 'click_cps' || key === 'click_count')
+            ? function(a, b) { return a > b; }
+            : function(a, b) { return a < b; };
+        if (current === null || betterFn(val, current)) {
+            localStorage.setItem('mg_best_' + key, val);
+            return true; /* New record */
+        }
+        return false;
+    }
+
+    /* ── Difficulty bar (shared) ── */
+    function diffBar(id, levels, active) {
+        return '<div class="mg-diff-bar" id="' + id + '">' +
+            levels.map(function(l) {
+                return '<button class="mg-diff-btn' + (l.key === active ? ' mg-diff-btn--active' : '') + '" data-diff="' + l.key + '" onclick="mgSetDiff(\'' + id + '\',\'' + l.key + '\')">' + l.label + '</button>';
+            }).join('') + '</div>';
+    }
 
     /* ── REACTION TEST ── */
-    const reactionGame = (function() {
-        let state = 'idle'; /* idle | waiting | ready | done */
-        let startTime = 0, timer = null;
-        const RESULTS_MAX = 5;
-        let results = [];
+    var reactionGame = (function() {
+        var state = 'start'; /* start | waiting | ready | done | tooearly */
+        var startTime = 0, timer = null;
+        var RESULTS_MAX = 5;
+        var results = [];
+        var difficulty = 'normal';
+        var DELAYS = { easy: [1000, 5000], normal: [1500, 4500], hard: [500, 2000] };
 
-        function avgMs(arr) { return arr.length ? Math.round(arr.reduce((a,b) => a+b,0) / arr.length) : 0; }
+        function avgMs(arr) { return arr.length ? Math.round(arr.reduce(function(a,b){return a+b;},0) / arr.length) : 0; }
+        function best() { return getHigh('reaction'); }
 
         function render() {
-            if (state === 'idle') {
+            var high = best();
+            var highStr = high !== null ? '<span class="mg-best-label">Best: ' + high + 'ms</span>' : '';
+            if (state === 'start') {
                 arena.innerHTML =
-                    '<div class="mg-reaction">' +
-                    '<div class="mg-pad mg-pad--idle" id="mgPad" tabindex="0" role="button" aria-label="Start reaction test">' +
-                    '<div class="mg-pad-text">Click to Start</div>' +
-                    '</div>' +
-                    '<div class="mg-results" id="mgResults"></div>' +
-                    '</div>';
+                    '<div class="mg-game-shell">' +
+                    '<div class="mg-game-header"><h4>⚡ Reaction Test</h4>' + highStr + '</div>' +
+                    '<div class="mg-instructions">When the pad turns <span style="color:#4ecdc4">green</span>, click it as fast as you can.<br>A random delay prevents anticipation.</div>' +
+                    diffBar('rDiff', [{key:'easy',label:'Easy'},{key:'normal',label:'Normal'},{key:'hard',label:'Hard'}], difficulty) +
+                    '<div class="mg-reaction"><div class="mg-pad mg-pad--idle" id="mgPad" tabindex="0" role="button" aria-label="Start reaction test"><div class="mg-pad-text">Click to Start</div></div></div>' +
+                    '<div class="mg-results" id="mgResults"></div></div>';
             } else if (state === 'waiting') {
                 arena.innerHTML =
-                    '<div class="mg-reaction">' +
-                    '<div class="mg-pad mg-pad--wait" id="mgPad" tabindex="0" role="button" aria-label="Wait for green">' +
-                    '<div class="mg-pad-text">Wait for green…</div>' +
-                    '</div>' +
-                    '<div class="mg-results" id="mgResults">' + resultsHTML() + '</div>' +
-                    '</div>';
+                    '<div class="mg-game-shell">' +
+                    '<div class="mg-game-header"><h4>⚡ Reaction Test</h4>' + highStr + '</div>' +
+                    '<div class="mg-reaction"><div class="mg-pad mg-pad--wait" id="mgPad" tabindex="0" role="button" aria-label="Wait for green"><div class="mg-pad-text">Wait…</div></div></div>' +
+                    '<div class="mg-results" id="mgResults">' + resultsHTML() + '</div></div>';
             } else if (state === 'ready') {
                 arena.innerHTML =
-                    '<div class="mg-reaction">' +
-                    '<div class="mg-pad mg-pad--go" id="mgPad" tabindex="0" role="button" aria-label="Click now!">' +
-                    '<div class="mg-pad-text">CLICK NOW!</div>' +
-                    '</div>' +
-                    '<div class="mg-results" id="mgResults">' + resultsHTML() + '</div>' +
-                    '</div>';
-            } else if (state === 'done') {
-                const last = results[results.length - 1];
+                    '<div class="mg-game-shell">' +
+                    '<div class="mg-game-header"><h4>⚡ Reaction Test</h4>' + highStr + '</div>' +
+                    '<div class="mg-reaction"><div class="mg-pad mg-pad--go" id="mgPad" tabindex="0" role="button" aria-label="Click now!"><div class="mg-pad-text">CLICK!</div></div></div>' +
+                    '<div class="mg-results" id="mgResults">' + resultsHTML() + '</div></div>';
+            } else if (state === 'tooearly') {
                 arena.innerHTML =
-                    '<div class="mg-reaction">' +
-                    '<div class="mg-pad mg-pad--result" id="mgPad" tabindex="0" role="button" aria-label="Try again">' +
-                    '<div class="mg-pad-text"><span class="mg-ms">' + last + ' ms</span><br><small>Click to try again</small></div>' +
-                    '</div>' +
-                    '<div class="mg-results" id="mgResults">' + resultsHTML() + '</div>' +
-                    '</div>';
+                    '<div class="mg-game-shell">' +
+                    '<div class="mg-game-header"><h4>⚡ Reaction Test</h4>' + highStr + '</div>' +
+                    '<div class="mg-reaction"><div class="mg-pad mg-pad--tooearly" id="mgPad" tabindex="0" role="button" aria-label="Too early, try again"><div class="mg-pad-text">⚠ Too Early!<br><small>Click to retry</small></div></div></div>' +
+                    '<div class="mg-results" id="mgResults">' + resultsHTML() + '</div></div>';
+            } else if (state === 'done') {
+                var last = results[results.length - 1];
+                var isRecord = setHigh('reaction', last);
+                arena.innerHTML =
+                    '<div class="mg-game-shell">' +
+                    '<div class="mg-game-header"><h4>⚡ Reaction Test</h4>' + (isRecord ? '<span class="mg-new-record">🏆 New Record!</span>' : highStr) + '</div>' +
+                    '<div class="mg-reaction"><div class="mg-pad mg-pad--result" id="mgPad" tabindex="0" role="button" aria-label="Try again">' +
+                    '<div class="mg-pad-text"><span class="mg-ms">' + last + ' ms</span>' +
+                    ratingLabel(last) +
+                    '<small>Click to try again</small></div></div></div>' +
+                    '<div class="mg-results" id="mgResults">' + resultsHTML() + '</div></div>';
             }
             bind();
         }
 
+        function ratingLabel(ms) {
+            if (ms < 180) return '<div class="mg-rating mg-rating--excellent">⚡ Superhuman!</div>';
+            if (ms < 250) return '<div class="mg-rating mg-rating--great">🔥 Great!</div>';
+            if (ms < 350) return '<div class="mg-rating mg-rating--good">👍 Good</div>';
+            if (ms < 500) return '<div class="mg-rating mg-rating--ok">😐 Average</div>';
+            return '<div class="mg-rating mg-rating--slow">🐢 Slow</div>';
+        }
+
         function resultsHTML() {
             if (!results.length) return '';
-            const avg = avgMs(results);
+            var avg = avgMs(results);
             return '<div class="mg-score-row">' +
-                results.map(function(r,i) { return '<span class="mg-score-chip">#' + (i+1) + ': ' + r + 'ms</span>'; }).join('') +
+                results.map(function(r,i){ return '<span class="mg-score-chip">#' + (i+1) + ': ' + r + 'ms</span>'; }).join('') +
                 (results.length > 1 ? '<span class="mg-score-chip mg-score-avg">Avg: ' + avg + 'ms</span>' : '') +
                 '</div>';
         }
 
         function bind() {
-            const pad = document.getElementById('mgPad');
+            var pad = document.getElementById('mgPad');
             if (!pad) return;
-            function handleClick() {
-                if (state === 'idle' || state === 'done') {
-                    startWaiting();
-                } else if (state === 'waiting') {
-                    /* Clicked too early */
-                    clearTimeout(timer);
-                    state = 'idle';
-                    arena.querySelector('.mg-pad-text').textContent = 'Too early! Click to try again.';
-                } else if (state === 'ready') {
-                    const ms = Date.now() - startTime;
-                    results.push(ms);
-                    if (results.length > RESULTS_MAX) results.shift();
-                    state = 'done';
-                    render();
-                }
-            }
             pad.addEventListener('click', handleClick);
             pad.addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === ' ') handleClick(); });
+            /* Difficulty change */
+            var diffDiv = document.getElementById('rDiff');
+            if (diffDiv) {
+                diffDiv.addEventListener('click', function(e) {
+                    var btn = e.target.closest('.mg-diff-btn');
+                    if (!btn) return;
+                    difficulty = btn.dataset.diff;
+                    diffDiv.querySelectorAll('.mg-diff-btn').forEach(function(b) {
+                        b.classList.toggle('mg-diff-btn--active', b.dataset.diff === difficulty);
+                    });
+                });
+            }
+        }
+
+        function handleClick() {
+            if (state === 'start' || state === 'done' || state === 'tooearly') {
+                startWaiting();
+            } else if (state === 'waiting') {
+                clearTimeout(timer);
+                state = 'tooearly';
+                render();
+            } else if (state === 'ready') {
+                var ms = Date.now() - startTime;
+                results.push(ms);
+                if (results.length > RESULTS_MAX) results.shift();
+                state = 'done';
+                render();
+            }
         }
 
         function startWaiting() {
             state = 'waiting';
             render();
-            const delay = 1500 + Math.random() * 3000;
+            var range = DELAYS[difficulty] || DELAYS.normal;
+            var delay = range[0] + Math.random() * (range[1] - range[0]);
             timer = setTimeout(function() {
                 state = 'ready';
                 startTime = Date.now();
@@ -1705,124 +2062,212 @@ document.addEventListener('DOMContentLoaded', () => {
             }, delay);
         }
 
-        return { init: render, reset: function() { state = 'idle'; results = []; clearTimeout(timer); render(); } };
+        return { init: function() { state = 'start'; render(); }, reset: function() { state = 'start'; results = []; clearTimeout(timer); render(); } };
     })();
 
     /* ── TYPING SPEED TEST ── */
-    const typingGame = (function() {
-        const SENTENCES = [
-            'The quick brown fox jumps over the lazy dog.',
-            'Computer engineering is the backbone of modern technology.',
-            'Design, data, and automation define the future of work.',
-            'Precision and creativity are two sides of the same coin.',
-            'Every line of code is a step toward solving a real problem.',
-        ];
-        let sentence = '', started = false, startTime = 0, finished = false;
+    var typingGame = (function() {
+        var SENTENCES = {
+            easy: [
+                'Type fast to win.',
+                'The cat sat on the mat.',
+                'Hello world, how are you.',
+                'Speed is the name of the game.',
+            ],
+            normal: [
+                'The quick brown fox jumps over the lazy dog.',
+                'Computer engineering is the backbone of modern technology.',
+                'Design, data, and automation define the future of work.',
+                'Precision and creativity are two sides of the same coin.',
+                'Every line of code is a step toward solving a real problem.',
+            ],
+            hard: [
+                'Parallelism in distributed systems requires careful synchronization of shared mutable state.',
+                'The asymptotic complexity of quicksort is O(n log n) on average, O(n²) in the worst case.',
+                'Functional programming paradigms emphasize immutability, pure functions, and composability.',
+                'Cryptographic hash functions are deterministic, collision-resistant, and one-directional.',
+            ],
+        };
+        var sentence = '', started = false, startTime = 0, finished = false, difficulty = 'normal';
 
-        function pick() { sentence = SENTENCES[Math.floor(Math.random() * SENTENCES.length)]; }
+        function pickSentence() {
+            var pool = SENTENCES[difficulty] || SENTENCES.normal;
+            sentence = pool[Math.floor(Math.random() * pool.length)];
+        }
 
         function render() {
-            pick();
+            pickSentence();
             finished = false; started = false;
+            var high = getHigh('typing_wpm');
+            var highStr = high !== null ? '<span class="mg-best-label">Best: ' + high + ' WPM</span>' : '';
             arena.innerHTML =
+                '<div class="mg-game-shell">' +
+                '<div class="mg-game-header"><h4>⌨️ Typing Speed</h4>' + highStr + '</div>' +
+                '<div class="mg-instructions">Type the sentence below exactly as shown. Timer starts on your first keystroke.</div>' +
+                diffBar('tDiff', [{key:'easy',label:'Easy'},{key:'normal',label:'Normal'},{key:'hard',label:'Hard'}], difficulty) +
                 '<div class="mg-typing">' +
                 '<div class="mg-typing-target" id="mgTypingTarget" aria-live="polite">' + highlightTyping('') + '</div>' +
-                '<input class="mg-typing-input" id="mgTypingInput" type="text" placeholder="Start typing here…" autocomplete="off" spellcheck="false" aria-label="Typing input">' +
-                '<div class="mg-typing-status" id="mgTypingStatus">Type the sentence above as fast as you can!</div>' +
-                '</div>';
-            const inp = document.getElementById('mgTypingInput');
+                '<input class="mg-typing-input" id="mgTypingInput" type="text" placeholder="Start typing here…" autocomplete="off" autocorrect="off" spellcheck="false" aria-label="Typing input">' +
+                '<div class="mg-typing-meta"><span class="mg-typing-chars" id="mgTypingChars">0/' + sentence.length + ' chars</span><span class="mg-typing-timer" id="mgTypingTimer" style="display:none">⏱ 0s</span></div>' +
+                '<div class="mg-typing-status" id="mgTypingStatus"></div>' +
+                '</div></div>';
+            var inp = document.getElementById('mgTypingInput');
+            var timerInterval = null;
             if (inp) {
                 inp.addEventListener('input', function() {
                     if (finished) return;
-                    if (!started) { started = true; startTime = Date.now(); }
-                    const val = inp.value;
+                    if (!started) {
+                        started = true; startTime = Date.now();
+                        var timerEl = document.getElementById('mgTypingTimer');
+                        if (timerEl) timerEl.style.display = '';
+                        timerInterval = setInterval(function() {
+                            var el = document.getElementById('mgTypingTimer');
+                            if (el) el.textContent = '⏱ ' + ((Date.now() - startTime) / 1000).toFixed(1) + 's';
+                        }, 100);
+                    }
+                    var val = inp.value;
+                    var charEl = document.getElementById('mgTypingChars');
+                    if (charEl) charEl.textContent = val.length + '/' + sentence.length + ' chars';
                     document.getElementById('mgTypingTarget').innerHTML = highlightTyping(val);
                     if (val === sentence) {
                         finished = true;
-                        const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
-                        const words = sentence.split(' ').length;
-                        const wpm = Math.round((words / elapsed) * 60);
-                        document.getElementById('mgTypingStatus').innerHTML =
-                            '<strong>Done in ' + elapsed + 's — ' + wpm + ' WPM!</strong> ' +
-                            '<button class="cta-button primary" id="mgTypingReset" style="margin-left:12px;padding:6px 16px;font-size:0.82rem">Try Again</button>';
+                        clearInterval(timerInterval);
+                        var elapsed  = ((Date.now() - startTime) / 1000).toFixed(2);
+                        var words    = sentence.trim().split(/\s+/).length;
+                        var wpm      = Math.round((words / parseFloat(elapsed)) * 60);
+                        var accuracy = calcAccuracy(val, sentence);
+                        var isRecord = setHigh('typing_wpm', wpm);
                         inp.disabled = true;
-                        const rst = document.getElementById('mgTypingReset');
-                        if (rst) rst.addEventListener('click', render);
+                        document.getElementById('mgTypingStatus').innerHTML =
+                            '<div class="mg-result-summary">' +
+                            '<div class="mg-result-stat"><span class="mg-result-big">' + wpm + '</span><span class="mg-result-unit">WPM</span></div>' +
+                            '<div class="mg-result-stat"><span class="mg-result-big">' + elapsed + 's</span><span class="mg-result-unit">Time</span></div>' +
+                            '<div class="mg-result-stat"><span class="mg-result-big">' + accuracy + '%</span><span class="mg-result-unit">Accuracy</span></div>' +
+                            '</div>' +
+                            (isRecord ? '<div class="mg-new-record" style="text-align:center;margin-bottom:12px">🏆 New Personal Best!</div>' : '') +
+                            '<div style="text-align:center"><button class="cta-button primary" onclick="typingGame_reset()" style="padding:8px 24px;font-size:0.85rem">Try Again</button></div>';
                     }
                 });
                 inp.focus();
+                /* Difficulty */
+                var diffDiv = document.getElementById('tDiff');
+                if (diffDiv) {
+                    diffDiv.addEventListener('click', function(e) {
+                        var btn = e.target.closest('.mg-diff-btn');
+                        if (!btn) return;
+                        difficulty = btn.dataset.diff;
+                        render();
+                    });
+                }
             }
         }
 
         function highlightTyping(val) {
             return sentence.split('').map(function(ch, i) {
                 if (i >= val.length) return '<span class="mg-t-pending">' + esc(ch) + '</span>';
-                if (val[i] === ch) return '<span class="mg-t-correct">' + esc(ch) + '</span>';
+                if (val[i] === ch)   return '<span class="mg-t-correct">' + esc(ch) + '</span>';
                 return '<span class="mg-t-wrong">' + esc(ch) + '</span>';
             }).join('');
         }
 
+        function calcAccuracy(typed, target) {
+            if (!typed.length) return 100;
+            var correct = 0;
+            for (var i = 0; i < Math.min(typed.length, target.length); i++) {
+                if (typed[i] === target[i]) correct++;
+            }
+            return Math.round((correct / target.length) * 100);
+        }
+
+        window.typingGame_reset = render;
         return { init: render, reset: render };
     })();
 
     /* ── CLICK SPEED TEST ── */
-    const clickGame = (function() {
-        const DURATION = 5;
-        let count = 0, running = false, timeLeft = DURATION, timerInterval = null;
+    var clickGame = (function() {
+        var DURATIONS = { easy: 10, normal: 5, hard: 3 };
+        var difficulty = 'normal';
+        var count = 0, running = false, timeLeft, timerInterval = null;
+
+        function getDuration() { return DURATIONS[difficulty] || 5; }
 
         function render() {
-            count = 0; running = false; timeLeft = DURATION;
+            var dur = getDuration();
+            count = 0; running = false; timeLeft = dur;
             clearInterval(timerInterval);
+            var high = getHigh('click_count');
+            var highStr = high !== null ? '<span class="mg-best-label">Best: ' + high + ' clicks</span>' : '';
             arena.innerHTML =
+                '<div class="mg-game-shell">' +
+                '<div class="mg-game-header"><h4>🖱 Click Speed</h4>' + highStr + '</div>' +
+                '<div class="mg-instructions">Click the button as many times as possible in ' + dur + ' seconds. Timer starts on your first click.</div>' +
+                diffBar('cDiff', [{key:'easy',label:'10s'},{key:'normal',label:'5s'},{key:'hard',label:'3s'}], difficulty) +
                 '<div class="mg-click">' +
                 '<div class="mg-click-info">' +
                 '<span class="mg-click-count" id="mgClickCount">0</span>' +
                 '<span class="mg-click-label">clicks</span>' +
-                '<span class="mg-click-timer" id="mgClickTimer">' + DURATION + 's</span>' +
+                '<span class="mg-click-timer" id="mgClickTimer">' + dur + 's</span>' +
                 '</div>' +
-                '<button class="mg-click-btn" id="mgClickBtn" aria-label="Click here as fast as you can">Click Me!</button>' +
-                '<div class="mg-click-status" id="mgClickStatus">Click the button as many times as you can in ' + DURATION + ' seconds!</div>' +
-                '</div>';
-            const btn = document.getElementById('mgClickBtn');
+                '<button class="mg-click-btn" id="mgClickBtn" aria-label="Click here fast">Click Me!</button>' +
+                '<div class="mg-click-status" id="mgClickStatus"></div>' +
+                '</div></div>';
+            var btn = document.getElementById('mgClickBtn');
             if (!btn) return;
             btn.addEventListener('click', function() {
                 if (!running) {
                     running = true;
                     timerInterval = setInterval(function() {
                         timeLeft--;
-                        const timerEl = document.getElementById('mgClickTimer');
+                        var timerEl = document.getElementById('mgClickTimer');
                         if (timerEl) timerEl.textContent = timeLeft + 's';
+                        if (timerEl && timeLeft <= 3) timerEl.style.color = 'var(--accent1)';
                         if (timeLeft <= 0) {
                             clearInterval(timerInterval);
                             running = false;
                             btn.disabled = true;
-                            const cps = (count / DURATION).toFixed(1);
-                            const status = document.getElementById('mgClickStatus');
-                            if (status) status.innerHTML = '<strong>' + count + ' clicks in ' + DURATION + 's (' + cps + ' CPS)</strong> ' +
-                                '<button class="cta-button primary" id="mgClickReset" style="margin-left:12px;padding:6px 16px;font-size:0.82rem">Try Again</button>';
-                            const rst = document.getElementById('mgClickReset');
-                            if (rst) rst.addEventListener('click', render);
+                            var dur2 = getDuration();
+                            var cps  = (count / dur2).toFixed(1);
+                            var isRecord = setHigh('click_count', count);
+                            var status = document.getElementById('mgClickStatus');
+                            if (status) status.innerHTML =
+                                '<div class="mg-result-summary">' +
+                                '<div class="mg-result-stat"><span class="mg-result-big">' + count + '</span><span class="mg-result-unit">Clicks</span></div>' +
+                                '<div class="mg-result-stat"><span class="mg-result-big">' + cps + '</span><span class="mg-result-unit">CPS</span></div>' +
+                                '</div>' +
+                                (isRecord ? '<div class="mg-new-record" style="text-align:center;margin-bottom:12px">🏆 New Record!</div>' : '') +
+                                '<div style="text-align:center"><button class="cta-button primary" onclick="clickGame_reset()" style="padding:8px 24px;font-size:0.85rem">Play Again</button></div>';
                         }
                     }, 1000);
                 }
                 if (running) {
                     count++;
-                    const el = document.getElementById('mgClickCount');
+                    var el = document.getElementById('mgClickCount');
                     if (el) el.textContent = count;
                 }
             });
+            /* Difficulty */
+            var diffDiv = document.getElementById('cDiff');
+            if (diffDiv) {
+                diffDiv.addEventListener('click', function(e) {
+                    var b = e.target.closest('.mg-diff-btn');
+                    if (!b) return;
+                    difficulty = b.dataset.diff;
+                    render();
+                });
+            }
         }
 
+        window.clickGame_reset = render;
         return { init: render, reset: render };
     })();
 
     /* ── Tab switching ── */
-    const games = { reaction: reactionGame, typing: typingGame, click: clickGame };
+    var games = { reaction: reactionGame, typing: typingGame, click: clickGame };
 
     function switchGame(name) {
         activeGame = name;
         tabs.querySelectorAll('.minigame-tab').forEach(function(t) {
-            const active = t.dataset.game === name;
+            var active = t.dataset.game === name;
             t.classList.toggle('active', active);
             t.setAttribute('aria-selected', active ? 'true' : 'false');
         });
@@ -1830,7 +2275,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     tabs.addEventListener('click', function(e) {
-        const tab = e.target.closest('.minigame-tab');
+        var tab = e.target.closest('.minigame-tab');
         if (tab) switchGame(tab.dataset.game);
     });
 
