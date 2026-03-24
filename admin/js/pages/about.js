@@ -4,12 +4,12 @@
 
 router.register('about', async () => {
     const container = document.getElementById('aboutEditor');
-    container.innerHTML = '<p style="color:var(--muted)">Loading...</p>';
+    renderPageLoading(container);
     try {
         const [cards, stats] = await Promise.all([API.getAboutCards(), API.getStats()]);
         renderAboutEditor(container, cards, stats);
     } catch (err) {
-        container.innerHTML = `<p style="color:var(--accent1)">Error: ${err.message}</p>`;
+        renderPageError(container, err);
     }
 });
 

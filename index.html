@@ -4,6 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>John Carlo Ebora — Portfolio</title>
+    <meta name="description" content="John Carlo Ebora — Computer Engineer, Multidisciplinary Creative. Design, Data &amp; Automation.">
+    <!-- Open Graph / Social sharing -->
+    <meta property="og:type"        content="website">
+    <meta property="og:title"       content="John Carlo Ebora — Portfolio">
+    <meta property="og:description" content="Computer Engineer · Multidisciplinary Creative — Design, Data &amp; Automation.">
+    <meta property="og:url"         content="https://carlo-portfolio.pages.dev">
+    <meta name="twitter:card"       content="summary_large_image">
+    <meta name="twitter:title"      content="John Carlo Ebora — Portfolio">
+    <meta name="twitter:description" content="Computer Engineer · Multidisciplinary Creative — Design, Data &amp; Automation.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -17,17 +26,19 @@
     <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 </head>
 <body>
-    
-    <!-- Page-wide ambient background shapes -->
-    <div id="bgShapes"></div>
-    <div class="floating-shapes" id="shapes"></div>
+    <!-- Skip navigation for keyboard users -->
+    <a href="#home" class="skip-link">Skip to main content</a>
 
-    <!-- Full-page particle canvas -->
-    <canvas id="particle-canvas"></canvas>
+    <!-- Page-wide ambient background shapes (decorative) -->
+    <div id="bgShapes" aria-hidden="true"></div>
+    <div class="floating-shapes" id="shapes" aria-hidden="true"></div>
 
-    <!-- Custom Cursor -->
-    <div id="cursor-dot"></div>
-    <div id="cursor-ring"></div>
+    <!-- Full-page particle canvas (decorative) -->
+    <canvas id="particle-canvas" aria-hidden="true"></canvas>
+
+    <!-- Custom Cursor (decorative) -->
+    <div id="cursor-dot"  aria-hidden="true"></div>
+    <div id="cursor-ring" aria-hidden="true"></div>
 
     <!-- Scroll Progress Bar -->
     <div class="scroll-seekbar"></div>

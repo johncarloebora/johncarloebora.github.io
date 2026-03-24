@@ -6,7 +6,7 @@ router.register('projects', loadProjectsPage);
 
 async function loadProjectsPage() {
     const container = document.getElementById('projectsEditor');
-    container.innerHTML = '<p style="color:var(--muted)">Loading...</p>';
+    renderPageLoading(container);
 
     try {
         const items = await API.getProjects();
@@ -51,7 +51,7 @@ async function loadProjectsPage() {
         html += '</div>';
         container.innerHTML = html;
     } catch (err) {
-        container.innerHTML = `<p style="color:var(--accent1)">Error: ${err.message}</p>`;
+        renderPageError(container, err);
     }
 }
 
@@ -157,7 +157,7 @@ async function openProjectModal(proj = null) {
 window.pickThumb = function(url) {
     if (!url) return;
     document.getElementById('modalThumb').value = url;
-    updateThumbPreview(url);
+    window.updateThumbPreview(url);
 };
 
 window.updateThumbPreview = function(url) {

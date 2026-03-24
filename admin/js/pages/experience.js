@@ -6,7 +6,7 @@ router.register('experience', loadExperiencePage);
 
 async function loadExperiencePage() {
     const container = document.getElementById('experienceEditor');
-    container.innerHTML = '<p style="color:var(--muted)">Loading...</p>';
+    renderPageLoading(container);
 
     try {
         const items = await API.getExperiences();
@@ -53,7 +53,7 @@ async function loadExperiencePage() {
         html += '</div>';
         container.innerHTML = html;
     } catch (err) {
-        container.innerHTML = `<p style="color:var(--accent1)">Error: ${err.message}</p>`;
+        renderPageError(container, err);
     }
 }
 
@@ -91,7 +91,7 @@ async function openExpModal(exp = null) {
             <label>Bullet Points <span style="font-size:0.72rem;color:var(--muted)">— what you did / achieved</span></label>
             <div class="card-description" style="margin-bottom:8px">Write one responsibility or achievement per row. Start with an action verb (e.g. "Automated…", "Led…", "Designed…").</div>
             <div class="bullet-list" id="bulletList">
-                ${bullets.map((b, i) => `
+                ${bullets.map(b => `
                     <div class="bullet-item">
                         <textarea class="form-input bullet-input" rows="2" placeholder="e.g. Automated compliance tracking using VBA, reducing errors by 40%">${esc(b)}</textarea>
                         <button class="btn btn-danger btn-icon btn-sm" onclick="this.parentElement.remove()" title="Remove bullet"><i class="fas fa-times"></i></button>

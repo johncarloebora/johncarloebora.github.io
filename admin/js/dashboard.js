@@ -29,19 +29,23 @@ function showConfirm(title, message, type = '') {
         ok.className = type === 'warning' ? 'btn btn-danger' : 'btn btn-primary';
 
         modal.classList.add('open');
-
+        // Move focus to the cancel button for safety on destructive actions
         const cancel = document.getElementById('confirmCancel');
+        cancel.focus();
 
         function cleanup() {
             modal.classList.remove('open');
             ok.removeEventListener('click', onOk);
             cancel.removeEventListener('click', onCancel);
+            document.removeEventListener('keydown', onKeydown);
         }
         function onOk()     { cleanup(); resolve(true);  }
         function onCancel() { cleanup(); resolve(false); }
+        function onKeydown(e) { if (e.key === 'Escape') onCancel(); }
 
         ok.addEventListener('click', onOk);
         cancel.addEventListener('click', onCancel);
+        document.addEventListener('keydown', onKeydown);
     });
 }
 
@@ -57,21 +61,28 @@ function showEditModal(title, bodyHtml) {
         const cancel = document.getElementById('editModalCancel');
         const close  = document.getElementById('editModalClose');
 
+        // Focus first focusable element inside the modal body
+        const firstInput = modal.querySelector('input, select, textarea, button');
+        if (firstInput) firstInput.focus();
+
         function cleanup() {
             modal.classList.remove('open');
             save.removeEventListener('click', onSave);
             cancel.removeEventListener('click', onCancel);
             close.removeEventListener('click', onCancel);
             modal.removeEventListener('click', onBackdrop);
+            document.removeEventListener('keydown', onKeydown);
         }
         function onSave()    { cleanup(); resolve(true);  }
         function onCancel()  { cleanup(); resolve(false); }
         function onBackdrop(e) { if (e.target === modal) onCancel(); }
+        function onKeydown(e) { if (e.key === 'Escape') onCancel(); }
 
         save.addEventListener('click', onSave);
         cancel.addEventListener('click', onCancel);
         close.addEventListener('click', onCancel);
         modal.addEventListener('click', onBackdrop);
+        document.addEventListener('keydown', onKeydown);
     });
 }
 
@@ -115,20 +126,6 @@ document.getElementById('publishBtn').addEventListener('click', async () => {
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-rocket"></i> Publish';
     }
-});
-
-// ── Sidebar toggle (mobile) ──
-const sidebarToggle  = document.getElementById('sidebarToggle');
-const sidebar        = document.getElementById('sidebar');
-const sidebarOverlay = document.getElementById('sidebarOverlay');
-
-sidebarToggle?.addEventListener('click', () => {
-    sidebar.classList.toggle('open');
-    sidebarOverlay.classList.toggle('open');
-});
-sidebarOverlay?.addEventListener('click', () => {
-    sidebar.classList.remove('open');
-    sidebarOverlay.classList.remove('open');
 });
 
 // ── Overview Page ──

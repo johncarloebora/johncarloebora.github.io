@@ -7,7 +7,7 @@ router.register('skills', loadSkillsPage);
 
 async function loadSkillsPage() {
     const container = document.getElementById('skillsEditor');
-    container.innerHTML = '<p style="color:var(--muted)">Loading...</p>';
+    renderPageLoading(container);
 
     try {
         const cards = await API.getSkillCards();
@@ -107,7 +107,7 @@ async function loadSkillsPage() {
         }
         container.innerHTML = html;
     } catch (err) {
-        container.innerHTML = `<p style="color:var(--accent1)">Error: ${err.message}</p>`;
+        renderPageError(container, err);
     }
 }
 

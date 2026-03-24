@@ -6,7 +6,7 @@ router.register('education', loadEducationPage);
 
 async function loadEducationPage() {
     const container = document.getElementById('educationEditor');
-    container.innerHTML = '<p style="color:var(--muted)">Loading...</p>';
+    renderPageLoading(container);
 
     try {
         const items = await API.getEducation();
@@ -50,7 +50,7 @@ async function loadEducationPage() {
         html += '</div>';
         container.innerHTML = html;
     } catch (err) {
-        container.innerHTML = `<p style="color:var(--accent1)">Error: ${err.message}</p>`;
+        renderPageError(container, err);
     }
 }
 
@@ -135,7 +135,7 @@ function buildEduEntryCard(entry, idx) {
             </div>
             <label style="font-size:0.78rem;font-weight:600;display:block;margin-bottom:6px">Detail Lines <span style="color:var(--muted);font-weight:400">(school name, GWA, honours, etc.)</span></label>
             <div class="entry-card-lines" id="eduLines_${idx}">
-                ${lines.map((l, li) => `
+                ${lines.map(l => `
                     <div class="entry-line-row">
                         <input type="text" class="form-input edu-line-input" value="${esc(l)}" placeholder="e.g. GWA: 1.21 — Academic Distinction">
                         <button type="button" class="btn btn-danger btn-icon btn-sm" onclick="this.closest('.entry-line-row').remove()" title="Remove"><i class="fas fa-times"></i></button>

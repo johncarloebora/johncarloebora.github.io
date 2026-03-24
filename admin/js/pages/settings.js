@@ -13,7 +13,7 @@ const SHAPES = [
 
 router.register('settings', async () => {
     const container = document.getElementById('settingsEditor');
-    container.innerHTML = '<p style="color:var(--muted)">Loading...</p>';
+    renderPageLoading(container);
 
     try {
         const settings = await API.getSettings();
@@ -151,7 +151,7 @@ router.register('settings', async () => {
         });
 
     } catch (err) {
-        container.innerHTML = `<p style="color:var(--accent1)">Error: ${err.message}</p>`;
+        renderPageError(container, err);
     }
 });
 

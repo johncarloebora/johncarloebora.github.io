@@ -19,7 +19,7 @@ const FOLDER_LABELS = {
 
 async function loadMediaPage() {
     const container = document.getElementById('mediaEditor');
-    container.innerHTML = '<p style="color:var(--muted)">Loading...</p>';
+    renderPageLoading(container);
 
     const filterFolder = document.getElementById('mediaFolderFilter').value;
 
@@ -151,7 +151,7 @@ async function loadMediaPage() {
         });
 
     } catch (err) {
-        container.innerHTML = `<p style="color:var(--accent1)">Error: ${err.message}</p>`;
+        renderPageError(container, err);
     }
 }
 

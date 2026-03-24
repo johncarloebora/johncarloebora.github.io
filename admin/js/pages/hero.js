@@ -4,7 +4,7 @@
 
 router.register('hero', async () => {
     const container = document.getElementById('heroEditor');
-    container.innerHTML = '<p style="color:var(--muted)">Loading...</p>';
+    renderPageLoading(container);
 
     try {
         const settings = await API.getSettings();
@@ -133,13 +133,10 @@ router.register('hero', async () => {
             <button class="btn btn-primary" id="saveHero"><i class="fas fa-save"></i> Save Hero</button>
         `;
 
-        document.getElementById('saveHero').addEventListener('click', async () => {
-            const phrases = Array.from(document.querySelectorAll('.tw-phrase-input'))
-                .map(i => i.value.trim()).filter(Boolean);
-            const btn = document.getElementById('saveHero');
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner"></span> Saving…';
-            try {
+        document.getElementById('saveHero').addEventListener('click', function() {
+            withButtonLock(this, async () => {
+                const phrases = Array.from(document.querySelectorAll('.tw-phrase-input'))
+                    .map(i => i.value.trim()).filter(Boolean);
                 await API.updateSettings({
                     heroEyebrow:       document.getElementById('heroEyebrow').value,
                     heroName:          document.getElementById('heroName').value,
@@ -152,24 +149,14 @@ router.register('hero', async () => {
                     ctaSecondaryLink:  document.getElementById('heroCtaSecLink').value,
                 });
                 showToast('Hero settings saved! Hit Publish to go live.', 'success');
-            } catch (err) {
-                showToast('Save failed: ' + err.message, 'error');
-            }
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-save"></i> Save Hero';
+            }, 'Saving…').catch(err => showToast('Save failed: ' + err.message, 'error'));
         });
     } catch (err) {
-        container.innerHTML = `<p style="color:var(--accent1)">Error: ${err.message}</p>`;
+        renderPageError(container, err);
     }
 });
 
-window.updateCounter = function(id, value, max) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.textContent = value.length + '/' + max;
-    el.classList.toggle('near-limit', value.length >= max * 0.85 && value.length < max);
-    el.classList.toggle('over-limit', value.length >= max);
-};
+// NOTE: esc() and window.updateCounter are defined in utils.js (loaded first)
 
 window.addTypewriterPhrase = function() {
     const list = document.getElementById('typewriterList');
@@ -187,6 +174,3 @@ window.removeTypewriterPhrase = function(btn) {
     btn.closest('.bullet-item').remove();
 };
 
-function esc(str) {
-    return String(str).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}

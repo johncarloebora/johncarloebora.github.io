@@ -1,0 +1,31 @@
+{
+  "env": {
+    "browser": true,
+    "es2021": true
+  },
+  "parserOptions": {
+    "ecmaVersion": 2021,
+    "sourceType": "script"
+  },
+  "globals": {
+    "API": "writable",
+    "router": "writable",
+    "showToast": "readonly",
+    "showConfirm": "readonly",
+    "showEditModal": "readonly",
+    "esc": "readonly",
+    "debounce": "readonly",
+    "withButtonLock": "readonly",
+    "renderPageLoading": "readonly",
+    "renderPageError": "readonly"
+  },
+  "rules": {
+    "no-unused-vars": "warn",
+    "no-undef": "error",
+    "no-console": "warn",
+    "eqeqeq": ["error", "always"],
+    "semi": ["warn", "always"],
+    "no-var": "error",
+    "prefer-const": "warn"
+  }
+}

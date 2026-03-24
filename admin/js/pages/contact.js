@@ -4,7 +4,7 @@
 
 router.register('contact', async () => {
     const container = document.getElementById('contactEditor');
-    container.innerHTML = '<p style="color:var(--muted)">Loading...</p>';
+    renderPageLoading(container);
 
     try {
         const settings = await API.getSettings();
@@ -90,6 +90,6 @@ router.register('contact', async () => {
             btn.innerHTML = '<i class="fas fa-save"></i> Save Contact Settings';
         });
     } catch (err) {
-        container.innerHTML = `<p style="color:var(--accent1)">Error: ${err.message}</p>`;
+        renderPageError(container, err);
     }
 });

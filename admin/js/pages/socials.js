@@ -25,7 +25,7 @@ const SOCIAL_PRESETS = [
 
 async function loadSocialsPage() {
     const container = document.getElementById('socialsEditor');
-    container.innerHTML = '<p style="color:var(--muted)">Loading...</p>';
+    renderPageLoading(container);
 
     try {
         const items = await API.getSocials();
@@ -57,15 +57,13 @@ async function loadSocialsPage() {
         html += '</div>';
         container.innerHTML = html;
     } catch (err) {
-        container.innerHTML = `<p style="color:var(--accent1)">Error: ${err.message}</p>`;
+        renderPageError(container, err);
     }
 }
 
 document.getElementById('addSocial').addEventListener('click', () => openSocialModal());
 
 async function openSocialModal(social = null) {
-    const selected = social ? SOCIAL_PRESETS.find(p => p.platform === social.platform) : null;
-
     const body = `
         <div class="form-group">
             <label>Platform</label>

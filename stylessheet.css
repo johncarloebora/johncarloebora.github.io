@@ -3,6 +3,29 @@
    Single source of truth. Zero duplication.
    ============================================================ */
 
+/* ── 0. ACCESSIBILITY UTILITIES ───────────────────────────── */
+
+/* Skip-to-main-content link — hidden until focused by keyboard */
+.skip-link {
+    position: fixed;
+    top: -100%;
+    left: 0;
+    z-index: 99999;
+    padding: 12px 20px;
+    background: var(--accent1, #ff6b6b);
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-decoration: none;
+    border-radius: 0 0 8px 0;
+    transition: top 0.2s ease;
+}
+.skip-link:focus {
+    top: 0;
+    outline: 3px solid #fff;
+    outline-offset: 2px;
+}
+
 /* ── 1. CSS CUSTOM PROPERTIES ─────────────────────────────── */
 :root {
     --bg:        #0a0a0a;

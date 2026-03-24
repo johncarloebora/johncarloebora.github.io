@@ -97,19 +97,37 @@ async function recordLoginAttempt(db, ip) {
 // CORS Setup
 // ============================================================
 
-function getCorsHeaders(env) {
+// Security headers applied to every response
+const SECURITY_HEADERS = {
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  'X-XSS-Protection': '1; mode=block',
+};
+
+function getCorsHeaders(env, requestOrigin) {
+  const allowed = env?.ALLOWED_ORIGIN || '*';
+  let allowOrigin;
+  if (allowed === '*') {
+    allowOrigin = '*';
+  } else {
+    const origins = allowed.split(',').map(s => s.trim());
+    allowOrigin = origins.includes(requestOrigin) ? requestOrigin : origins[0];
+  }
   return {
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': allowOrigin,
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Max-Age': '86400',
+    ...(allowOrigin !== '*' && { 'Vary': 'Origin' }),
   };
 }
 
-function corsify(response, env) {
-  const headers = getCorsHeaders(env);
+function corsify(response, env, request) {
+  const origin = request?.headers.get('Origin') || '';
+  const corsHeaders = getCorsHeaders(env, origin);
   const newHeaders = new Headers(response.headers);
-  for (const [k, v] of Object.entries(headers)) {
+  for (const [k, v] of Object.entries({ ...corsHeaders, ...SECURITY_HEADERS })) {
     newHeaders.set(k, v);
   }
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers: newHeaders });
@@ -126,7 +144,8 @@ const router = AutoRouter({
 
 // Preflight
 router.options('*', (request, env) => {
-  return new Response(null, { status: 204, headers: getCorsHeaders(env) });
+  const origin = request.headers.get('Origin') || '';
+  return new Response(null, { status: 204, headers: getCorsHeaders(env, origin) });
 });
 
 // ────────────────────────────────────────────────────────────
@@ -138,8 +157,11 @@ router.post('/api/auth/login', async (request, env) => {
   const rateLimited = await checkRateLimit(env.DB, ip);
   if (rateLimited) return error(429, 'Too many login attempts. Try again in 15 minutes.');
 
-  const { username, password } = await request.json();
+  const body = await request.json();
+  const username = (body?.username || '').trim().slice(0, 128);
+  const password = body?.password || '';
   if (!username || !password) return error(400, 'Username and password required');
+  if (password.length > 1024) return error(400, 'Password too long');
 
   const user = await env.DB.prepare('SELECT * FROM users WHERE username = ?').bind(username).first();
   if (!user) {
@@ -164,9 +186,12 @@ router.get('/api/auth/me', authMiddleware, async (request, env) => {
 });
 
 router.post('/api/auth/change-password', authMiddleware, async (request, env) => {
-  const { currentPassword, newPassword } = await request.json();
+  const body = await request.json();
+  const currentPassword = body?.currentPassword || '';
+  const newPassword     = body?.newPassword || '';
   if (!currentPassword || !newPassword) return error(400, 'Current and new password required');
-  if (newPassword.length < 8) return error(400, 'Password must be at least 8 characters');
+  if (newPassword.length < 8)    return error(400, 'Password must be at least 8 characters');
+  if (newPassword.length > 1024) return error(400, 'Password too long');
 
   const user = await env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(request.user.sub).first();
   const valid = await bcrypt.compare(currentPassword, user.password);
@@ -203,15 +228,19 @@ router.post('/api/auth/forgot-password', async (request, env) => {
     'INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES (?, ?, ?)'
   ).bind(user.id, token, expiresAt).run();
 
-  // Send email via EmailJS
+  // Send email via EmailJS (5-second timeout)
   const resetUrl = `${env.ADMIN_ORIGIN}/admin/#reset?token=${token}`;
+  const emailController = new AbortController();
+  const emailTimeout = setTimeout(() => emailController.abort(), 5000);
   try {
     await fetch('https://api.emailjs.com/api/v1.0/email/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      signal: emailController.signal,
       body: JSON.stringify({
         service_id: env.EMAILJS_SERVICE_ID,
-        template_id: env.EMAILJS_RESET_TEMPLATE_ID,
+        // Support both naming conventions — wrangler.toml may use either key
+        template_id: env.EMAILJS_RESET_TEMPLATE_ID || env.EMAILJS_TEMPLATE_ID,
         user_id: env.EMAILJS_PUBLIC_KEY,
         accessToken: env.EMAILJS_PRIVATE_KEY,
         template_params: {
@@ -222,7 +251,11 @@ router.post('/api/auth/forgot-password', async (request, env) => {
       }),
     });
   } catch (e) {
-    console.error('Failed to send reset email:', e);
+    // Log the reason but don't expose email delivery status to the caller
+    const reason = e.name === 'AbortError' ? 'timeout after 5 s' : e.message;
+    console.error('[forgot-password] email send failed:', reason);
+  } finally {
+    clearTimeout(emailTimeout);
   }
 
   return json({ success: true, message: 'If that email exists, a reset link has been sent.' });
@@ -244,6 +277,36 @@ router.post('/api/auth/reset-password', async (request, env) => {
   return json({ success: true, message: 'Password reset successful' });
 });
 
+// ============================================================
+// Input Validation Helpers
+// ============================================================
+
+/**
+ * Returns the trimmed string if it is within the allowed length,
+ * or throws a 400 error response via the itty-router `error` helper.
+ */
+function requireString(value, fieldName, maxLen = 10000) {
+  if (typeof value !== 'string') return error(400, `${fieldName} must be a string`);
+  const trimmed = value.trim();
+  if (!trimmed) return error(400, `${fieldName} is required`);
+  if (trimmed.length > maxLen) return error(400, `${fieldName} must be ${maxLen} characters or fewer`);
+  return trimmed;
+}
+
+/** Whitelist of valid setting keys to prevent arbitrary key injection */
+const ALLOWED_SETTING_KEYS = new Set([
+  'hero_name', 'hero_eyebrow', 'hero_subtitle', 'hero_desc',
+  'hero_cta_primary', 'hero_cta_primary_href',
+  'hero_cta_secondary', 'hero_cta_secondary_href',
+  'hero_phrases',
+  'profile_shape', 'profile_photo_url',
+  'theme', 'footer_text', 'footer_links',
+  'recaptcha_site_key', 'recaptcha_enabled',
+  'emailjs_service_id', 'emailjs_template_id', 'emailjs_public_key',
+  'contact_email', 'contact_enabled',
+  'site_title', 'site_description',
+]);
+
 // ────────────────────────────────────────────────────────────
 // SITE SETTINGS
 // ────────────────────────────────────────────────────────────
@@ -259,8 +322,12 @@ router.get('/api/settings', authMiddleware, async (request, env) => {
 
 router.put('/api/settings/:key', authMiddleware, async (request, env) => {
   const { key } = request.params;
-  const { value } = await request.json();
+  if (!key || key.length > 64) return error(400, 'Invalid setting key');
+  const body = await request.json();
+  const { value } = body;
+  if (value === undefined) return error(400, 'value is required');
   const serialized = typeof value === 'string' ? value : JSON.stringify(value);
+  if (serialized.length > 65535) return error(400, 'Setting value too large');
   await env.DB.prepare(
     'INSERT INTO site_settings (key, value, updated_at) VALUES (?, ?, datetime(\'now\')) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at'
   ).bind(key, serialized).run();
@@ -269,12 +336,17 @@ router.put('/api/settings/:key', authMiddleware, async (request, env) => {
 
 router.put('/api/settings', authMiddleware, async (request, env) => {
   const settings = await request.json();
+  if (typeof settings !== 'object' || Array.isArray(settings)) {
+    return error(400, 'settings must be a JSON object');
+  }
   const stmt = env.DB.prepare(
     'INSERT INTO site_settings (key, value, updated_at) VALUES (?, ?, datetime(\'now\')) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at'
   );
   const batch = [];
   for (const [key, value] of Object.entries(settings)) {
+    if (!key || key.length > 64) continue; // skip invalid keys silently
     const serialized = typeof value === 'string' ? value : JSON.stringify(value);
+    if (serialized.length > 65535) return error(400, `Value for key "${key}" is too large`);
     batch.push(stmt.bind(key, serialized));
   }
   if (batch.length) await env.DB.batch(batch);
@@ -727,6 +799,6 @@ router.all('*', () => error(404, 'Not found'));
 export default {
   async fetch(request, env, ctx) {
     const response = await router.fetch(request, env, ctx);
-    return corsify(response, env);
+    return corsify(response, env, request);
   },
 };

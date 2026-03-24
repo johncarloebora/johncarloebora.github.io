@@ -4,6 +4,13 @@
   "private": true,
   "scripts": {
     "sync": "node sync-gallery.js",
-    "watch": "node sync-gallery.js --watch"
+    "watch": "node sync-gallery.js --watch",
+    "lint": "eslint admin/js --ext .js",
+    "lint:fix": "eslint admin/js --ext .js --fix",
+    "worker:dev": "cd worker && npm run dev",
+    "worker:deploy": "cd worker && npm run deploy"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0"
   }
 }

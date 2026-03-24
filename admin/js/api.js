@@ -5,11 +5,17 @@
 const API = {
     base: window.ADMIN_API_BASE || 'https://carlo-portfolio-api.johncarloebora.workers.dev',
 
+    // Default request timeout in milliseconds
+    TIMEOUT_MS: 15000,
+
+    // Maximum retry attempts for transient network errors (not for 4xx responses)
+    MAX_RETRIES: 2,
+
     getToken() {
         return sessionStorage.getItem('admin_token');
     },
 
-    async request(path, options = {}) {
+    async request(path, options = {}, _retryCount = 0) {
         const token = this.getToken();
         if (!token && !options.noAuth) {
             window.location.href = 'index.html';
@@ -22,7 +28,32 @@ const API = {
             headers['Content-Type'] = 'application/json';
         }
 
-        const res = await fetch(`${this.base}${path}`, { ...options, headers });
+        // Attach an AbortController so requests time out cleanly
+        const controller = new AbortController();
+        const timeoutId  = setTimeout(() => controller.abort(), this.TIMEOUT_MS);
+
+        let res;
+        try {
+            res = await fetch(`${this.base}${path}`, {
+                ...options,
+                headers,
+                signal: controller.signal,
+            });
+        } catch (err) {
+            clearTimeout(timeoutId);
+            // Retry on network failures (not aborts caused by the user navigating away)
+            if (err.name !== 'AbortError' && _retryCount < this.MAX_RETRIES) {
+                const delay = 300 * Math.pow(2, _retryCount); // 300 ms, 600 ms
+                await new Promise(r => setTimeout(r, delay));
+                return this.request(path, options, _retryCount + 1);
+            }
+            const msg = err.name === 'AbortError'
+                ? `Request timed out after ${this.TIMEOUT_MS / 1000}s`
+                : 'Network error — check your connection';
+            throw new Error(msg);
+        } finally {
+            clearTimeout(timeoutId);
+        }
 
         if (res.status === 401) {
             sessionStorage.removeItem('admin_token');

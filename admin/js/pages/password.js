@@ -132,7 +132,7 @@ window.updateStrength = function(value) {
     label.style.color = lvl.color;
 
     // Also recheck match
-    checkPwMatch();
+    window.checkPwMatch();
 };
 
 window.checkPwMatch = function() {

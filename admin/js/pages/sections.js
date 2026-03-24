@@ -6,7 +6,7 @@ router.register('sections', loadSectionsPage);
 
 async function loadSectionsPage() {
     const container = document.getElementById('sectionsEditor');
-    container.innerHTML = '<p style="color:var(--muted)">Loading...</p>';
+    renderPageLoading(container);
 
     try {
         const sections = await API.getSections();
@@ -54,7 +54,7 @@ async function loadSectionsPage() {
         html += '</div></div>';
         container.innerHTML = html;
     } catch (err) {
-        container.innerHTML = `<p style="color:var(--accent1)"><i class="fas fa-exclamation-circle" style="margin-right:6px"></i>Error: ${err.message}</p>`;
+        renderPageError(container, err);
     }
 }
 
@@ -227,7 +227,7 @@ window.pickSectionIcon = function(iconClass) {
     const input = document.getElementById('modalIcon');
     if (input) {
         input.value = iconClass;
-        updateSectionIconPreview(iconClass);
+        window.updateSectionIconPreview(iconClass);
     }
 };
 
