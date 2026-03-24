@@ -6,10 +6,9 @@ compatibility_date = "2024-12-01"
 # Replace with your actual R2 public URL after enabling public access
 R2_PUBLIC_URL = "https://pub-f5b0f09119db40a8996c7447f85b44f9.r2.dev"
 # Comma-separated list of allowed CORS origins (no trailing slash)
-# Add localhost variants during development, e.g. "https://carlo-portfolio.pages.dev,http://localhost:5500"
-ALLOWED_ORIGIN = "https://carlo-portfolio.pages.dev"
+ALLOWED_ORIGIN = "https://johncarloebora.github.io,https://carlo-portfolio.pages.dev,http://localhost:5500,http://127.0.0.1:5500"
 # Base URL for the admin panel (used for password-reset email links)
-ADMIN_ORIGIN = "https://carlo-portfolio.pages.dev"
+ADMIN_ORIGIN = "https://johncarloebora.github.io"
 # EmailJS config for password reset emails
 EMAILJS_SERVICE_ID = "service_ansc2g4"
 # Template used for general contact emails
