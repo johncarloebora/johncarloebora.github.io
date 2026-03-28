@@ -71,6 +71,10 @@ async function authMiddleware(request, env) {
   const token = authHeader.slice(7);
   const payload = await verifyJwt(token, env.JWT_SECRET);
   if (!payload) return error(401, 'Invalid or expired token');
+  // Viewer (read-only share token) can only make GET requests
+  if (payload.role === 'viewer' && request.method !== 'GET') {
+    return error(403, 'Read-only token — write access denied');
+  }
   request.user = payload;
 }
 
@@ -183,6 +187,12 @@ router.get('/api/auth/me', authMiddleware, async (request, env) => {
   const user = await env.DB.prepare('SELECT id, username, email FROM users WHERE id = ?').bind(request.user.sub).first();
   if (!user) return error(404, 'User not found');
   return json(user);
+});
+
+// Generate a read-only share token (viewer role — GET-only, no writes)
+router.post('/api/auth/share-token', authMiddleware, async (request, env) => {
+  const token = await signJwt({ sub: 'viewer', role: 'viewer' }, env.JWT_SECRET, 60 * 60 * 24 * 30); // 30 days
+  return json({ token, expiresIn: '30 days' });
 });
 
 router.post('/api/auth/change-password', authMiddleware, async (request, env) => {
@@ -397,17 +407,27 @@ function crudRoutes(router, path, table, options = {}) {
       params.push(request.query[parentKey]);
     }
     query += ` ORDER BY ${orderBy}`;
-    const { results } = params.length
-      ? await env.DB.prepare(query).bind(...params).all()
-      : await env.DB.prepare(query).all();
-    return json(results);
+    try {
+      const { results } = params.length
+        ? await env.DB.prepare(query).bind(...params).all()
+        : await env.DB.prepare(query).all();
+      return json(results);
+    } catch (e) {
+      if (e.message && e.message.includes('no such table')) return json([]);
+      throw e;
+    }
   });
 
   // GET ONE
   router.get(`/api/${path}/:id`, authMiddleware, async (request, env) => {
-    const row = await env.DB.prepare(`SELECT * FROM ${table} WHERE id = ?`).bind(request.params.id).first();
-    if (!row) return error(404, 'Not found');
-    return json(row);
+    try {
+      const row = await env.DB.prepare(`SELECT * FROM ${table} WHERE id = ?`).bind(request.params.id).first();
+      if (!row) return error(404, 'Not found');
+      return json(row);
+    } catch (e) {
+      if (e.message && e.message.includes('no such table')) return error(503, 'Table not ready — run migrations first');
+      throw e;
+    }
   });
 
   // CREATE
@@ -423,13 +443,18 @@ function crudRoutes(router, path, table, options = {}) {
       return typeof v === 'object' ? JSON.stringify(v) : v;
     });
 
-    const result = await env.DB.prepare(
-      `INSERT INTO ${table} (${cols.join(', ')}) VALUES (${placeholders})`
-    ).bind(...values).run();
+    try {
+      const result = await env.DB.prepare(
+        `INSERT INTO ${table} (${cols.join(', ')}) VALUES (${placeholders})`
+      ).bind(...values).run();
 
-    const inserted = await env.DB.prepare(`SELECT * FROM ${table} WHERE id = ?`).bind(result.meta.last_row_id).first();
-    if (onWrite) await onWrite(env, 'create', inserted.id, inserted);
-    return json(inserted, { status: 201 });
+      const inserted = await env.DB.prepare(`SELECT * FROM ${table} WHERE id = ?`).bind(result.meta.last_row_id).first();
+      if (onWrite) await onWrite(env, 'create', inserted.id, inserted);
+      return json(inserted, { status: 201 });
+    } catch (e) {
+      if (e.message && e.message.includes('no such table')) return error(503, 'Table not ready — run migrations first');
+      throw e;
+    }
   });
 
   // UPDATE
@@ -446,27 +471,42 @@ function crudRoutes(router, path, table, options = {}) {
     });
     values.push(request.params.id);
 
-    await env.DB.prepare(`UPDATE ${table} SET ${sets} WHERE id = ?`).bind(...values).run();
-    const updated = await env.DB.prepare(`SELECT * FROM ${table} WHERE id = ?`).bind(request.params.id).first();
-    if (onWrite) await onWrite(env, 'update', updated.id, updated);
-    return json(updated);
+    try {
+      await env.DB.prepare(`UPDATE ${table} SET ${sets} WHERE id = ?`).bind(...values).run();
+      const updated = await env.DB.prepare(`SELECT * FROM ${table} WHERE id = ?`).bind(request.params.id).first();
+      if (onWrite) await onWrite(env, 'update', updated.id, updated);
+      return json(updated);
+    } catch (e) {
+      if (e.message && e.message.includes('no such table')) return error(503, 'Table not ready — run migrations first');
+      throw e;
+    }
   });
 
   // DELETE
   router.delete(`/api/${path}/:id`, authMiddleware, async (request, env) => {
-    if (onWrite) await onWrite(env, 'delete', request.params.id, null);
-    await env.DB.prepare(`DELETE FROM ${table} WHERE id = ?`).bind(request.params.id).run();
-    return json({ success: true });
+    try {
+      if (onWrite) await onWrite(env, 'delete', request.params.id, null);
+      await env.DB.prepare(`DELETE FROM ${table} WHERE id = ?`).bind(request.params.id).run();
+      return json({ success: true });
+    } catch (e) {
+      if (e.message && e.message.includes('no such table')) return error(503, 'Table not ready — run migrations first');
+      throw e;
+    }
   });
 
   // REORDER
   router.put(`/api/${path}/reorder`, authMiddleware, async (request, env) => {
     const { items } = await request.json(); // [{ id, sort_order }]
     if (!Array.isArray(items)) return error(400, 'items array required');
-    const stmt = env.DB.prepare(`UPDATE ${table} SET sort_order = ? WHERE id = ?`);
-    const batch = items.map(item => stmt.bind(item.sort_order, item.id));
-    if (batch.length) await env.DB.batch(batch);
-    return json({ success: true });
+    try {
+      const stmt = env.DB.prepare(`UPDATE ${table} SET sort_order = ? WHERE id = ?`);
+      const batch = items.map(item => stmt.bind(item.sort_order, item.id));
+      if (batch.length) await env.DB.batch(batch);
+      return json({ success: true });
+    } catch (e) {
+      if (e.message && e.message.includes('no such table')) return error(503, 'Table not ready — run migrations first');
+      throw e;
+    }
   });
 }
 

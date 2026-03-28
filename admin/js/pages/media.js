@@ -156,7 +156,32 @@ async function loadMediaPage() {
 }
 
 // Folder filter
-document.getElementById('mediaFolderFilter').addEventListener('change', loadMediaPage);
+document.getElementById('mediaFolderFilter').addEventListener('change', function() {
+    // Reset text search when changing folder
+    const searchEl = document.getElementById('mediaSearchInput');
+    if (searchEl) searchEl.value = '';
+    loadMediaPage();
+});
+
+// Text search — client-side filter on rendered items
+window.filterMediaItems = debounce(function(q) {
+    q = q.trim().toLowerCase();
+    document.querySelectorAll('.media-item').forEach(function(item) {
+        const overlay = item.querySelector('.media-item-overlay');
+        const name = overlay ? overlay.textContent.toLowerCase() : '';
+        const match = !q || name.includes(q);
+        item.closest('.media-folder-section') && (item.style.display = match ? '' : 'none');
+    });
+    // Hide folder sections with all items hidden
+    document.querySelectorAll('.media-folder-section').forEach(function(section) {
+        const visible = Array.from(section.querySelectorAll('.media-item')).some(el => el.style.display !== 'none');
+        section.style.display = visible ? '' : 'none';
+    });
+    if (typeof announceAriaLive === 'function') {
+        const count = document.querySelectorAll('.media-item:not([style*="display: none"])').length;
+        announceAriaLive(count + ' media file(s) shown');
+    }
+}, 200);
 
 // Rescan bucket — syncs D1 from actual R2 object keys
 document.getElementById('rescanBtn').addEventListener('click', async () => {

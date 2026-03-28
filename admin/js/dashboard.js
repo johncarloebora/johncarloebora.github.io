@@ -33,8 +33,12 @@ function showConfirm(title, message, type = '') {
         const cancel = document.getElementById('confirmCancel');
         cancel.focus();
 
+        // Focus trap
+        const removeTrap = typeof trapFocus === 'function' ? trapFocus(modal) : function() {};
+
         function cleanup() {
             modal.classList.remove('open');
+            removeTrap();
             ok.removeEventListener('click', onOk);
             cancel.removeEventListener('click', onCancel);
             document.removeEventListener('keydown', onKeydown);
@@ -65,8 +69,12 @@ function showEditModal(title, bodyHtml) {
         const firstInput = modal.querySelector('input, select, textarea, button');
         if (firstInput) firstInput.focus();
 
+        // Focus trap
+        const removeTrap = typeof trapFocus === 'function' ? trapFocus(modal) : function() {};
+
         function cleanup() {
             modal.classList.remove('open');
+            removeTrap();
             save.removeEventListener('click', onSave);
             cancel.removeEventListener('click', onCancel);
             close.removeEventListener('click', onCancel);
@@ -244,6 +252,46 @@ router.register('system', async () => {
     }
     loadAuditLog();
 });
+
+// ── Admin sync polling (every 60 s — show unpublished-changes warning) ──
+(function initSyncPolling() {
+    var lastPublishedAt = null;
+
+    async function pollSyncStatus() {
+        try {
+            const status = await API.request('/api/sync-status');
+            const el = document.getElementById('publishStatus');
+            if (!el) return;
+
+            const publishedAt = status.publishedAt ? new Date(status.publishedAt) : null;
+            const changedAt   = status.lastChangeAt ? new Date(status.lastChangeAt) : null;
+
+            if (publishedAt) {
+                lastPublishedAt = publishedAt;
+                if (changedAt && changedAt > publishedAt) {
+                    el.innerHTML = '<span class="status-badge unpublished"><i class="fas fa-exclamation-circle"></i> Unpublished changes</span>';
+                } else if (!el.innerHTML.includes('Published')) {
+                    el.innerHTML = `<span class="status-badge published"><i class="fas fa-check-circle"></i> Published ${publishedAt.toLocaleString()}</span>`;
+                }
+            } else {
+                el.innerHTML = '<span class="status-badge hidden"><i class="fas fa-clock"></i> Never published</span>';
+            }
+        } catch { /* network error — silently skip */ }
+    }
+
+    // Run immediately then every 60 s
+    pollSyncStatus();
+    setInterval(pollSyncStatus, 60000);
+})();
+
+// ── ARIA live announcer ──
+window.announceAriaLive = function(msg) {
+    var el = document.getElementById('ariaLive');
+    if (!el) return;
+    el.textContent = '';
+    // Force re-announce by toggling
+    requestAnimationFrame(function() { el.textContent = msg; });
+};
 
 // ── Initialize ──
 router.init();

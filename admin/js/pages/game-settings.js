@@ -5,15 +5,30 @@
 router.register('game-settings', loadGameSettingsPage);
 
 const GAME_DEFS = [
-    { id: 'reaction', label: 'Reaction Time',  icon: 'fas fa-bolt',       desc: 'Click when the screen changes color.' },
-    { id: 'typing',   label: 'Typing Speed',   icon: 'fas fa-keyboard',   desc: 'Type the given text as fast as possible.' },
-    { id: 'click',    label: 'Click Speed',    icon: 'fas fa-mouse-pointer', desc: 'Click as many times as possible in 10 s.' },
-    { id: 'memory',   label: 'Memory Cards',   icon: 'fas fa-th-large',   desc: 'Match emoji pairs before the timer runs out.' },
-    { id: 'aim',      label: 'Aim Trainer',    icon: 'fas fa-crosshairs', desc: 'Hit targets as quickly as possible.' },
-    { id: 'logic',    label: 'Logic Puzzle',   icon: 'fas fa-brain',      desc: 'Number sequence and pattern challenges.' },
+    { id: 'reaction', label: 'Reaction Time',  icon: 'fas fa-bolt',           desc: 'Click when the screen changes color.' },
+    { id: 'typing',   label: 'Typing Speed',   icon: 'fas fa-keyboard',       desc: 'Type the given text as fast as possible.' },
+    { id: 'click',    label: 'Click Speed',    icon: 'fas fa-mouse-pointer',  desc: 'Click as many times as possible in 10 s.' },
+    { id: 'memory',   label: 'Memory Cards',   icon: 'fas fa-th-large',       desc: 'Match emoji pairs before the timer runs out.' },
+    { id: 'aim',      label: 'Aim Trainer',    icon: 'fas fa-crosshairs',     desc: 'Hit targets as quickly as possible.' },
+    { id: 'logic',    label: 'Logic Puzzle',   icon: 'fas fa-brain',          desc: 'Number sequence and pattern challenges.' },
     { id: 'quiz',     label: 'Tech Quiz',      icon: 'fas fa-question-circle', desc: 'Multiple-choice tech trivia questions.' },
 ];
 const DIFFICULTIES = ['easy', 'normal', 'hard'];
+
+// Schema definition for each game's settings row.
+// Used by SchemaForm.render() / SchemaForm.read() to generate and collect
+// the per-game difficulty select + enabled checkbox without hand-coding HTML.
+const GAME_SCHEMA = [
+    {
+        id: 'diff', type: 'select', compact: true,
+        options: DIFFICULTIES.map(d => ({ value: d, label: d.charAt(0).toUpperCase() + d.slice(1) })),
+        default: 'normal',
+    },
+    {
+        id: 'en', type: 'checkbox', compact: true,
+        checkLabel: 'Enabled', default: 1,
+    },
+];
 
 async function loadGameSettingsPage() {
     const container = document.getElementById('gameSettingsEditor');
@@ -33,6 +48,13 @@ async function loadGameSettingsPage() {
 
         for (const g of GAME_DEFS) {
             const s = map[g.id] || { enabled: 1, default_difficulty: 'normal' };
+            // SchemaForm generates the difficulty select + enabled checkbox using the
+            // shared GAME_SCHEMA definition. Prefix 'gs_<id>_' keeps IDs unique per game.
+            const sfHtml = SchemaForm.render(
+                GAME_SCHEMA,
+                { diff: s.default_difficulty || 'normal', en: s.enabled !== 0 ? 1 : 0 },
+                'gs_' + g.id + '_'
+            );
             html += `
                 <div class="section-list-item" style="align-items:center">
                     <div style="width:38px;height:38px;background:var(--surface2);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:1rem;color:var(--accent2);flex-shrink:0">
@@ -42,13 +64,7 @@ async function loadGameSettingsPage() {
                         <strong>${g.label}</strong>
                         <div class="section-id">${g.desc}</div>
                     </div>
-                    <select class="form-input" id="gsDiff_${g.id}" style="width:110px;font-size:0.82rem;padding:6px 10px">
-                        ${DIFFICULTIES.map(d => `<option value="${d}" ${(s.default_difficulty || 'normal') === d ? 'selected' : ''}>${d.charAt(0).toUpperCase()+d.slice(1)}</option>`).join('')}
-                    </select>
-                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;white-space:nowrap;font-size:0.82rem;color:var(--text-secondary)">
-                        <input type="checkbox" id="gsEn_${g.id}" ${s.enabled !== 0 ? 'checked' : ''} style="width:16px;height:16px;accent-color:var(--accent2)">
-                        Enabled
-                    </label>
+                    ${sfHtml}
                 </div>`;
         }
 
@@ -62,10 +78,14 @@ async function loadGameSettingsPage() {
 
         document.getElementById('saveGameSettings').addEventListener('click', function() {
             withButtonLock(this, async () => {
-                const batch = GAME_DEFS.map(g => API.updateGameSetting(g.id, {
-                    enabled: document.getElementById(`gsEn_${g.id}`)?.checked ? 1 : 0,
-                    default_difficulty: document.getElementById(`gsDiff_${g.id}`)?.value || 'normal',
-                }));
+                // SchemaForm.read() collects difficulty + enabled for each game by prefix.
+                const batch = GAME_DEFS.map(function(g) {
+                    const vals = SchemaForm.read(GAME_SCHEMA, 'gs_' + g.id + '_');
+                    return API.updateGameSetting(g.id, {
+                        enabled:            vals.en  !== undefined ? vals.en  : 1,
+                        default_difficulty: vals.diff || 'normal',
+                    });
+                });
                 await Promise.all(batch);
                 showToast('Game settings saved! Hit Publish to apply.', 'success');
             }, 'Saving…').catch(err => showToast(err.message, 'error'));

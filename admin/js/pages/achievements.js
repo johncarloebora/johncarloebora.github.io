@@ -30,7 +30,7 @@ function renderAchievementsList(items, container) {
         <div class="data-grid">`;
     for (const a of items) {
         html += `
-            <div class="data-card">
+            <div class="data-card" id="ach-card-${a.id}">
                 <div class="data-card-header">
                     <div style="display:flex;align-items:center;gap:10px">
                         <div style="width:38px;height:38px;background:var(--surface2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.1rem;color:var(--accent2);flex-shrink:0">
@@ -43,8 +43,20 @@ function renderAchievementsList(items, container) {
                     </div>
                 </div>
                 ${a.description ? `<p style="font-size:0.82rem;color:var(--text-secondary);margin:8px 0 4px;line-height:1.4">${esc(a.description)}</p>` : ''}
+                <!-- Inline edit panel -->
+                <div id="ach-inline-${a.id}" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+                    <div class="form-row" style="gap:8px">
+                        <input type="text" class="form-input" id="ach-ie-title-${a.id}" value="${esc(a.title||'')}" placeholder="Title" style="flex:2">
+                        <input type="text" class="form-input" id="ach-ie-date-${a.id}" value="${esc(a.date||'')}" placeholder="YYYY-MM" style="flex:0 0 100px">
+                    </div>
+                    <div style="display:flex;gap:6px;margin-top:6px">
+                        <button class="btn btn-primary btn-sm" onclick="saveAchInline(${a.id})"><i class="fas fa-save"></i> Save</button>
+                        <button class="btn btn-secondary btn-sm" onclick="toggleAchInline(${a.id})"><i class="fas fa-times"></i> Cancel</button>
+                    </div>
+                </div>
                 <div class="data-card-actions">
-                    <button class="btn btn-secondary btn-sm" onclick="editAchievement(${a.id})"><i class="fas fa-edit"></i> Edit</button>
+                    <button class="btn btn-secondary btn-sm" onclick="toggleAchInline(${a.id})" title="Quick edit"><i class="fas fa-pen-square"></i> Quick Edit</button>
+                    <button class="btn btn-secondary btn-sm" onclick="editAchievement(${a.id})"><i class="fas fa-edit"></i> Full Edit</button>
                     <button class="btn btn-danger btn-sm" onclick="deleteAchievement(${a.id})"><i class="fas fa-trash"></i></button>
                 </div>
             </div>`;
@@ -125,6 +137,27 @@ window.pickAchIcon = function(ic) {
     const prev = document.getElementById('aIconPreview');
     if (inp) inp.value = ic;
     if (prev) prev.innerHTML = `<i class="${esc(ic)}" style="font-size:1.1rem;color:var(--accent2)"></i>`;
+};
+
+window.toggleAchInline = function(id) {
+    const panel = document.getElementById('ach-inline-' + id);
+    if (!panel) return;
+    panel.style.display = panel.style.display === 'none' ? '' : 'none';
+    if (panel.style.display !== 'none') {
+        const input = document.getElementById('ach-ie-title-' + id);
+        if (input) input.focus();
+    }
+};
+
+window.saveAchInline = async function(id) {
+    const title = document.getElementById('ach-ie-title-' + id)?.value?.trim();
+    const date  = document.getElementById('ach-ie-date-' + id)?.value?.trim();
+    if (!title) return showToast('Title is required', 'error');
+    try {
+        await API.updateAchievement(id, { title, date });
+        showToast('Achievement updated!', 'success');
+        loadAchievementsPage();
+    } catch (err) { showToast(err.message, 'error'); }
 };
 
 window.editAchievement = async function(id) {

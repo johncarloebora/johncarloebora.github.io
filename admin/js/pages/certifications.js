@@ -30,7 +30,7 @@ function renderCertificationsList(items, container) {
         <div class="data-grid">`;
     for (const c of items) {
         html += `
-            <div class="data-card">
+            <div class="data-card" id="cert-card-${c.id}">
                 <div class="data-card-header">
                     <div>
                         <div class="data-card-title">${esc(c.title || 'Untitled')}</div>
@@ -40,8 +40,21 @@ function renderCertificationsList(items, container) {
                 </div>
                 ${c.description ? `<p style="font-size:0.82rem;color:var(--text-secondary);margin:6px 0;line-height:1.4">${esc(c.description)}</p>` : ''}
                 ${c.credential_url ? `<a href="${esc(c.credential_url)}" target="_blank" rel="noopener" style="font-size:0.78rem;color:var(--accent2)"><i class="fas fa-external-link-alt"></i> View Credential</a>` : ''}
+                <!-- Inline edit panel -->
+                <div id="cert-inline-${c.id}" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+                    <div class="form-row" style="gap:8px">
+                        <input type="text" class="form-input" id="cert-ie-title-${c.id}" value="${esc(c.title||'')}" placeholder="Title" style="flex:2">
+                        <input type="text" class="form-input" id="cert-ie-issuer-${c.id}" value="${esc(c.issuer||'')}" placeholder="Issuer" style="flex:1">
+                        <input type="text" class="form-input" id="cert-ie-date-${c.id}" value="${esc(c.date||'')}" placeholder="YYYY-MM" style="flex:0 0 100px">
+                    </div>
+                    <div style="display:flex;gap:6px;margin-top:6px">
+                        <button class="btn btn-primary btn-sm" onclick="saveCertInline(${c.id})"><i class="fas fa-save"></i> Save</button>
+                        <button class="btn btn-secondary btn-sm" onclick="toggleCertInline(${c.id})"><i class="fas fa-times"></i> Cancel</button>
+                    </div>
+                </div>
                 <div class="data-card-actions">
-                    <button class="btn btn-secondary btn-sm" onclick="editCertification(${c.id})"><i class="fas fa-edit"></i> Edit</button>
+                    <button class="btn btn-secondary btn-sm" onclick="toggleCertInline(${c.id})" title="Quick edit"><i class="fas fa-pen-square"></i> Quick Edit</button>
+                    <button class="btn btn-secondary btn-sm" onclick="editCertification(${c.id})"><i class="fas fa-edit"></i> Full Edit</button>
                     <button class="btn btn-danger btn-sm" onclick="deleteCertification(${c.id})"><i class="fas fa-trash"></i></button>
                 </div>
             </div>`;
@@ -113,6 +126,28 @@ async function openCertModal(item) {
         loadCertificationsPage();
     } catch (err) { showToast(err.message, 'error'); }
 }
+
+window.toggleCertInline = function(id) {
+    const panel = document.getElementById('cert-inline-' + id);
+    if (!panel) return;
+    panel.style.display = panel.style.display === 'none' ? '' : 'none';
+    if (panel.style.display !== 'none') {
+        const input = document.getElementById('cert-ie-title-' + id);
+        if (input) input.focus();
+    }
+};
+
+window.saveCertInline = async function(id) {
+    const title  = document.getElementById('cert-ie-title-' + id)?.value?.trim();
+    const issuer = document.getElementById('cert-ie-issuer-' + id)?.value?.trim();
+    const date   = document.getElementById('cert-ie-date-' + id)?.value?.trim();
+    if (!title) return showToast('Title is required', 'error');
+    try {
+        await API.updateCertification(id, { title, issuer, date });
+        showToast('Certification updated!', 'success');
+        loadCertificationsPage();
+    } catch (err) { showToast(err.message, 'error'); }
+};
 
 window.editCertification = async function(id) {
     const item = await API.request(`/api/certifications/${id}`);

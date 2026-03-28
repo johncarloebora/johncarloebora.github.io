@@ -47,6 +47,12 @@ const router = {
     },
 
     navigate(page) {
+        // Run cleanup for the outgoing page
+        if (typeof runPageCleanup === 'function') runPageCleanup(this.currentPage);
+
+        // Invalidate global search cache on navigation
+        if (typeof _gsCacheProjects !== 'undefined') { _gsCacheProjects = null; _gsCacheSections = null; }
+
         // Hide all pages
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));

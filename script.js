@@ -705,8 +705,9 @@ function applySiteConfig(cfg) {
             overlayIcon = 'fas fa-play-circle'; overlayText = 'View Videos';
             dataAttr = 'data-video-folder="' + esc(proj.gallery_folder) + '" style="cursor:pointer"';
         } else if (isWebpage) {
-            overlayIcon = 'fas fa-globe'; overlayText = 'Live Preview';
-            dataAttr = 'data-webpage-url="' + esc(proj.webpage_url || '') + '" data-webpage-title="' + esc(proj.title) + '" data-webpage-device="' + esc(proj.wp_device || 'full') + '" data-webpage-interaction="' + (proj.wp_allow_interaction !== 0 ? '1' : '0') + '" style="cursor:pointer"';
+            overlayIcon = proj.preview_mode === 'static' ? 'fas fa-image' : 'fas fa-globe';
+            overlayText = proj.preview_mode === 'static' ? 'View Screenshot' : 'Live Preview';
+            dataAttr = 'data-webpage-url="' + esc(proj.webpage_url || '') + '" data-webpage-title="' + esc(proj.title) + '" data-webpage-device="' + esc(proj.wp_device || 'full') + '" data-webpage-interaction="' + (proj.wp_allow_interaction !== 0 ? '1' : '0') + '" data-preview-mode="' + esc(proj.preview_mode || 'live') + '" style="cursor:pointer"';
         } else if (hasGallery) {
             overlayIcon = 'fas fa-images'; overlayText = 'View Gallery';
             dataAttr = 'data-gallery-folder="' + esc(proj.gallery_folder) + '"';
@@ -714,8 +715,23 @@ function applySiteConfig(cfg) {
             overlayIcon = 'fas fa-info-circle'; overlayText = 'View Project';
             dataAttr = '';
         }
-        return '<div class="project-card' + (proj.featured ? ' project-card--featured' : '') + '">' +
-            '<div class="project-thumbnail" ' + dataAttr + '>' +
+        // No-gallery projects get advanced modal
+        var noGalleryAttr = (!proj.gallery_type) ? ' data-proj-detail="' + esc(JSON.stringify({
+            id: proj.id,
+            title: proj.title,
+            description: proj.description || '',
+            tags: proj.tags || [],
+            skills: proj.skills || [],
+            category: proj.category || '',
+            featured: proj.featured,
+            thumbnail_url: thumbSrc,
+        })) + '"' : '';
+
+        // Category-driven layout class
+        var catLayoutClass = proj.category ? ' project-card--cat-' + (proj.category || 'standard').replace(/\s+/g,'-') : '';
+
+        return '<div class="project-card' + (proj.featured ? ' project-card--featured' : '') + catLayoutClass + '">' +
+            '<div class="project-thumbnail" ' + dataAttr + noGalleryAttr + '>' +
             '<img src="' + esc(thumbSrc) + '" alt="' + esc(proj.title) + '" class="main-thumbnail" loading="lazy" ' +
             'onerror="this.src=\'thumbnail/Coming Soon.gif\'">' +
             '<div class="project-overlay"><span class="overlay-text"><i class="' + overlayIcon + '"></i> ' + overlayText + '</span></div>' +
@@ -1990,6 +2006,79 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    /* ── Advanced Project Detail Modal (no-gallery projects) ── */
+    var projDetailModal  = document.getElementById('projDetailModal');
+    var projDetailContent = document.getElementById('projDetailContent');
+    var projDetailClose  = document.getElementById('projDetailClose');
+
+    function openProjDetail(projData) {
+        if (!projDetailModal || !projDetailContent) return;
+        var tagsHtml   = (projData.tags  || []).map(function(t) { return '<span class="project-type">' + esc(t) + '</span>'; }).join('');
+        var skillsHtml = (projData.skills|| []).map(function(s) { return '<span class="project-skill">' + esc(s) + '</span>'; }).join('');
+        projDetailContent.innerHTML =
+            (projData.thumbnail_url ? '<img src="' + esc(projData.thumbnail_url) + '" alt="' + esc(projData.title) + '" style="width:100%;border-radius:8px;margin-bottom:20px;max-height:260px;object-fit:cover">' : '') +
+            (projData.featured ? '<div class="project-featured-badge" style="margin-bottom:8px">★ Featured</div>' : '') +
+            '<h2 style="font-size:1.5rem;margin:0 0 8px;color:var(--text-primary)">' + esc(projData.title) + '</h2>' +
+            (projData.category && projData.category !== 'standard' ? '<span class="project-category-badge project-category-badge--' + esc(projData.category.replace(/\s+/g,'-')) + '" style="margin-bottom:12px;display:inline-block">' + esc(projData.category) + '</span>' : '') +
+            '<p style="color:var(--text-secondary);line-height:1.7;margin:12px 0">' + esc(projData.description) + '</p>' +
+            (tagsHtml ? '<div class="project-tags" style="margin:12px 0">' + tagsHtml + '</div>' : '') +
+            (skillsHtml ? '<div class="project-skills" style="margin:12px 0">' + skillsHtml + '</div>' : '');
+        projDetailModal.style.display = '';
+        projDetailModal.classList.add('active');
+        lockScroll();
+        hideNav();
+        if (projDetailClose) projDetailClose.focus();
+    }
+
+    function closeProjDetail() {
+        if (!projDetailModal) return;
+        projDetailModal.classList.remove('active');
+        projDetailModal.style.display = 'none';
+        unlockScroll();
+        restoreNav();
+    }
+
+    document.querySelectorAll('.project-thumbnail[data-proj-detail]').forEach(function(thumb) {
+        if (thumb.dataset.projDetailBound) return;
+        thumb.dataset.projDetailBound = '1';
+        thumb.style.cursor = 'pointer';
+        thumb.addEventListener('click', function() {
+            try { openProjDetail(JSON.parse(thumb.dataset.projDetail)); } catch {}
+        });
+    });
+
+    if (projDetailClose) projDetailClose.addEventListener('click', closeProjDetail);
+    if (projDetailModal) {
+        projDetailModal.addEventListener('click', function(e) { if (e.target === projDetailModal) closeProjDetail(); });
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && projDetailModal.classList.contains('active')) closeProjDetail();
+        });
+    }
+
+    /* ── Static screenshot fallback for preview_mode=static ── */
+    /* When a webpage project has preview_mode=static, show a screenshot image instead of iframe */
+    document.querySelectorAll('.project-thumbnail[data-webpage-url]').forEach(function(thumb) {
+        var previewMode = thumb.dataset.previewMode;
+        if (previewMode !== 'static') return;
+        // Override click to show screenshot image overlay instead of iframe
+        thumb.dataset.webpageBound = '1'; // prevent bindWebpageClicks from re-binding
+        thumb.addEventListener('click', function() {
+            var url   = thumb.dataset.webpageUrl;
+            var title = thumb.dataset.webpageTitle || 'Preview';
+            var thumbImg = thumb.querySelector('.main-thumbnail');
+            var imgSrc = thumbImg ? thumbImg.src : '';
+            if (!projDetailModal) return;
+            projDetailContent.innerHTML =
+                '<h2 style="font-size:1.3rem;margin:0 0 12px">' + esc(title) + '</h2>' +
+                (imgSrc ? '<img src="' + esc(imgSrc) + '" alt="' + esc(title) + '" style="width:100%;border-radius:8px;margin-bottom:16px">' : '') +
+                '<p style="color:var(--muted);font-size:0.88rem;margin-bottom:16px">Live preview not available in embedded mode.</p>' +
+                '<a href="' + esc(url) + '" target="_blank" rel="noopener noreferrer" class="cta-button primary" style="display:inline-flex;align-items:center;gap:6px;padding:10px 20px;text-decoration:none"><i class="fas fa-external-link-alt"></i> Open Website</a>';
+            projDetailModal.style.display = '';
+            projDetailModal.classList.add('active');
+            lockScroll(); hideNav();
+        });
+    });
+
     /* Legacy fallback */
     document.querySelectorAll('.project-thumbnail[data-video-empty]').forEach(thumb => {
         thumb.addEventListener('click', showVideoEmpty);
@@ -2697,24 +2786,44 @@ document.addEventListener('DOMContentLoaded', () => {
             { q: 'What comes next: 2, 3, 5, 7, 11, ?', a: '13', hint: 'Prime numbers' },
             { q: 'What comes next: 0, 1, 4, 9, 16, ?', a: '25', hint: 'n squared (0-based)' },
         ];
-        var idx = 0, correct = 0, total = 5;
+        var DIFF_TOTALS = { easy: 3, normal: 5, hard: 8 };
+        var difficulty = 'normal';
+        var idx = 0, correct = 0, count = 0, total = 5;
 
         function render() {
+            total = DIFF_TOTALS[difficulty] || 5;
             idx = Math.floor(Math.random() * PUZZLES.length);
             correct = 0;
+            count = 0;
+            var high = getHigh('logic_score');
+            var highStr = high !== null ? '<span class="mg-best-label">Best: ' + high + '/' + total + '</span>' : '';
             arena.innerHTML =
-                '<div class="mg-logic-wrap">' +
-                diffBar('logic') +
+                '<div class="mg-game-shell">' +
+                '<div class="mg-game-header"><h4>🧩 Logic Puzzles</h4>' + highStr + '</div>' +
+                '<div class="mg-instructions">Solve each number sequence. Type your answer and hit Submit.</div>' +
+                diffBar('lDiff', [{key:'easy',label:'Easy (3)'},{key:'normal',label:'Normal (5)'},{key:'hard',label:'Hard (8)'}], difficulty) +
                 '<div class="mg-logic-progress" id="mgLProgress">Question 1/' + total + '</div>' +
                 '<div class="mg-logic-question" id="mgLQ"></div>' +
                 '<input class="mg-logic-input" id="mgLAns" type="text" placeholder="Your answer…" autocomplete="off">' +
                 '<button class="cta-button primary" onclick="logicSubmit()" style="margin-top:8px;padding:8px 24px">Submit</button>' +
-                '<div class="mg-logic-feedback" id="mgLFb" style="min-height:24px;margin-top:8px"></div>' +
+                '<div class="mg-logic-feedback" id="mgLFb" aria-live="polite" style="min-height:24px;margin-top:8px"></div>' +
                 '</div>';
             loadPuzzle();
+            /* Difficulty listener */
+            var diffDiv = document.getElementById('lDiff');
+            if (diffDiv) {
+                diffDiv.addEventListener('click', function(e) {
+                    var btn = e.target.closest('.mg-diff-btn');
+                    if (!btn) return;
+                    difficulty = btn.dataset.diff;
+                    render();
+                });
+            }
+            /* Enter key submits */
+            var inp = document.getElementById('mgLAns');
+            if (inp) inp.addEventListener('keydown', function(e) { if (e.key === 'Enter') window.logicSubmit(); });
         }
 
-        var count = 0;
         function loadPuzzle() {
             var p = PUZZLES[idx % PUZZLES.length];
             var qEl = document.getElementById('mgLQ');
@@ -2741,18 +2850,18 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (count >= total) {
                 var isRec = setHigh('logic_score', correct);
-                arena.innerHTML = '<div class="mg-result-summary">' +
+                arena.innerHTML = '<div class="mg-game-shell"><div class="mg-result-summary">' +
                     '<div class="mg-result-stat"><span class="mg-result-big">' + correct + '/' + total + '</span><span class="mg-result-unit">Correct</span></div>' +
                     '</div>' +
                     (isRec ? '<div class="mg-new-record" style="text-align:center;margin-bottom:12px">🏆 New Record!</div>' : '') +
-                    '<div style="text-align:center"><button class="cta-button primary" onclick="logicGame_reset()" style="padding:8px 24px;font-size:0.85rem">Play Again</button></div>';
+                    '<div style="text-align:center"><button class="cta-button primary" onclick="logicGame_reset()" style="padding:8px 24px;font-size:0.85rem">Play Again</button></div></div>';
             } else {
                 idx = (idx + 1) % PUZZLES.length;
                 setTimeout(loadPuzzle, 900);
             }
         };
 
-        window.logicGame_reset = function() { count = 0; render(); };
+        window.logicGame_reset = function() { render(); };
         return { init: render, reset: render };
     })();
 
@@ -2770,9 +2879,12 @@ document.addEventListener('DOMContentLoaded', () => {
             { q: 'What is a CDN?', a: 1, opts: ['Code Delivery Network','Content Delivery Network','Central Data Node','Coded Data Network'] },
             { q: 'What does DOM stand for?', a: 0, opts: ['Document Object Model','Data Object Module','Document Order Map','Dynamic Object Module'] },
         ];
+        var DIFF_TOTALS = { easy: 3, normal: 5, hard: 10 };
+        var difficulty = 'normal';
         var qi = 0, correct = 0, total = 5, shuffled = [];
 
         function render() {
+            total = DIFF_TOTALS[difficulty] || 5;
             shuffled = QS.slice().sort(function() { return Math.random() - 0.5; }).slice(0, total);
             qi = 0; correct = 0;
             showQ();
@@ -2780,8 +2892,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         function showQ() {
             var q = shuffled[qi];
-            arena.innerHTML = '<div class="mg-quiz-wrap">' +
-                diffBar('quiz') +
+            var high = getHigh('quiz_score');
+            var highStr = high !== null ? '<span class="mg-best-label">Best: ' + high + '/' + total + '</span>' : '';
+            arena.innerHTML = '<div class="mg-game-shell">' +
+                '<div class="mg-game-header"><h4>💡 Tech Quiz</h4>' + highStr + '</div>' +
+                '<div class="mg-instructions">Answer the tech question. Select the correct option.</div>' +
+                diffBar('qDiff', [{key:'easy',label:'Easy (3)'},{key:'normal',label:'Normal (5)'},{key:'hard',label:'All (10)'}], difficulty) +
                 '<div class="mg-quiz-progress">Question ' + (qi+1) + '/' + total + '</div>' +
                 '<div class="mg-quiz-q">' + esc(q.q) + '</div>' +
                 '<div class="mg-quiz-opts">' +
@@ -2789,8 +2905,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     return '<button class="mg-quiz-opt" onclick="quizAnswer(' + i + ',' + q.a + ')">' + esc(o) + '</button>';
                 }).join('') +
                 '</div>' +
-                '<div class="mg-quiz-fb" id="mgQFb" style="min-height:24px"></div>' +
+                '<div class="mg-quiz-fb" id="mgQFb" aria-live="polite" style="min-height:24px"></div>' +
                 '</div>';
+            /* Difficulty listener (only bind once — first question per render) */
+            if (qi === 0) {
+                var diffDiv = document.getElementById('qDiff');
+                if (diffDiv) {
+                    diffDiv.addEventListener('click', function(e) {
+                        var btn = e.target.closest('.mg-diff-btn');
+                        if (!btn) return;
+                        difficulty = btn.dataset.diff;
+                        render();
+                    });
+                }
+            }
         }
 
         window.quizAnswer = function(chosen, correct_idx) {
@@ -2810,11 +2938,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (qi >= total) {
                 var isRec = setHigh('quiz_score', correct);
                 setTimeout(function() {
-                    arena.innerHTML = '<div class="mg-result-summary">' +
+                    arena.innerHTML = '<div class="mg-game-shell"><div class="mg-result-summary">' +
                         '<div class="mg-result-stat"><span class="mg-result-big">' + correct + '/' + total + '</span><span class="mg-result-unit">Correct</span></div>' +
                         '</div>' +
                         (isRec ? '<div class="mg-new-record" style="text-align:center;margin-bottom:12px">🏆 New Record!</div>' : '') +
-                        '<div style="text-align:center"><button class="cta-button primary" onclick="quizGame_reset()" style="padding:8px 24px;font-size:0.85rem">Play Again</button></div>';
+                        '<div style="text-align:center"><button class="cta-button primary" onclick="quizGame_reset()" style="padding:8px 24px;font-size:0.85rem">Play Again</button></div></div>';
                 }, 1200);
             } else {
                 setTimeout(showQ, 1200);

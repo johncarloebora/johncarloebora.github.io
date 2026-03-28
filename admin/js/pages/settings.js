@@ -223,6 +223,35 @@ router.register('settings', async () => {
                 </div>
             </div>
 
+            <!-- Design Token Export -->
+            <div class="admin-card">
+                <div class="admin-card-header"><h3><i class="fas fa-file-export"></i> Design Token Export</h3></div>
+                <div class="card-description">
+                    Download a CSS variables file with all current design tokens (colors, fonts, spacing). Use it in other projects or as a reference.
+                </div>
+                <button class="btn btn-secondary" onclick="exportDesignTokens()">
+                    <i class="fas fa-download"></i> Download design-tokens.css
+                </button>
+            </div>
+
+            <!-- Share Token (Read-Only Role) -->
+            <div class="admin-card">
+                <div class="admin-card-header"><h3><i class="fas fa-share-alt"></i> Read-Only Share Token</h3></div>
+                <div class="card-description">
+                    Generate a 30-day read-only token that lets someone view your admin data (GET requests only) without being able to make any changes.
+                </div>
+                <button class="btn btn-secondary" id="genShareTokenBtn" onclick="generateShareToken()">
+                    <i class="fas fa-key"></i> Generate Share Token
+                </button>
+                <div id="shareTokenResult" style="display:none;margin-top:12px">
+                    <label style="font-size:0.82rem;color:var(--muted);display:block;margin-bottom:4px">Read-only token (valid 30 days):</label>
+                    <div style="display:flex;gap:8px">
+                        <input type="text" id="shareTokenValue" readonly class="form-input" style="font-family:monospace;font-size:0.75rem">
+                        <button class="btn btn-secondary btn-sm" onclick="copyShareToken()"><i class="fas fa-copy"></i></button>
+                    </div>
+                </div>
+            </div>
+
             <button class="btn btn-primary" id="saveSettings"><i class="fas fa-save"></i> Save Settings</button>
         `;
 
@@ -291,6 +320,56 @@ window.selectShape = function(shape) {
     const el = document.querySelector(`.shape-option[data-shape="${shape}"]`);
     if (el) el.classList.add('active');
     document.getElementById('settProfileShape').value = shape;
+};
+
+window.exportDesignTokens = async function() {
+    let settings = {};
+    try { settings = await API.getSettings(); } catch {}
+    const accent1 = settings.accent1 || '#ff6b6b';
+    const accent2 = settings.accent2 || '#4ecdc4';
+    const hFont   = settings.headingFont || 'Inter';
+    const bFont   = settings.bodyFont    || 'Inter';
+    const fontSize = settings.baseFontSize || 16;
+    const lineH    = settings.lineHeight  || 1.6;
+    const secPad   = settings.sectionPadding || 80;
+    const radius   = settings.cardBorderRadius || 12;
+    const animDur  = settings.animationSpeed === 'slow' ? '0.8s' : settings.animationSpeed === 'fast' ? '0.3s' : '0.5s';
+
+    const css = `/* Design Tokens — Carlo Portfolio\n * Generated: ${new Date().toISOString()}\n */\n\n:root {\n  /* Colors */\n  --accent1: ${accent1};\n  --accent2: ${accent2};\n\n  /* Typography */\n  --heading-font: '${hFont}', sans-serif;\n  --body-font: '${bFont}', sans-serif;\n  --base-font-size: ${fontSize}px;\n  --line-height: ${lineH};\n\n  /* Spacing */\n  --section-padding: ${secPad}px;\n  --card-border-radius: ${radius}px;\n\n  /* Animation */\n  --anim-duration: ${animDur};\n}\n`;
+    const blob = new Blob([css], { type: 'text/css' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = 'design-tokens.css';
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Design tokens exported!', 'success');
+};
+
+window.generateShareToken = async function() {
+    const btn = document.getElementById('genShareTokenBtn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Generating…'; }
+    try {
+        const res = await API.request('/api/auth/share-token', { method: 'POST' });
+        document.getElementById('shareTokenValue').value = res.token;
+        document.getElementById('shareTokenResult').style.display = '';
+        showToast('Read-only token generated (valid 30 days)', 'success');
+    } catch (err) {
+        showToast('Failed: ' + err.message, 'error');
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-key"></i> Generate Share Token'; }
+    }
+};
+
+window.copyShareToken = function() {
+    const inp = document.getElementById('shareTokenValue');
+    if (!inp) return;
+    navigator.clipboard.writeText(inp.value).then(function() {
+        showToast('Token copied to clipboard!', 'success');
+    }).catch(function() {
+        inp.select(); document.execCommand('copy');
+        showToast('Token copied!', 'success');
+    });
 };
 
 window.resetAccentColors = function() {

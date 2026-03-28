@@ -31,7 +31,7 @@ function renderTestimonialsList(items, container) {
     for (const t of items) {
         const stars = '★'.repeat(Math.min(5, Math.max(0, t.rating || 5)));
         html += `
-            <div class="data-card">
+            <div class="data-card" id="test-card-${t.id}">
                 <div class="data-card-header">
                     <div>
                         <div class="data-card-title">${esc(t.name || 'Anonymous')}</div>
@@ -40,8 +40,26 @@ function renderTestimonialsList(items, container) {
                     <span style="color:var(--accent1);font-size:0.9rem" title="${t.rating || 5}/5 stars">${stars}</span>
                 </div>
                 <p style="font-size:0.82rem;color:var(--text-secondary);margin:8px 0 4px;font-style:italic;line-height:1.5">"${esc(t.quote || '')}"</p>
+                <!-- Inline edit panel -->
+                <div id="test-inline-${t.id}" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+                    <div class="form-row" style="gap:8px">
+                        <input type="text" class="form-input" id="test-ie-name-${t.id}" value="${esc(t.name||'')}" placeholder="Name" style="flex:1">
+                        <input type="text" class="form-input" id="test-ie-role-${t.id}" value="${esc(t.role||'')}" placeholder="Role" style="flex:1">
+                    </div>
+                    <div class="form-row" style="gap:8px;margin-top:6px">
+                        <input type="text" class="form-input" id="test-ie-company-${t.id}" value="${esc(t.company||'')}" placeholder="Company" style="flex:1">
+                        <select class="form-input" id="test-ie-rating-${t.id}" style="flex:0 0 80px">
+                            ${[5,4,3,2,1].map(n=>`<option value="${n}" ${(t.rating||5)==n?'selected':''}>${n}★</option>`).join('')}
+                        </select>
+                    </div>
+                    <div style="display:flex;gap:6px;margin-top:6px">
+                        <button class="btn btn-primary btn-sm" onclick="saveTestimonialInline(${t.id})"><i class="fas fa-save"></i> Save</button>
+                        <button class="btn btn-secondary btn-sm" onclick="toggleTestimonialInline(${t.id})"><i class="fas fa-times"></i> Cancel</button>
+                    </div>
+                </div>
                 <div class="data-card-actions">
-                    <button class="btn btn-secondary btn-sm" onclick="editTestimonial(${t.id})"><i class="fas fa-edit"></i> Edit</button>
+                    <button class="btn btn-secondary btn-sm" onclick="toggleTestimonialInline(${t.id})" title="Quick edit"><i class="fas fa-pen-square"></i> Quick Edit</button>
+                    <button class="btn btn-secondary btn-sm" onclick="editTestimonial(${t.id})"><i class="fas fa-edit"></i> Full Edit</button>
                     <button class="btn btn-danger btn-sm" onclick="deleteTestimonial(${t.id})"><i class="fas fa-trash"></i></button>
                 </div>
             </div>`;
@@ -117,6 +135,29 @@ async function openTestimonialModal(item) {
 window.editTestimonial = async function(id) {
     const item = await API.request(`/api/testimonials/${id}`);
     await openTestimonialModal(item);
+};
+
+window.toggleTestimonialInline = function(id) {
+    const panel = document.getElementById('test-inline-' + id);
+    if (!panel) return;
+    panel.style.display = panel.style.display === 'none' ? '' : 'none';
+    if (panel.style.display !== 'none') {
+        const nameInput = document.getElementById('test-ie-name-' + id);
+        if (nameInput) nameInput.focus();
+    }
+};
+
+window.saveTestimonialInline = async function(id) {
+    const name    = document.getElementById('test-ie-name-' + id)?.value?.trim();
+    const role    = document.getElementById('test-ie-role-' + id)?.value?.trim();
+    const company = document.getElementById('test-ie-company-' + id)?.value?.trim();
+    const rating  = parseInt(document.getElementById('test-ie-rating-' + id)?.value) || 5;
+    if (!name) return showToast('Name is required', 'error');
+    try {
+        await API.updateTestimonial(id, { name, role, company, rating });
+        showToast('Testimonial updated!', 'success');
+        loadTestimonialsPage();
+    } catch (err) { showToast(err.message, 'error'); }
 };
 
 window.deleteTestimonial = async function(id) {

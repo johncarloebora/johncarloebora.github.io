@@ -9,6 +9,8 @@ let _allProjects = [];
 let _projectFilterStatus = 'all';
 let _projectFilterCategory = 'all';
 let _projectSearch = '';
+const _projectPageSize = 25;
+let _projectPage = 0;
 
 async function loadProjectsPage() {
     const container = document.getElementById('projectsEditor');
@@ -105,11 +107,24 @@ function renderProjectsPage() {
             <button class="btn btn-secondary btn-sm" onclick="clearBulkSelection()" style="margin-left:auto"><i class="fas fa-times"></i> Clear</button>
         </div>`;
 
+    // Clamp page
+    const totalPages = Math.ceil(filtered.length / _projectPageSize) || 1;
+    _projectPage = Math.max(0, Math.min(_projectPage, totalPages - 1));
+    const pageSlice = filtered.slice(_projectPage * _projectPageSize, (_projectPage + 1) * _projectPageSize);
+
     if (!filtered.length) {
         html += `<div class="empty-state"><i class="fas fa-search"></i><p>${_allProjects.length ? 'No projects match your filters.' : 'No projects yet — click <strong>Add Project</strong>.'}</p></div>`;
     } else {
+        // Pagination controls
+        if (totalPages > 1) {
+            html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:0.83rem;color:var(--muted)">
+                <button class="btn btn-secondary btn-sm" onclick="setProjectPage(${_projectPage - 1})" ${_projectPage === 0 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>
+                <span>Page ${_projectPage + 1} / ${totalPages} &nbsp;(${filtered.length} total)</span>
+                <button class="btn btn-secondary btn-sm" onclick="setProjectPage(${_projectPage + 1})" ${_projectPage >= totalPages - 1 ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>
+            </div>`;
+        }
         html += '<div class="data-grid">';
-        for (const proj of filtered) {
+        for (const proj of pageSlice) {
             const tags    = typeof proj.tags === 'string' ? JSON.parse(proj.tags || '[]') : (proj.tags || []);
             const skills  = typeof proj.skills === 'string' ? JSON.parse(proj.skills || '[]') : (proj.skills || []);
             const status  = proj.status || 'published';
@@ -156,11 +171,31 @@ function renderProjectsPage() {
     container.innerHTML = html;
 }
 
+window.setProjectPage = function(page) {
+    _projectPage = page;
+    renderProjectsPage();
+};
+
 window.setProjectFilter = function(type, val) {
     if (type === 'status')   _projectFilterStatus   = val;
     if (type === 'category') _projectFilterCategory = val;
     if (type === 'search')   _projectSearch         = val;
+    _projectPage = 0; // reset to first page on filter change
     renderProjectsPage();
+    // ARIA live announcement
+    if (typeof announceAriaLive === 'function') {
+        const filtered = _allProjects.filter(proj => {
+            const matchStatus   = _projectFilterStatus === 'all' || proj.status === _projectFilterStatus
+                || (_projectFilterStatus === 'featured' && proj.featured);
+            const matchCategory = _projectFilterCategory === 'all' || (proj.category || 'standard') === _projectFilterCategory;
+            const q             = _projectSearch.trim().toLowerCase();
+            const matchSearch   = !q ||
+                (proj.title || '').toLowerCase().includes(q) ||
+                (proj.description || '').toLowerCase().includes(q);
+            return matchStatus && matchCategory && matchSearch;
+        });
+        announceAriaLive(filtered.length + ' project(s) found');
+    }
 };
 
 window.clearProjectFilters = function() {
@@ -368,11 +403,36 @@ async function openProjectModal(proj = null) {
             document.getElementById('modalDesc').addEventListener('input', function() {
                 document.getElementById('projDescCounter').textContent = this.value.length + '/300';
             });
+            // Autosave on any input change
+            (function() {
+                var _asKey = 'proj_' + (window._projModalId || 'new');
+                function _getFormData() {
+                    return {
+                        title: document.getElementById('modalTitle')?.value,
+                        desc:  document.getElementById('modalDesc')?.value,
+                        thumb: document.getElementById('modalThumb')?.value,
+                    };
+                }
+                document.getElementById('editModalBody').addEventListener('input', function() {
+                    if (typeof scheduleAutosave === 'function') scheduleAutosave(_asKey, _getFormData);
+                });
+            })();
         </script>
     `;
 
+    // Store modal id for autosave key
+    window._projModalId = proj ? proj.id : 'new';
+
+    // Check for unsaved draft
+    const draftKey = 'proj_' + (proj ? proj.id : 'new');
+    const draft = typeof getAutosaveDraft === 'function' ? getAutosaveDraft(draftKey) : null;
+
     const ok = await showEditModal(proj ? 'Edit Project' : 'Add Project', body);
-    if (!ok) return;
+    if (!ok) {
+        if (typeof clearAutosave === 'function') clearAutosave(draftKey);
+        return;
+    }
+    if (typeof clearAutosave === 'function') clearAutosave(draftKey);
 
     const tagChips   = document.querySelectorAll('#tagEditor .tag-chip');
     const skillChips = document.querySelectorAll('#skillEditor .tag-chip');

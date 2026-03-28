@@ -31,7 +31,7 @@ function renderBlogList(posts, container) {
     for (const p of posts) {
         const tags = typeof p.tags === 'string' ? JSON.parse(p.tags || '[]') : (p.tags || []);
         html += `
-            <div class="data-card">
+            <div class="data-card" id="blog-card-${p.id}">
                 <div class="data-card-header">
                     <div>
                         <div class="data-card-title">${esc(p.title || 'Untitled')}</div>
@@ -41,8 +41,24 @@ function renderBlogList(posts, container) {
                 </div>
                 ${p.excerpt ? `<p style="font-size:0.82rem;color:var(--text-secondary);margin:8px 0 4px;line-height:1.5">${esc(p.excerpt)}</p>` : ''}
                 ${tags.length ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">${tags.map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</div>` : ''}
+                <!-- Inline edit panel (hidden by default) -->
+                <div id="blog-inline-${p.id}" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+                    <div class="form-row" style="gap:8px">
+                        <input type="text" class="form-input" id="blog-ie-title-${p.id}" value="${esc(p.title||'')}" placeholder="Title" style="flex:2">
+                        <input type="text" class="form-input" id="blog-ie-slug-${p.id}" value="${esc(p.slug||'')}" placeholder="slug" style="flex:1">
+                    </div>
+                    <label style="display:flex;align-items:center;gap:8px;margin:6px 0;cursor:pointer;font-size:0.82rem">
+                        <input type="checkbox" id="blog-ie-pub-${p.id}" ${p.published ? 'checked' : ''} style="width:16px;height:16px;accent-color:var(--accent2)">
+                        <span>Published</span>
+                    </label>
+                    <div style="display:flex;gap:6px">
+                        <button class="btn btn-primary btn-sm" onclick="saveBlogInline(${p.id})"><i class="fas fa-save"></i> Save</button>
+                        <button class="btn btn-secondary btn-sm" onclick="toggleBlogInline(${p.id})"><i class="fas fa-times"></i> Cancel</button>
+                    </div>
+                </div>
                 <div class="data-card-actions">
-                    <button class="btn btn-secondary btn-sm" onclick="editBlogPost(${p.id})"><i class="fas fa-edit"></i> Edit</button>
+                    <button class="btn btn-secondary btn-sm" onclick="toggleBlogInline(${p.id})" title="Quick edit inline"><i class="fas fa-pen-square"></i> Quick Edit</button>
+                    <button class="btn btn-secondary btn-sm" onclick="editBlogPost(${p.id})"><i class="fas fa-edit"></i> Full Edit</button>
                     <button class="btn btn-danger btn-sm" onclick="deleteBlogPost(${p.id})"><i class="fas fa-trash"></i></button>
                 </div>
             </div>`;
@@ -127,6 +143,28 @@ async function openBlogModal(post) {
 window.editBlogPost = async function(id) {
     const post = await API.request(`/api/blog/${id}`);
     await openBlogModal(post);
+};
+
+window.toggleBlogInline = function(id) {
+    const panel = document.getElementById('blog-inline-' + id);
+    if (!panel) return;
+    panel.style.display = panel.style.display === 'none' ? '' : 'none';
+    if (panel.style.display !== 'none') {
+        const titleInput = document.getElementById('blog-ie-title-' + id);
+        if (titleInput) titleInput.focus();
+    }
+};
+
+window.saveBlogInline = async function(id) {
+    const title = document.getElementById('blog-ie-title-' + id)?.value?.trim();
+    const slug  = document.getElementById('blog-ie-slug-' + id)?.value?.trim().toLowerCase().replace(/[^a-z0-9-]/g,'-');
+    const pub   = document.getElementById('blog-ie-pub-' + id)?.checked ? 1 : 0;
+    if (!title) return showToast('Title is required', 'error');
+    try {
+        await API.updateBlogPost(id, { title, slug, published: pub });
+        showToast('Post updated!', 'success');
+        loadBlogPage();
+    } catch (err) { showToast(err.message, 'error'); }
 };
 
 window.deleteBlogPost = async function(id) {
