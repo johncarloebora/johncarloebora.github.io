@@ -180,6 +180,47 @@ const API = {
     updateMedia(id, altText) { return this.put(`/api/media/${id}`, { alt_text: altText }); },
     deleteMedia(id) { return this.delete(`/api/media/${id}`); },
 
+    // ── Blog ──
+    getBlogPosts() { return this.get('/api/blog'); },
+    createBlogPost(data) { return this.post('/api/blog', data); },
+    updateBlogPost(id, data) { return this.put(`/api/blog/${id}`, data); },
+    deleteBlogPost(id) { return this.delete(`/api/blog/${id}`); },
+
+    // ── Testimonials ──
+    getTestimonials() { return this.get('/api/testimonials'); },
+    createTestimonial(data) { return this.post('/api/testimonials', data); },
+    updateTestimonial(id, data) { return this.put(`/api/testimonials/${id}`, data); },
+    deleteTestimonial(id) { return this.delete(`/api/testimonials/${id}`); },
+
+    // ── Certifications ──
+    getCertifications() { return this.get('/api/certifications'); },
+    createCertification(data) { return this.post('/api/certifications', data); },
+    updateCertification(id, data) { return this.put(`/api/certifications/${id}`, data); },
+    deleteCertification(id) { return this.delete(`/api/certifications/${id}`); },
+
+    // ── Achievements ──
+    getAchievements() { return this.get('/api/achievements'); },
+    createAchievement(data) { return this.post('/api/achievements', data); },
+    updateAchievement(id, data) { return this.put(`/api/achievements/${id}`, data); },
+    deleteAchievement(id) { return this.delete(`/api/achievements/${id}`); },
+
+    // ── Game Settings ──
+    getGameSettings() { return this.get('/api/game-settings'); },
+    updateGameSetting(gameId, data) { return this.put(`/api/game-settings/${gameId}`, data); },
+
+    // ── Versions ──
+    getVersions() { return this.get('/api/admin/versions'); },
+    restoreVersion(id) { return this.post(`/api/admin/versions/restore/${id}`, {}); },
+
+    // ── Analytics ──
+    getAnalytics(days = 30) { return this.get(`/api/admin/analytics?days=${days}`); },
+
+    // ── Audit Log ──
+    getAuditLog(limit = 40) { return this.get(`/api/admin/audit-log?limit=${limit}`); },
+
+    // ── Sync Status ──
+    getSyncStatus() { return this.get('/api/sync-status'); },
+
     // ── Publish ──
     publish() { return this.post('/api/publish', {}); },
 };

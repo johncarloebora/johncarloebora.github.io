@@ -472,7 +472,7 @@ function crudRoutes(router, path, table, options = {}) {
 
 // Register CRUD routes for all content tables
 crudRoutes(router, 'sections', 'sections', {
-  allowedFields: ['id', 'title', 'subtitle', 'nav_icon', 'nav_label', 'sort_order', 'visible', 'type', 'config', 'animate'],
+  allowedFields: ['id', 'title', 'subtitle', 'nav_icon', 'nav_label', 'sort_order', 'visible', 'type', 'config', 'animate', 'animation_preset', 'layout_variant'],
 });
 crudRoutes(router, 'about-cards', 'about_cards', {
   allowedFields: ['title', 'icon', 'content', 'type', 'expanded', 'sort_order'],
@@ -497,10 +497,32 @@ crudRoutes(router, 'experiences', 'experiences', {
 crudRoutes(router, 'education', 'education', {
   allowedFields: ['card_title', 'card_icon', 'entries', 'sort_order'],
 });
+crudRoutes(router, 'blog', 'blog_posts', {
+  allowedFields: ['title', 'slug', 'excerpt', 'content', 'cover_image', 'tags', 'published', 'sort_order'],
+  orderBy: 'sort_order',
+  onWrite: async (env, action, id, data) => {
+    const summary = data ? (data.title || 'Untitled') : `id:${id}`;
+    await writeAuditLog(env, action, 'blog', String(id), summary);
+  },
+});
+crudRoutes(router, 'testimonials', 'testimonials', {
+  allowedFields: ['name', 'role', 'company', 'avatar', 'quote', 'rating', 'sort_order'],
+  orderBy: 'sort_order',
+});
+crudRoutes(router, 'certifications', 'certifications', {
+  allowedFields: ['title', 'issuer', 'date', 'credential_url', 'badge_image', 'description', 'sort_order'],
+  orderBy: 'sort_order',
+});
+crudRoutes(router, 'achievements', 'achievements', {
+  allowedFields: ['title', 'description', 'icon', 'date', 'sort_order'],
+  orderBy: 'sort_order',
+});
+
 crudRoutes(router, 'projects', 'projects', {
   allowedFields: ['title', 'description', 'thumbnail_path', 'gallery_type', 'gallery_folder',
                   'webpage_url', 'category', 'tags', 'skills', 'sort_order',
-                  'status', 'featured', 'visibility', 'wp_device', 'wp_allow_interaction'],
+                  'status', 'featured', 'visibility', 'wp_device', 'wp_allow_interaction',
+                  'custom_width', 'custom_height', 'zoom_level', 'preview_mode', 'load_strategy', 'wp_timeout'],
   onWrite: async (env, action, id, data) => {
     const summary = data ? (data.title || 'Untitled') : `id:${id}`;
     await writeAuditLog(env, action, 'project', String(id), summary);
@@ -691,6 +713,38 @@ router.post('/api/admin/migrate', authMiddleware, async (request, env) => {
     "ALTER TABLE sections ADD COLUMN animate INTEGER DEFAULT 1",
     // Audit log table for admin activity tracking
     "CREATE TABLE IF NOT EXISTS audit_log (id INTEGER PRIMARY KEY AUTOINCREMENT, action TEXT NOT NULL, resource TEXT NOT NULL, resource_id TEXT, summary TEXT, performed_at TEXT DEFAULT (datetime('now')))",
+    // Blog posts table
+    "CREATE TABLE IF NOT EXISTS blog_posts (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, slug TEXT, excerpt TEXT, content TEXT, cover_image TEXT, tags TEXT DEFAULT '[]', published INTEGER DEFAULT 0, sort_order INTEGER DEFAULT 0, created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now')))",
+    // Testimonials table
+    "CREATE TABLE IF NOT EXISTS testimonials (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, role TEXT, company TEXT, avatar TEXT, quote TEXT, rating INTEGER DEFAULT 5, sort_order INTEGER DEFAULT 0)",
+    // Certifications table
+    "CREATE TABLE IF NOT EXISTS certifications (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, issuer TEXT, date TEXT, credential_url TEXT, badge_image TEXT, description TEXT, sort_order INTEGER DEFAULT 0)",
+    // Achievements table
+    "CREATE TABLE IF NOT EXISTS achievements (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, description TEXT, icon TEXT DEFAULT 'fas fa-trophy', date TEXT, sort_order INTEGER DEFAULT 0)",
+    // Game settings table
+    "CREATE TABLE IF NOT EXISTS game_settings (id INTEGER PRIMARY KEY AUTOINCREMENT, game_id TEXT UNIQUE, enabled INTEGER DEFAULT 1, default_difficulty TEXT DEFAULT 'normal', config TEXT DEFAULT '{}')",
+    // Site version snapshots (last 10 published configs)
+    "CREATE TABLE IF NOT EXISTS site_versions (id INTEGER PRIMARY KEY AUTOINCREMENT, snapshot TEXT, label TEXT, published_at TEXT DEFAULT (datetime('now')))",
+    // Page views analytics
+    "CREATE TABLE IF NOT EXISTS page_views (id INTEGER PRIMARY KEY AUTOINCREMENT, path TEXT DEFAULT '/', viewed_at TEXT DEFAULT (datetime('now')))",
+    // Seed default game settings
+    "INSERT OR IGNORE INTO game_settings (game_id, enabled, default_difficulty) VALUES ('reaction', 1, 'normal')",
+    "INSERT OR IGNORE INTO game_settings (game_id, enabled, default_difficulty) VALUES ('typing', 1, 'normal')",
+    "INSERT OR IGNORE INTO game_settings (game_id, enabled, default_difficulty) VALUES ('click', 1, 'normal')",
+    "INSERT OR IGNORE INTO game_settings (game_id, enabled, default_difficulty) VALUES ('memory', 1, 'normal')",
+    "INSERT OR IGNORE INTO game_settings (game_id, enabled, default_difficulty) VALUES ('aim', 1, 'normal')",
+    "INSERT OR IGNORE INTO game_settings (game_id, enabled, default_difficulty) VALUES ('logic', 1, 'normal')",
+    "INSERT OR IGNORE INTO game_settings (game_id, enabled, default_difficulty) VALUES ('quiz', 1, 'normal')",
+    // Webpage project additional fields
+    "ALTER TABLE projects ADD COLUMN custom_width INTEGER DEFAULT 0",
+    "ALTER TABLE projects ADD COLUMN custom_height INTEGER DEFAULT 0",
+    "ALTER TABLE projects ADD COLUMN zoom_level REAL DEFAULT 1.0",
+    "ALTER TABLE projects ADD COLUMN preview_mode TEXT DEFAULT 'live'",
+    "ALTER TABLE projects ADD COLUMN load_strategy TEXT DEFAULT 'eager'",
+    "ALTER TABLE projects ADD COLUMN wp_timeout INTEGER DEFAULT 30",
+    // Section animation preset and layout variant
+    "ALTER TABLE sections ADD COLUMN animation_preset TEXT DEFAULT 'fade'",
+    "ALTER TABLE sections ADD COLUMN layout_variant TEXT DEFAULT 'standard'",
   ];
   const results = [];
   for (const sql of migrations) {
@@ -759,6 +813,11 @@ router.post('/api/publish', authMiddleware, async (request, env) => {
       projectsRes,
       socialsRes,
       mediaRes,
+      blogRes,
+      testimonialsRes,
+      certificationsRes,
+      achievementsRes,
+      gameSettingsRes,
     ] = await Promise.all([
       env.DB.prepare('SELECT * FROM site_settings').all(),
       env.DB.prepare('SELECT * FROM sections ORDER BY sort_order').all(),
@@ -772,6 +831,11 @@ router.post('/api/publish', authMiddleware, async (request, env) => {
       env.DB.prepare('SELECT * FROM projects ORDER BY sort_order').all(),
       env.DB.prepare('SELECT * FROM socials ORDER BY sort_order').all(),
       env.DB.prepare('SELECT * FROM media ORDER BY folder, filename').all(),
+      env.DB.prepare('SELECT * FROM blog_posts WHERE published = 1 ORDER BY sort_order').all().catch(() => ({ results: [] })),
+      env.DB.prepare('SELECT * FROM testimonials ORDER BY sort_order').all().catch(() => ({ results: [] })),
+      env.DB.prepare('SELECT * FROM certifications ORDER BY sort_order').all().catch(() => ({ results: [] })),
+      env.DB.prepare('SELECT * FROM achievements ORDER BY sort_order').all().catch(() => ({ results: [] })),
+      env.DB.prepare('SELECT * FROM game_settings ORDER BY game_id').all().catch(() => ({ results: [] })),
     ]);
 
     // Parse settings
@@ -828,9 +892,20 @@ router.post('/api/publish', authMiddleware, async (request, env) => {
       });
     }
 
+    // Build game settings map
+    const gameSettingsMap = {};
+    for (const g of gameSettingsRes.results) {
+      gameSettingsMap[g.game_id] = {
+        enabled: g.enabled !== 0,
+        default_difficulty: g.default_difficulty || 'normal',
+        config: safeParseJson(g.config, {}),
+      };
+    }
+
     // Assemble config
+    const publishedAt = new Date().toISOString();
     const siteConfig = {
-      publishedAt: new Date().toISOString(),
+      publishedAt,
       r2Base,
       settings,
       sections: sectionsRes.results.map(s => ({
@@ -850,17 +925,37 @@ router.post('/api/publish', authMiddleware, async (request, env) => {
       projects,
       socials: socialsRes.results,
       media: mediaByFolder,
+      blog: blogRes.results.map(p => ({ ...p, tags: safeParseJson(p.tags, []) })),
+      testimonials: testimonialsRes.results,
+      certifications: certificationsRes.results,
+      achievements: achievementsRes.results,
+      gameSettings: gameSettingsMap,
     };
 
+    const configJson = JSON.stringify(siteConfig, null, 2);
+
     // Write to R2
-    await env.MEDIA.put('site-config.json', JSON.stringify(siteConfig, null, 2), {
+    await env.MEDIA.put('site-config.json', configJson, {
       httpMetadata: {
         contentType: 'application/json',
         cacheControl: 'no-cache, no-store, must-revalidate',
       },
     });
 
-    return json({ success: true, publishedAt: siteConfig.publishedAt });
+    // Save version snapshot (keep last 10)
+    try {
+      await env.DB.prepare(
+        'INSERT INTO site_versions (snapshot, label, published_at) VALUES (?, ?, ?)'
+      ).bind(configJson, `Published ${publishedAt}`, publishedAt).run();
+      // Prune old versions — keep 10 most recent
+      await env.DB.prepare(
+        'DELETE FROM site_versions WHERE id NOT IN (SELECT id FROM site_versions ORDER BY id DESC LIMIT 10)'
+      ).run();
+    } catch (e) { console.error('[versions]', e.message); }
+
+    await writeAuditLog(env, 'publish', 'site', 'config', publishedAt);
+
+    return json({ success: true, publishedAt });
   } catch (err) {
     console.error('Publish error:', err);
     return error(500, 'Failed to publish: ' + err.message);
@@ -872,6 +967,104 @@ function safeParseJson(str, fallback) {
   try { return JSON.parse(str); } catch { return fallback; }
 }
 
+
+// ────────────────────────────────────────────────────────────
+// GAME SETTINGS ENDPOINTS
+// ────────────────────────────────────────────────────────────
+
+router.get('/api/game-settings', authMiddleware, async (request, env) => {
+  try {
+    const { results } = await env.DB.prepare('SELECT * FROM game_settings ORDER BY game_id').all();
+    return json(results);
+  } catch { return json([]); }
+});
+
+router.put('/api/game-settings/:gameId', authMiddleware, async (request, env) => {
+  const { gameId } = request.params;
+  if (!gameId || gameId.length > 64) return error(400, 'Invalid game ID');
+  const body = await request.json();
+  const enabled = body.enabled !== undefined ? (body.enabled ? 1 : 0) : 1;
+  const defaultDifficulty = body.default_difficulty || 'normal';
+  const config = typeof body.config === 'object' ? JSON.stringify(body.config) : (body.config || '{}');
+  await env.DB.prepare(
+    `INSERT INTO game_settings (game_id, enabled, default_difficulty, config) VALUES (?, ?, ?, ?)
+     ON CONFLICT(game_id) DO UPDATE SET enabled=excluded.enabled, default_difficulty=excluded.default_difficulty, config=excluded.config`
+  ).bind(gameId, enabled, defaultDifficulty, config).run();
+  return json({ success: true });
+});
+
+// ────────────────────────────────────────────────────────────
+// VERSION HISTORY ENDPOINTS
+// ────────────────────────────────────────────────────────────
+
+router.get('/api/admin/versions', authMiddleware, async (request, env) => {
+  try {
+    const { results } = await env.DB.prepare(
+      'SELECT id, label, published_at FROM site_versions ORDER BY id DESC LIMIT 10'
+    ).all();
+    return json(results);
+  } catch { return json([]); }
+});
+
+router.post('/api/admin/versions/restore/:id', authMiddleware, async (request, env) => {
+  try {
+    const row = await env.DB.prepare('SELECT snapshot FROM site_versions WHERE id = ?').bind(request.params.id).first();
+    if (!row) return error(404, 'Version not found');
+    await env.MEDIA.put('site-config.json', row.snapshot, {
+      httpMetadata: { contentType: 'application/json', cacheControl: 'no-cache, no-store, must-revalidate' },
+    });
+    await writeAuditLog(env, 'restore', 'version', request.params.id, `Restored version id:${request.params.id}`);
+    return json({ success: true });
+  } catch (err) { return error(500, err.message); }
+});
+
+// ────────────────────────────────────────────────────────────
+// ANALYTICS ENDPOINTS
+// ────────────────────────────────────────────────────────────
+
+// Public — no auth (called from portfolio page)
+router.post('/api/page-view', async (request, env) => {
+  try {
+    const body = await request.json().catch(() => ({}));
+    const path = (body.path || '/').slice(0, 255);
+    await env.DB.prepare('INSERT INTO page_views (path) VALUES (?)').bind(path).run();
+  } catch { /* non-fatal */ }
+  return json({ ok: true });
+});
+
+router.get('/api/admin/analytics', authMiddleware, async (request, env) => {
+  try {
+    const days = Math.min(parseInt(request.query?.days || '30'), 90);
+    const since = new Date(Date.now() - days * 86400000).toISOString();
+    const [totalRes, dailyRes, pathRes] = await Promise.all([
+      env.DB.prepare('SELECT COUNT(*) as total FROM page_views WHERE viewed_at >= ?').bind(since).first(),
+      env.DB.prepare(`SELECT substr(viewed_at,1,10) as day, COUNT(*) as views FROM page_views WHERE viewed_at >= ? GROUP BY day ORDER BY day DESC LIMIT 30`).bind(since).all(),
+      env.DB.prepare(`SELECT path, COUNT(*) as views FROM page_views WHERE viewed_at >= ? GROUP BY path ORDER BY views DESC LIMIT 10`).bind(since).all(),
+    ]);
+    return json({
+      total: totalRes?.total || 0,
+      daily: dailyRes.results || [],
+      topPaths: pathRes.results || [],
+      days,
+    });
+  } catch { return json({ total: 0, daily: [], topPaths: [], days: 30 }); }
+});
+
+// ────────────────────────────────────────────────────────────
+// SYNC STATUS ENDPOINT
+// ────────────────────────────────────────────────────────────
+
+router.get('/api/sync-status', authMiddleware, async (request, env) => {
+  try {
+    const obj = await env.MEDIA.head('site-config.json');
+    // Get last DB change timestamp from audit log
+    const lastAudit = await env.DB.prepare('SELECT performed_at FROM audit_log ORDER BY id DESC LIMIT 1').first().catch(() => null);
+    return json({
+      publishedAt: obj ? obj.uploaded : null,
+      lastChangeAt: lastAudit?.performed_at || null,
+    });
+  } catch { return json({ publishedAt: null, lastChangeAt: null }); }
+});
 
 // ────────────────────────────────────────────────────────────
 // 404 fallback

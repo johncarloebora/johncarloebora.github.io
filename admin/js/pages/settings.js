@@ -133,6 +133,96 @@ router.register('settings', async () => {
                 </div>
             </div>
 
+            <div class="admin-card">
+                <div class="admin-card-header">
+                    <h3><i class="fas fa-font"></i> Typography</h3>
+                </div>
+                <div class="card-description">
+                    Customize the fonts used throughout your portfolio. Changes apply after publishing.
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Heading Font</label>
+                        <select class="form-input" id="settHeadingFont">
+                            ${['Inter','Roboto','Poppins','Montserrat','Playfair Display','Space Grotesk','DM Sans','Raleway'].map(f =>
+                                `<option value="${f}" ${(settings.headingFont || 'Inter') === f ? 'selected' : ''}>${f}</option>`
+                            ).join('')}
+                        </select>
+                        <div class="field-hint"><i class="fas fa-info-circle"></i>Used for section titles and hero headings.</div>
+                    </div>
+                    <div class="form-group">
+                        <label>Body Font</label>
+                        <select class="form-input" id="settBodyFont">
+                            ${['Inter','Roboto','Open Sans','Lato','Source Sans Pro','Nunito','DM Sans'].map(f =>
+                                `<option value="${f}" ${(settings.bodyFont || 'Inter') === f ? 'selected' : ''}>${f}</option>`
+                            ).join('')}
+                        </select>
+                        <div class="field-hint"><i class="fas fa-info-circle"></i>Used for body text, descriptions, and UI elements.</div>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Base Font Size <span style="color:var(--muted);font-weight:400">(px)</span></label>
+                        <input type="range" id="settFontSizeRange" min="12" max="20" step="1" value="${settings.baseFontSize || 16}"
+                            oninput="document.getElementById('settFontSizeVal').textContent=this.value+'px'" style="width:100%">
+                        <div style="font-size:0.8rem;color:var(--muted);margin-top:2px">Current: <span id="settFontSizeVal">${settings.baseFontSize || 16}px</span></div>
+                    </div>
+                    <div class="form-group">
+                        <label>Line Height</label>
+                        <input type="range" id="settLineHeightRange" min="1.2" max="2.0" step="0.1" value="${settings.lineHeight || 1.6}"
+                            oninput="document.getElementById('settLineHeightVal').textContent=this.value" style="width:100%">
+                        <div style="font-size:0.8rem;color:var(--muted);margin-top:2px">Current: <span id="settLineHeightVal">${settings.lineHeight || 1.6}</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="admin-card">
+                <div class="admin-card-header">
+                    <h3><i class="fas fa-ruler-combined"></i> Spacing &amp; Layout</h3>
+                </div>
+                <div class="card-description">
+                    Control section padding and card border radius across your portfolio.
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Section Padding <span style="color:var(--muted);font-weight:400">(px)</span></label>
+                        <input type="range" id="settSectionPaddingRange" min="40" max="120" step="8" value="${settings.sectionPadding || 80}"
+                            oninput="document.getElementById('settSectionPaddingVal').textContent=this.value+'px'" style="width:100%">
+                        <div style="font-size:0.8rem;color:var(--muted);margin-top:2px">Current: <span id="settSectionPaddingVal">${settings.sectionPadding || 80}px</span></div>
+                    </div>
+                    <div class="form-group">
+                        <label>Card Border Radius <span style="color:var(--muted);font-weight:400">(px)</span></label>
+                        <input type="range" id="settBorderRadiusRange" min="0" max="32" step="2" value="${settings.cardBorderRadius || 12}"
+                            oninput="document.getElementById('settBorderRadiusVal').textContent=this.value+'px'" style="width:100%">
+                        <div style="font-size:0.8rem;color:var(--muted);margin-top:2px">Current: <span id="settBorderRadiusVal">${settings.cardBorderRadius || 12}px</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="admin-card">
+                <div class="admin-card-header">
+                    <h3><i class="fas fa-magic"></i> Animations</h3>
+                </div>
+                <div class="card-description">
+                    Global animation controls. Individual sections can also have animations toggled in the Section Manager.
+                </div>
+                <div class="form-group">
+                    <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+                        <input type="checkbox" id="settAnimationsEnabled" ${settings.animationsEnabled !== false ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--accent2)">
+                        <span>Enable scroll animations site-wide</span>
+                    </label>
+                    <div class="field-hint"><i class="fas fa-info-circle"></i>When unchecked, all scroll-triggered animations are disabled globally (overrides per-section setting).</div>
+                </div>
+                <div class="form-group">
+                    <label>Animation Speed</label>
+                    <select class="form-input" id="settAnimationSpeed" style="width:200px">
+                        <option value="slow"   ${settings.animationSpeed === 'slow'   ? 'selected' : ''}>Slow (0.8s)</option>
+                        <option value="normal" ${(!settings.animationSpeed || settings.animationSpeed === 'normal') ? 'selected' : ''}>Normal (0.5s)</option>
+                        <option value="fast"   ${settings.animationSpeed === 'fast'   ? 'selected' : ''}>Fast (0.3s)</option>
+                    </select>
+                </div>
+            </div>
+
             <button class="btn btn-primary" id="saveSettings"><i class="fas fa-save"></i> Save Settings</button>
         `;
 
@@ -178,6 +268,14 @@ router.register('settings', async () => {
                     profileShape: document.getElementById('settProfileShape').value,
                     accent1:      document.getElementById('settAccent1').value || '#ff6b6b',
                     accent2:      document.getElementById('settAccent2').value || '#4ecdc4',
+                    headingFont:  document.getElementById('settHeadingFont').value || 'Inter',
+                    bodyFont:     document.getElementById('settBodyFont').value || 'Inter',
+                    baseFontSize: parseInt(document.getElementById('settFontSizeRange').value) || 16,
+                    lineHeight:   parseFloat(document.getElementById('settLineHeightRange').value) || 1.6,
+                    sectionPadding:    parseInt(document.getElementById('settSectionPaddingRange').value) || 80,
+                    cardBorderRadius:  parseInt(document.getElementById('settBorderRadiusRange').value) || 12,
+                    animationsEnabled: document.getElementById('settAnimationsEnabled').checked,
+                    animationSpeed:    document.getElementById('settAnimationSpeed').value || 'normal',
                 });
                 showToast('Settings saved! Hit Publish to apply.', 'success');
             }, 'Saving…').catch(err => showToast(err.message, 'error'));

@@ -92,6 +92,19 @@ function renderProjectsPage() {
             </div>
         </div>`;
 
+    // Bulk action bar
+    html += `
+        <div id="bulkBar" style="display:none;padding:10px 14px;background:var(--surface2);border:1px solid var(--accent2);border-radius:var(--radius-sm);margin-bottom:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <span id="bulkCount" style="font-size:0.85rem;font-weight:600">0 selected</span>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <button class="btn btn-secondary btn-sm" onclick="bulkSetStatus('published')"><i class="fas fa-check"></i> Publish</button>
+                <button class="btn btn-secondary btn-sm" onclick="bulkSetStatus('draft')"><i class="fas fa-pen"></i> Draft</button>
+                <button class="btn btn-secondary btn-sm" onclick="bulkSetStatus('archived')"><i class="fas fa-archive"></i> Archive</button>
+                <button class="btn btn-danger btn-sm" onclick="bulkDelete()"><i class="fas fa-trash"></i> Delete</button>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="clearBulkSelection()" style="margin-left:auto"><i class="fas fa-times"></i> Clear</button>
+        </div>`;
+
     if (!filtered.length) {
         html += `<div class="empty-state"><i class="fas fa-search"></i><p>${_allProjects.length ? 'No projects match your filters.' : 'No projects yet — click <strong>Add Project</strong>.'}</p></div>`;
     } else {
@@ -106,7 +119,10 @@ function renderProjectsPage() {
             const visibilityBadge = !proj.visibility
                 ? `<span class="status-badge hidden" style="font-size:0.68rem"><i class="fas fa-eye-slash"></i> Hidden</span>` : '';
             html += `
-                <div class="data-item" style="gap:14px">
+                <div class="data-item" style="gap:14px" data-proj-id="${proj.id}">
+                    <label style="display:flex;align-items:center;padding:0 4px;cursor:pointer">
+                        <input type="checkbox" class="proj-checkbox" data-id="${proj.id}" style="width:16px;height:16px;accent-color:var(--accent2)" onchange="updateBulkBar()">
+                    </label>
                     <div style="width:88px;height:64px;border-radius:8px;overflow:hidden;background:var(--surface3);flex-shrink:0;border:1px solid var(--border)">
                         ${proj.thumbnail_path
                             ? `<img src="${esc(proj.thumbnail_path)}" style="width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.style.display='none'">`
@@ -260,8 +276,17 @@ async function openProjectModal(proj = null) {
 
         <div class="form-group" id="webpageUrlRow" style="${proj?.gallery_type === 'webpage' ? '' : 'display:none'}">
             <label>Webpage URL</label>
-            <input type="text" class="form-input" id="modalWebpageUrl" value="${esc(proj?.webpage_url || '')}" placeholder="https://yourwebsite.com">
-            <div class="field-hint"><i class="fas fa-info-circle"></i>Full URL of the live webpage to preview in an iframe.</div>
+            <div style="display:flex;gap:8px">
+                <input type="text" class="form-input" id="modalWebpageUrl" value="${esc(proj?.webpage_url || '')}" placeholder="https://yourwebsite.com" style="flex:1" oninput="validateWebpageUrl(this)">
+                <button type="button" class="btn btn-secondary btn-sm" id="wpPreviewBtn" onclick="toggleWpPreview()" title="Preview URL in iframe" style="${proj?.webpage_url ? '' : 'display:none'}">
+                    <i class="fas fa-eye"></i> Preview
+                </button>
+            </div>
+            <div id="wpUrlError" style="font-size:0.78rem;color:var(--accent1);margin-top:4px;display:none"><i class="fas fa-exclamation-triangle"></i> Invalid URL — must start with https://</div>
+            <div id="wpPreviewFrame" style="display:none;margin-top:8px;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;height:180px">
+                <iframe id="wpInlinePreview" src="about:blank" style="width:100%;height:100%;border:none" sandbox="allow-scripts allow-same-origin"></iframe>
+            </div>
+            <div class="field-hint"><i class="fas fa-info-circle"></i>Full URL of the live webpage to preview in an iframe. Must start with <code>https://</code>.</div>
         </div>
 
         <div class="form-row" id="wpSettingsRow" style="${proj?.gallery_type === 'webpage' ? '' : 'display:none'}">
@@ -273,15 +298,48 @@ async function openProjectModal(proj = null) {
                     <option value="tablet"  ${proj?.wp_device === 'tablet'  ? 'selected' : ''}>Tablet (768px)</option>
                     <option value="mobile"  ${proj?.wp_device === 'mobile'  ? 'selected' : ''}>Mobile (390px)</option>
                 </select>
-                <div class="field-hint"><i class="fas fa-info-circle"></i>Device simulation preset applied when this preview opens.</div>
             </div>
-            <div class="form-group" style="align-self:flex-end">
-                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-top:28px">
-                    <input type="checkbox" id="modalWpInteraction" ${proj?.wp_allow_interaction !== 0 ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--accent2)">
-                    <span>Allow iframe interaction</span>
-                </label>
-                <div class="field-hint"><i class="fas fa-info-circle"></i>Enables scripts and forms. Uncheck for untrusted/external sites.</div>
+            <div class="form-group">
+                <label>Preview Mode</label>
+                <select class="form-input" id="modalPreviewMode">
+                    <option value="live"   ${(!proj?.preview_mode || proj?.preview_mode === 'live')   ? 'selected' : ''}>Live iframe</option>
+                    <option value="static" ${proj?.preview_mode === 'static' ? 'selected' : ''}>Static screenshot</option>
+                </select>
             </div>
+            <div class="form-group">
+                <label>Load Strategy</label>
+                <select class="form-input" id="modalLoadStrategy">
+                    <option value="eager" ${(!proj?.load_strategy || proj?.load_strategy === 'eager') ? 'selected' : ''}>Eager (load immediately)</option>
+                    <option value="lazy"  ${proj?.load_strategy === 'lazy'  ? 'selected' : ''}>Lazy (load on open)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-row" id="wpAdvancedRow" style="${proj?.gallery_type === 'webpage' ? '' : 'display:none'}">
+            <div class="form-group">
+                <label>Custom Width <span style="color:var(--muted);font-weight:400">(px, 0=auto)</span></label>
+                <input type="number" class="form-input" id="modalCustomWidth" value="${proj?.custom_width || 0}" min="0" max="3840">
+            </div>
+            <div class="form-group">
+                <label>Custom Height <span style="color:var(--muted);font-weight:400">(px, 0=auto)</span></label>
+                <input type="number" class="form-input" id="modalCustomHeight" value="${proj?.custom_height || 0}" min="0" max="2160">
+            </div>
+            <div class="form-group">
+                <label>Zoom Level <span style="color:var(--muted);font-weight:400">(0.5–2.0)</span></label>
+                <input type="number" class="form-input" id="modalZoomLevel" value="${proj?.zoom_level || 1.0}" min="0.5" max="2.0" step="0.1">
+            </div>
+            <div class="form-group">
+                <label>Timeout <span style="color:var(--muted);font-weight:400">(seconds)</span></label>
+                <input type="number" class="form-input" id="modalWpTimeout" value="${proj?.wp_timeout || 30}" min="5" max="120">
+            </div>
+        </div>
+
+        <div id="wpInteractionRow" style="${proj?.gallery_type === 'webpage' ? '' : 'display:none'}">
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+                <input type="checkbox" id="modalWpInteraction" ${proj?.wp_allow_interaction !== 0 ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--accent2)">
+                <span>Allow iframe interaction (scripts, forms, popups)</span>
+            </label>
+            <div class="field-hint"><i class="fas fa-info-circle"></i>Enables scripts and forms. Uncheck for untrusted/external sites (read-only sandbox).</div>
         </div>
 
         <div class="form-group">
@@ -322,15 +380,31 @@ async function openProjectModal(proj = null) {
     const newSkills  = Array.from(skillChips).map(c => c.childNodes[0].textContent.trim()).filter(Boolean);
 
     const galleryType = document.getElementById('modalGalleryType').value || null;
+
+    // Domain validation for webpage URLs
+    if (galleryType === 'webpage') {
+        const url = document.getElementById('modalWebpageUrl')?.value?.trim() || '';
+        if (url && !url.startsWith('https://')) {
+            showToast('Webpage URL must start with https://', 'error');
+            return;
+        }
+    }
+
     const data = {
         title:          document.getElementById('modalTitle').value,
         description:    document.getElementById('modalDesc').value,
         thumbnail_path: document.getElementById('modalThumb').value || null,
         gallery_type:   galleryType,
         gallery_folder: galleryType === 'webpage' ? null : (document.getElementById('modalGalleryFolder').value || null),
-        webpage_url:         galleryType === 'webpage' ? (document.getElementById('modalWebpageUrl').value || null) : null,
-        wp_device:           galleryType === 'webpage' ? (document.getElementById('modalWpDevice')?.value || 'full') : null,
+        webpage_url:          galleryType === 'webpage' ? (document.getElementById('modalWebpageUrl')?.value || null) : null,
+        wp_device:            galleryType === 'webpage' ? (document.getElementById('modalWpDevice')?.value || 'full') : null,
         wp_allow_interaction: galleryType === 'webpage' ? (document.getElementById('modalWpInteraction')?.checked ? 1 : 0) : null,
+        preview_mode:         galleryType === 'webpage' ? (document.getElementById('modalPreviewMode')?.value || 'live') : null,
+        load_strategy:        galleryType === 'webpage' ? (document.getElementById('modalLoadStrategy')?.value || 'eager') : null,
+        custom_width:         galleryType === 'webpage' ? (parseInt(document.getElementById('modalCustomWidth')?.value) || 0) : null,
+        custom_height:        galleryType === 'webpage' ? (parseInt(document.getElementById('modalCustomHeight')?.value) || 0) : null,
+        zoom_level:           galleryType === 'webpage' ? (parseFloat(document.getElementById('modalZoomLevel')?.value) || 1.0) : null,
+        wp_timeout:           galleryType === 'webpage' ? (parseInt(document.getElementById('modalWpTimeout')?.value) || 30) : null,
         category:       document.getElementById('modalCategory').value || 'standard',
         status:         document.getElementById('modalStatus').value || 'published',
         featured:       document.getElementById('modalFeatured').checked ? 1 : 0,
@@ -356,12 +430,39 @@ async function openProjectModal(proj = null) {
 window.toggleWebpageField = function() {
     const type      = document.getElementById('modalGalleryType')?.value;
     const isWebpage = type === 'webpage';
-    const folderRow    = document.getElementById('galleryFolderRow');
-    const webpageRow   = document.getElementById('webpageUrlRow');
-    const wpSettings   = document.getElementById('wpSettingsRow');
-    if (folderRow)  folderRow.style.display  = isWebpage ? 'none' : '';
-    if (webpageRow) webpageRow.style.display = isWebpage ? '' : 'none';
-    if (wpSettings) wpSettings.style.display = isWebpage ? '' : 'none';
+    const folderRow      = document.getElementById('galleryFolderRow');
+    const webpageRow     = document.getElementById('webpageUrlRow');
+    const wpSettings     = document.getElementById('wpSettingsRow');
+    const wpAdvanced     = document.getElementById('wpAdvancedRow');
+    const wpInteraction  = document.getElementById('wpInteractionRow');
+    if (folderRow)     folderRow.style.display     = isWebpage ? 'none' : '';
+    if (webpageRow)    webpageRow.style.display     = isWebpage ? '' : 'none';
+    if (wpSettings)    wpSettings.style.display     = isWebpage ? '' : 'none';
+    if (wpAdvanced)    wpAdvanced.style.display     = isWebpage ? '' : 'none';
+    if (wpInteraction) wpInteraction.style.display  = isWebpage ? '' : 'none';
+};
+
+window.validateWebpageUrl = function(input) {
+    const url = input.value.trim();
+    const errEl = document.getElementById('wpUrlError');
+    const previewBtn = document.getElementById('wpPreviewBtn');
+    const isValid = !url || url.startsWith('https://');
+    if (errEl) errEl.style.display = (url && !isValid) ? '' : 'none';
+    if (previewBtn) previewBtn.style.display = (url && isValid) ? '' : 'none';
+};
+
+window.toggleWpPreview = function() {
+    const frameWrap = document.getElementById('wpPreviewFrame');
+    const iframe    = document.getElementById('wpInlinePreview');
+    const url       = document.getElementById('modalWebpageUrl')?.value?.trim();
+    if (!frameWrap || !iframe) return;
+    if (frameWrap.style.display === 'none') {
+        frameWrap.style.display = '';
+        if (url && url.startsWith('https://')) iframe.src = url;
+    } else {
+        frameWrap.style.display = 'none';
+        iframe.src = 'about:blank';
+    }
 };
 
 window.pickThumb = function(url) {
@@ -414,4 +515,53 @@ window.deleteProject = async function(id) {
             renderProjectsPage();
         } catch (err) { showToast(err.message, 'error'); }
     }
+};
+
+// ── Bulk Operations ──
+window.updateBulkBar = function() {
+    const checked = document.querySelectorAll('.proj-checkbox:checked');
+    const bar     = document.getElementById('bulkBar');
+    const count   = document.getElementById('bulkCount');
+    if (!bar) return;
+    if (checked.length > 0) {
+        bar.style.display = 'flex';
+        if (count) count.textContent = `${checked.length} selected`;
+    } else {
+        bar.style.display = 'none';
+    }
+};
+
+window.clearBulkSelection = function() {
+    document.querySelectorAll('.proj-checkbox').forEach(cb => cb.checked = false);
+    window.updateBulkBar();
+};
+
+function getSelectedIds() {
+    return Array.from(document.querySelectorAll('.proj-checkbox:checked')).map(cb => cb.dataset.id);
+}
+
+window.bulkSetStatus = async function(status) {
+    const ids = getSelectedIds();
+    if (!ids.length) return;
+    const ok = await showConfirm('Bulk Update', `Set ${ids.length} project(s) to <strong>${status}</strong>?`, 'warning');
+    if (!ok) return;
+    try {
+        await Promise.all(ids.map(id => API.updateProject(id, { status })));
+        showToast(`${ids.length} project(s) set to ${status}`, 'success');
+        _allProjects = await API.getProjects();
+        renderProjectsPage();
+    } catch (err) { showToast(err.message, 'error'); }
+};
+
+window.bulkDelete = async function() {
+    const ids = getSelectedIds();
+    if (!ids.length) return;
+    const ok = await showConfirm('Bulk Delete', `Permanently delete <strong>${ids.length} project(s)</strong>? This cannot be undone.`, 'warning');
+    if (!ok) return;
+    try {
+        await Promise.all(ids.map(id => API.deleteProject(id)));
+        showToast(`${ids.length} project(s) deleted`, 'success');
+        _allProjects = await API.getProjects();
+        renderProjectsPage();
+    } catch (err) { showToast(err.message, 'error'); }
 };

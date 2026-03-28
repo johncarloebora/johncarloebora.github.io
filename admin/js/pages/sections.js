@@ -136,6 +136,31 @@ window.editSection = async function(id) {
             </label>
             <div class="field-hint"><i class="fas fa-info-circle"></i>When unchecked, cards and items in this section appear instantly without scroll-triggered animations.</div>
         </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Animation Preset</label>
+                <select class="form-input" id="modalAnimationPreset">
+                    <option value="fade"       ${(s.animation_preset || 'fade') === 'fade'        ? 'selected' : ''}>Fade In</option>
+                    <option value="slide-up"   ${s.animation_preset === 'slide-up'                ? 'selected' : ''}>Slide Up</option>
+                    <option value="slide-left" ${s.animation_preset === 'slide-left'              ? 'selected' : ''}>Slide from Left</option>
+                    <option value="slide-right"${s.animation_preset === 'slide-right'             ? 'selected' : ''}>Slide from Right</option>
+                    <option value="scale"      ${s.animation_preset === 'scale'                   ? 'selected' : ''}>Scale In</option>
+                    <option value="none"       ${s.animation_preset === 'none'                    ? 'selected' : ''}>None (instant)</option>
+                </select>
+                <div class="field-hint"><i class="fas fa-info-circle"></i>Animation style applied to elements in this section on scroll reveal.</div>
+            </div>
+            <div class="form-group">
+                <label>Layout Variant</label>
+                <select class="form-input" id="modalLayoutVariant">
+                    <option value="standard" ${(s.layout_variant || 'standard') === 'standard'   ? 'selected' : ''}>Standard</option>
+                    <option value="centered" ${s.layout_variant === 'centered'                    ? 'selected' : ''}>Centered</option>
+                    <option value="hero"     ${s.layout_variant === 'hero'                        ? 'selected' : ''}>Hero (full-width)</option>
+                    <option value="split"    ${s.layout_variant === 'split'                       ? 'selected' : ''}>Split (50/50)</option>
+                    <option value="grid"     ${s.layout_variant === 'grid'                        ? 'selected' : ''}>Grid</option>
+                </select>
+                <div class="field-hint"><i class="fas fa-info-circle"></i>Controls how content is arranged within the section container.</div>
+            </div>
+        </div>
         <div class="form-group">
             <label>Nav Label</label>
             <input type="text" class="form-input" id="modalLabel" value="${esc(s.nav_label)}">
@@ -160,11 +185,13 @@ window.editSection = async function(id) {
     if (!ok) return;
 
     const data = {
-        title:    document.getElementById('modalTitle').value,
-        subtitle: document.getElementById('modalSubtitle')?.value || null,
-        nav_icon:  document.getElementById('modalIcon').value,
-        nav_label: document.getElementById('modalLabel').value,
-        animate:  document.getElementById('modalAnimate')?.checked ? 1 : 0,
+        title:            document.getElementById('modalTitle').value,
+        subtitle:         document.getElementById('modalSubtitle')?.value || null,
+        nav_icon:          document.getElementById('modalIcon').value,
+        nav_label:         document.getElementById('modalLabel').value,
+        animate:           document.getElementById('modalAnimate')?.checked ? 1 : 0,
+        animation_preset:  document.getElementById('modalAnimationPreset')?.value || 'fade',
+        layout_variant:    document.getElementById('modalLayoutVariant')?.value || 'standard',
     };
     if (isCustom) {
         data.config = JSON.stringify({ html: document.getElementById('modalConfig').value });

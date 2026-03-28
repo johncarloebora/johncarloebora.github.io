@@ -793,19 +793,81 @@
         </div>
     </section>
 
+    <!-- Testimonials Section (hidden by default) -->
+    <section id="testimonials" style="display:none" aria-hidden="true">
+        <div class="container">
+            <h2 class="section-title" data-scramble="Testimonials">Testimonials</h2>
+            <p class="section-intro" id="testimonialsSubtitle"></p>
+            <div class="testimonials-grid" id="testimonialsGrid" role="list" aria-label="Testimonials">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Certifications Section (hidden by default) -->
+    <section id="certifications" style="display:none" aria-hidden="true">
+        <div class="container">
+            <h2 class="section-title" data-scramble="Certifications">Certifications</h2>
+            <p class="section-intro" id="certificationsSubtitle"></p>
+            <div class="certifications-grid" id="certificationsGrid" role="list" aria-label="Certifications">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Achievements Section (hidden by default) -->
+    <section id="achievements" style="display:none" aria-hidden="true">
+        <div class="container">
+            <h2 class="section-title" data-scramble="Achievements">Achievements</h2>
+            <p class="section-intro" id="achievementsSubtitle"></p>
+            <div class="achievements-grid" id="achievementsGrid" role="list" aria-label="Achievements">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Blog Section (hidden by default) -->
+    <section id="blog" style="display:none" aria-hidden="true">
+        <div class="container">
+            <h2 class="section-title" data-scramble="Blog">Blog</h2>
+            <p class="section-intro" id="blogSubtitle"></p>
+            <div class="blog-grid" id="blogGrid" role="list" aria-label="Blog posts">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Resume Section (hidden by default, print-friendly) -->
+    <section id="resume" style="display:none" aria-hidden="true">
+        <div class="container">
+            <h2 class="section-title" data-scramble="Resume">Resume</h2>
+            <p class="section-intro" id="resumeSubtitle">A concise summary of my professional background.</p>
+            <div id="resumeContent">
+                <!-- Populated by JS from existing experiences + education data -->
+            </div>
+            <div style="text-align:center;margin-top:32px">
+                <button class="cta-button primary" onclick="window.print()" aria-label="Print or save as PDF">
+                    <i class="fas fa-print"></i> Print / Save as PDF
+                </button>
+            </div>
+        </div>
+    </section>
+
     <!-- Mini-Game Section (hidden by default; shown when section is visible in admin) -->
     <section id="minigame" style="display:none" aria-hidden="true">
         <div class="container">
             <h2 class="section-title" data-scramble="Quick Challenges">Quick Challenges</h2>
             <p class="section-intro">Test your reflexes with a quick mini-game. Each challenge is lightweight and loads on demand.</p>
-            <div class="minigame-tabs" id="minigameTabs">
-                <button class="minigame-tab active" data-game="reaction" aria-selected="true">⚡ Reaction</button>
-                <button class="minigame-tab" data-game="typing" aria-selected="false">⌨️ Typing</button>
-                <button class="minigame-tab" data-game="click" aria-selected="false">🖱️ Click</button>
-                <button class="minigame-tab" data-game="memory" aria-selected="false">🃏 Memory</button>
-                <button class="minigame-tab" data-game="aim" aria-selected="false">🎯 Aim</button>
+            <div class="minigame-tabs" id="minigameTabs" role="tablist" aria-label="Mini-game selection">
+                <button class="minigame-tab active" data-game="reaction" role="tab" aria-selected="true">⚡ Reaction</button>
+                <button class="minigame-tab" data-game="typing" role="tab" aria-selected="false">⌨️ Typing</button>
+                <button class="minigame-tab" data-game="click" role="tab" aria-selected="false">🖱️ Click</button>
+                <button class="minigame-tab" data-game="memory" role="tab" aria-selected="false">🃏 Memory</button>
+                <button class="minigame-tab" data-game="aim" role="tab" aria-selected="false">🎯 Aim</button>
+                <button class="minigame-tab" data-game="logic" role="tab" aria-selected="false">🧠 Logic</button>
+                <button class="minigame-tab" data-game="quiz" role="tab" aria-selected="false">❓ Quiz</button>
             </div>
-            <div class="minigame-arena" id="minigameArena">
+            <div class="minigame-arena" id="minigameArena" role="tabpanel" aria-live="polite">
                 <!-- Populated by JS -->
             </div>
         </div>

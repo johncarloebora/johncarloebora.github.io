@@ -31,6 +31,19 @@ function esc(s) {
     return d.innerHTML;
 }
 
+/* ── PAGE VIEW TRACKING ──────────────────────────────────── */
+(function() {
+    var API_BASE = 'https://carlo-portfolio-api.johncarloebora.workers.dev';
+    try {
+        fetch(API_BASE + '/api/page-view', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ path: window.location.pathname || '/' }),
+            keepalive: true,
+        }).catch(function() {});
+    } catch(e) {}
+})();
+
 function applySiteConfig(cfg) {
     var s = cfg.settings || {};
     var r2 = cfg.r2Base || '';
@@ -379,6 +392,163 @@ function applySiteConfig(cfg) {
             }
             sub.textContent = sec.subtitle;
         });
+    }
+
+    /* ── Typography & Spacing from settings ── */
+    if (s.accent1) document.documentElement.style.setProperty('--accent1', s.accent1);
+    if (s.accent2) document.documentElement.style.setProperty('--accent2', s.accent2);
+    if (s.baseFontSize) document.documentElement.style.setProperty('--base-font-size', s.baseFontSize + 'px');
+    if (s.lineHeight)   document.documentElement.style.setProperty('--line-height', s.lineHeight);
+    if (s.sectionPadding) document.documentElement.style.setProperty('--section-padding', s.sectionPadding + 'px');
+    if (s.cardBorderRadius) document.documentElement.style.setProperty('--radius', s.cardBorderRadius + 'px');
+    if (s.animationSpeed) {
+        var speedMap = { slow: '0.8s', normal: '0.5s', fast: '0.3s' };
+        document.documentElement.style.setProperty('--anim-duration', speedMap[s.animationSpeed] || '0.5s');
+    }
+    /* Global animation toggle */
+    if (s.animationsEnabled === false) {
+        document.documentElement.setAttribute('data-no-animate-global', '');
+    } else {
+        document.documentElement.removeAttribute('data-no-animate-global');
+    }
+    /* Section animation presets */
+    if (cfg.sections) {
+        cfg.sections.forEach(function(sec) {
+            var el = document.getElementById(sec.id);
+            if (!el) return;
+            if (sec.animation_preset && sec.animation_preset !== 'fade') {
+                el.setAttribute('data-anim-preset', sec.animation_preset);
+            } else {
+                el.removeAttribute('data-anim-preset');
+            }
+            if (sec.layout_variant && sec.layout_variant !== 'standard') {
+                el.setAttribute('data-layout', sec.layout_variant);
+            } else {
+                el.removeAttribute('data-layout');
+            }
+        });
+    }
+
+    /* ── Testimonials ── */
+    if (cfg.testimonials && cfg.testimonials.length) {
+        var testGrid = document.getElementById('testimonialsGrid');
+        if (testGrid) {
+            testGrid.innerHTML = cfg.testimonials.map(function(t) {
+                var stars = '';
+                for (var i = 0; i < Math.min(5, t.rating || 5); i++) stars += '★';
+                return '<div class="testimonial-card" role="listitem">' +
+                    '<div class="testimonial-stars">' + stars + '</div>' +
+                    '<p class="testimonial-quote">"' + esc(t.quote || '') + '"</p>' +
+                    '<div class="testimonial-author">' +
+                    (t.avatar ? '<img src="' + esc(t.avatar) + '" alt="' + esc(t.name) + '" class="testimonial-avatar" loading="lazy">' : '') +
+                    '<div class="testimonial-info">' +
+                    '<strong>' + esc(t.name || '') + '</strong>' +
+                    (t.role || t.company ? '<span>' + esc(t.role || '') + (t.company ? ' · ' + esc(t.company) : '') + '</span>' : '') +
+                    '</div></div></div>';
+            }).join('');
+        }
+    }
+
+    /* ── Certifications ── */
+    if (cfg.certifications && cfg.certifications.length) {
+        var certGrid = document.getElementById('certificationsGrid');
+        if (certGrid) {
+            certGrid.innerHTML = cfg.certifications.map(function(c) {
+                return '<div class="cert-card" role="listitem">' +
+                    (c.badge_image ? '<img src="' + esc(c.badge_image) + '" alt="' + esc(c.title) + ' badge" class="cert-badge" loading="lazy">' : '<div class="cert-badge-placeholder"><i class="fas fa-certificate"></i></div>') +
+                    '<div class="cert-info">' +
+                    '<div class="cert-title">' + esc(c.title || '') + '</div>' +
+                    '<div class="cert-issuer">' + esc(c.issuer || '') + (c.date ? ' · ' + esc(c.date) : '') + '</div>' +
+                    (c.description ? '<p class="cert-desc">' + esc(c.description) + '</p>' : '') +
+                    (c.credential_url ? '<a href="' + esc(c.credential_url) + '" target="_blank" rel="noopener" class="cert-link"><i class="fas fa-external-link-alt"></i> View Credential</a>' : '') +
+                    '</div></div>';
+            }).join('');
+        }
+    }
+
+    /* ── Achievements ── */
+    if (cfg.achievements && cfg.achievements.length) {
+        var achGrid = document.getElementById('achievementsGrid');
+        if (achGrid) {
+            achGrid.innerHTML = cfg.achievements.map(function(a) {
+                return '<div class="achievement-card" role="listitem">' +
+                    '<div class="achievement-icon"><i class="' + esc(a.icon || 'fas fa-trophy') + '"></i></div>' +
+                    '<div class="achievement-info">' +
+                    '<div class="achievement-title">' + esc(a.title || '') + '</div>' +
+                    (a.date ? '<div class="achievement-date">' + esc(a.date) + '</div>' : '') +
+                    (a.description ? '<p class="achievement-desc">' + esc(a.description) + '</p>' : '') +
+                    '</div></div>';
+            }).join('');
+        }
+    }
+
+    /* ── Blog ── */
+    if (cfg.blog && cfg.blog.length) {
+        var blogGrid = document.getElementById('blogGrid');
+        if (blogGrid) {
+            blogGrid.innerHTML = cfg.blog.map(function(p) {
+                var tags = Array.isArray(p.tags) ? p.tags : [];
+                return '<article class="blog-card" role="listitem">' +
+                    (p.cover_image ? '<div class="blog-cover"><img src="' + esc(p.cover_image) + '" alt="' + esc(p.title) + '" loading="lazy"></div>' : '') +
+                    '<div class="blog-content">' +
+                    (tags.length ? '<div class="blog-tags">' + tags.map(function(t) { return '<span class="tag-chip">' + esc(t) + '</span>'; }).join('') + '</div>' : '') +
+                    '<h3 class="blog-title">' + esc(p.title || '') + '</h3>' +
+                    (p.excerpt ? '<p class="blog-excerpt">' + esc(p.excerpt) + '</p>' : '') +
+                    '</div></article>';
+            }).join('');
+        }
+    }
+
+    /* ── Resume (from experiences + education) ── */
+    var resumeContent = document.getElementById('resumeContent');
+    if (resumeContent && (cfg.experiences && cfg.experiences.length || cfg.education && cfg.education.length)) {
+        var resumeHTML = '';
+        if (cfg.experiences && cfg.experiences.length) {
+            resumeHTML += '<div class="resume-section"><h3 class="resume-section-title"><i class="fas fa-briefcase"></i> Experience</h3>';
+            resumeHTML += cfg.experiences.map(function(exp) {
+                var bullets = Array.isArray(exp.bullets) ? exp.bullets : [];
+                return '<div class="resume-item">' +
+                    '<div class="resume-item-header">' +
+                    '<div><strong>' + esc(exp.title || '') + '</strong>' +
+                    (exp.company ? ' <span class="resume-company">@ ' + esc(exp.company) + '</span>' : '') + '</div>' +
+                    '<span class="resume-date">' + esc(exp.date_range || '') + '</span>' +
+                    '</div>' +
+                    (exp.description ? '<p class="resume-desc">' + esc(exp.description) + '</p>' : '') +
+                    (bullets.length ? '<ul>' + bullets.map(function(b) { return '<li>' + esc(b) + '</li>'; }).join('') + '</ul>' : '') +
+                    '</div>';
+            }).join('');
+            resumeHTML += '</div>';
+        }
+        if (cfg.education && cfg.education.length) {
+            resumeHTML += '<div class="resume-section"><h3 class="resume-section-title"><i class="fas fa-graduation-cap"></i> Education</h3>';
+            resumeHTML += cfg.education.map(function(ed) {
+                var entries = Array.isArray(ed.entries) ? ed.entries : [];
+                return '<div class="resume-item">' +
+                    '<strong>' + esc(ed.card_title || '') + '</strong>' +
+                    (entries.length ? '<ul>' + entries.map(function(e) {
+                        return '<li>' + esc(e.degree || e.school || e.title || JSON.stringify(e)) + '</li>';
+                    }).join('') + '</ul>' : '') +
+                    '</div>';
+            }).join('');
+            resumeHTML += '</div>';
+        }
+        resumeContent.innerHTML = resumeHTML;
+    }
+
+    /* ── Game settings (apply per-game visibility) ── */
+    if (cfg.gameSettings) {
+        var tabBar = document.getElementById('minigameTabs');
+        if (tabBar) {
+            tabBar.querySelectorAll('.minigame-tab').forEach(function(tab) {
+                var gId = tab.dataset.game;
+                var gs = cfg.gameSettings[gId];
+                if (gs && gs.enabled === false) {
+                    tab.style.display = 'none';
+                } else {
+                    tab.style.display = '';
+                }
+            });
+        }
     }
 
     /* Re-bind gallery/video/webpage click handlers after DOM replacement */
@@ -2515,10 +2685,151 @@ document.addEventListener('DOMContentLoaded', () => {
         return { init: render, reset: render };
     })();
 
+    /* ── Logic Puzzle Game ── */
+    var logicGame = (function() {
+        var PUZZLES = [
+            { q: 'What comes next: 2, 4, 8, 16, ?', a: '32', hint: 'Each number doubles' },
+            { q: 'What comes next: 1, 1, 2, 3, 5, 8, ?', a: '13', hint: 'Sum of the two previous' },
+            { q: 'What comes next: 3, 6, 9, 12, ?', a: '15', hint: 'Add 3 each time' },
+            { q: 'What comes next: 1, 4, 9, 16, 25, ?', a: '36', hint: 'Perfect squares' },
+            { q: 'What comes next: 100, 50, 25, 12.5, ?', a: '6.25', hint: 'Divide by 2 each time' },
+            { q: 'What comes next: 1, 3, 7, 15, 31, ?', a: '63', hint: '2n+1 pattern' },
+            { q: 'What comes next: 2, 3, 5, 7, 11, ?', a: '13', hint: 'Prime numbers' },
+            { q: 'What comes next: 0, 1, 4, 9, 16, ?', a: '25', hint: 'n squared (0-based)' },
+        ];
+        var idx = 0, correct = 0, total = 5;
+
+        function render() {
+            idx = Math.floor(Math.random() * PUZZLES.length);
+            correct = 0;
+            arena.innerHTML =
+                '<div class="mg-logic-wrap">' +
+                diffBar('logic') +
+                '<div class="mg-logic-progress" id="mgLProgress">Question 1/' + total + '</div>' +
+                '<div class="mg-logic-question" id="mgLQ"></div>' +
+                '<input class="mg-logic-input" id="mgLAns" type="text" placeholder="Your answer…" autocomplete="off">' +
+                '<button class="cta-button primary" onclick="logicSubmit()" style="margin-top:8px;padding:8px 24px">Submit</button>' +
+                '<div class="mg-logic-feedback" id="mgLFb" style="min-height:24px;margin-top:8px"></div>' +
+                '</div>';
+            loadPuzzle();
+        }
+
+        var count = 0;
+        function loadPuzzle() {
+            var p = PUZZLES[idx % PUZZLES.length];
+            var qEl = document.getElementById('mgLQ');
+            var aEl = document.getElementById('mgLAns');
+            var prog = document.getElementById('mgLProgress');
+            if (qEl) qEl.textContent = p.q;
+            if (aEl) { aEl.value = ''; aEl.focus(); }
+            if (prog) prog.textContent = 'Question ' + (count + 1) + '/' + total;
+        }
+
+        window.logicSubmit = function() {
+            var aEl = document.getElementById('mgLAns');
+            var fb  = document.getElementById('mgLFb');
+            if (!aEl || !fb) return;
+            var p   = PUZZLES[idx % PUZZLES.length];
+            var ans = aEl.value.trim().replace(/\s/g,'');
+            if (ans.toLowerCase() === p.a.toLowerCase()) {
+                correct++;
+                count++;
+                fb.innerHTML = '<span style="color:var(--accent2)">✓ Correct!</span>';
+            } else {
+                count++;
+                fb.innerHTML = '<span style="color:var(--accent1)">✗ Hint: ' + esc(p.hint) + '</span>';
+            }
+            if (count >= total) {
+                var isRec = setHigh('logic_score', correct);
+                arena.innerHTML = '<div class="mg-result-summary">' +
+                    '<div class="mg-result-stat"><span class="mg-result-big">' + correct + '/' + total + '</span><span class="mg-result-unit">Correct</span></div>' +
+                    '</div>' +
+                    (isRec ? '<div class="mg-new-record" style="text-align:center;margin-bottom:12px">🏆 New Record!</div>' : '') +
+                    '<div style="text-align:center"><button class="cta-button primary" onclick="logicGame_reset()" style="padding:8px 24px;font-size:0.85rem">Play Again</button></div>';
+            } else {
+                idx = (idx + 1) % PUZZLES.length;
+                setTimeout(loadPuzzle, 900);
+            }
+        };
+
+        window.logicGame_reset = function() { count = 0; render(); };
+        return { init: render, reset: render };
+    })();
+
+    /* ── Tech Quiz Game ── */
+    var quizGame = (function() {
+        var QS = [
+            { q: 'What does CSS stand for?', a: 1, opts: ['Computer Style Sheets','Cascading Style Sheets','Colorful Style Sheets','Coded Style Sheets'] },
+            { q: 'Which language runs in the browser natively?', a: 2, opts: ['Python','Java','JavaScript','C++'] },
+            { q: 'What does HTTP stand for?', a: 0, opts: ['HyperText Transfer Protocol','High Text Transfer Protocol','HyperText Transmission Process','Hyper Transfer Text Protocol'] },
+            { q: 'What does SQL stand for?', a: 3, opts: ['Simple Query List','Structured Query List','Simple Query Language','Structured Query Language'] },
+            { q: 'What is the time complexity of binary search?', a: 1, opts: ['O(n)','O(log n)','O(n²)','O(1)'] },
+            { q: 'Which HTML tag is used for a hyperlink?', a: 2, opts: ['<link>','<url>','<a>','<href>'] },
+            { q: 'What does API stand for?', a: 0, opts: ['Application Programming Interface','App Processing Interface','Automated Programming Interface','Application Process Integration'] },
+            { q: 'Which protocol secures HTTPS?', a: 3, opts: ['FTP','SSH','HTTP','TLS/SSL'] },
+            { q: 'What is a CDN?', a: 1, opts: ['Code Delivery Network','Content Delivery Network','Central Data Node','Coded Data Network'] },
+            { q: 'What does DOM stand for?', a: 0, opts: ['Document Object Model','Data Object Module','Document Order Map','Dynamic Object Module'] },
+        ];
+        var qi = 0, correct = 0, total = 5, shuffled = [];
+
+        function render() {
+            shuffled = QS.slice().sort(function() { return Math.random() - 0.5; }).slice(0, total);
+            qi = 0; correct = 0;
+            showQ();
+        }
+
+        function showQ() {
+            var q = shuffled[qi];
+            arena.innerHTML = '<div class="mg-quiz-wrap">' +
+                diffBar('quiz') +
+                '<div class="mg-quiz-progress">Question ' + (qi+1) + '/' + total + '</div>' +
+                '<div class="mg-quiz-q">' + esc(q.q) + '</div>' +
+                '<div class="mg-quiz-opts">' +
+                q.opts.map(function(o, i) {
+                    return '<button class="mg-quiz-opt" onclick="quizAnswer(' + i + ',' + q.a + ')">' + esc(o) + '</button>';
+                }).join('') +
+                '</div>' +
+                '<div class="mg-quiz-fb" id="mgQFb" style="min-height:24px"></div>' +
+                '</div>';
+        }
+
+        window.quizAnswer = function(chosen, correct_idx) {
+            document.querySelectorAll('.mg-quiz-opt').forEach(function(b, i) {
+                b.disabled = true;
+                if (i === correct_idx) b.classList.add('mg-quiz-correct');
+                else if (i === chosen)  b.classList.add('mg-quiz-wrong');
+            });
+            var fb = document.getElementById('mgQFb');
+            if (chosen === correct_idx) {
+                correct++;
+                if (fb) fb.innerHTML = '<span style="color:var(--accent2)">✓ Correct!</span>';
+            } else {
+                if (fb) fb.innerHTML = '<span style="color:var(--accent1)">✗ The correct answer was: ' + esc(shuffled[qi].opts[correct_idx]) + '</span>';
+            }
+            qi++;
+            if (qi >= total) {
+                var isRec = setHigh('quiz_score', correct);
+                setTimeout(function() {
+                    arena.innerHTML = '<div class="mg-result-summary">' +
+                        '<div class="mg-result-stat"><span class="mg-result-big">' + correct + '/' + total + '</span><span class="mg-result-unit">Correct</span></div>' +
+                        '</div>' +
+                        (isRec ? '<div class="mg-new-record" style="text-align:center;margin-bottom:12px">🏆 New Record!</div>' : '') +
+                        '<div style="text-align:center"><button class="cta-button primary" onclick="quizGame_reset()" style="padding:8px 24px;font-size:0.85rem">Play Again</button></div>';
+                }, 1200);
+            } else {
+                setTimeout(showQ, 1200);
+            }
+        };
+
+        window.quizGame_reset = function() { render(); };
+        return { init: render, reset: render };
+    })();
+
     /* ── Tab switching ── */
-    var games = { reaction: reactionGame, typing: typingGame, click: clickGame, memory: memoryGame, aim: aimGame };
+    var games = { reaction: reactionGame, typing: typingGame, click: clickGame, memory: memoryGame, aim: aimGame, logic: logicGame, quiz: quizGame };
 
     function switchGame(name) {
+        if (!games[name]) return;
         activeGame = name;
         tabs.querySelectorAll('.minigame-tab').forEach(function(t) {
             var active = t.dataset.game === name;
