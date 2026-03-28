@@ -130,6 +130,13 @@ window.editSection = async function(id) {
             <input type="text" class="form-input" id="modalSubtitle" value="${esc(s.subtitle || '')}" placeholder="e.g. A selection of my recent work">
         </div>
         <div class="form-group">
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+                <input type="checkbox" id="modalAnimate" ${s.animate !== 0 ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--accent2)">
+                <span>Enable scroll animations for this section</span>
+            </label>
+            <div class="field-hint"><i class="fas fa-info-circle"></i>When unchecked, cards and items in this section appear instantly without scroll-triggered animations.</div>
+        </div>
+        <div class="form-group">
             <label>Nav Label</label>
             <input type="text" class="form-input" id="modalLabel" value="${esc(s.nav_label)}">
             <div class="field-hint"><i class="fas fa-info-circle"></i> Short text shown in the navigation bar.</div>
@@ -157,6 +164,7 @@ window.editSection = async function(id) {
         subtitle: document.getElementById('modalSubtitle')?.value || null,
         nav_icon:  document.getElementById('modalIcon').value,
         nav_label: document.getElementById('modalLabel').value,
+        animate:  document.getElementById('modalAnimate')?.checked ? 1 : 0,
     };
     if (isCustom) {
         data.config = JSON.stringify({ html: document.getElementById('modalConfig').value });

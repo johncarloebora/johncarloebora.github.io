@@ -264,6 +264,26 @@ async function openProjectModal(proj = null) {
             <div class="field-hint"><i class="fas fa-info-circle"></i>Full URL of the live webpage to preview in an iframe.</div>
         </div>
 
+        <div class="form-row" id="wpSettingsRow" style="${proj?.gallery_type === 'webpage' ? '' : 'display:none'}">
+            <div class="form-group">
+                <label>Default Device View</label>
+                <select class="form-input" id="modalWpDevice">
+                    <option value="full"    ${(!proj?.wp_device || proj?.wp_device === 'full')    ? 'selected' : ''}>Full Width</option>
+                    <option value="desktop" ${proj?.wp_device === 'desktop' ? 'selected' : ''}>Desktop (1280px)</option>
+                    <option value="tablet"  ${proj?.wp_device === 'tablet'  ? 'selected' : ''}>Tablet (768px)</option>
+                    <option value="mobile"  ${proj?.wp_device === 'mobile'  ? 'selected' : ''}>Mobile (390px)</option>
+                </select>
+                <div class="field-hint"><i class="fas fa-info-circle"></i>Device simulation preset applied when this preview opens.</div>
+            </div>
+            <div class="form-group" style="align-self:flex-end">
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-top:28px">
+                    <input type="checkbox" id="modalWpInteraction" ${proj?.wp_allow_interaction !== 0 ? 'checked' : ''} style="width:18px;height:18px;accent-color:var(--accent2)">
+                    <span>Allow iframe interaction</span>
+                </label>
+                <div class="field-hint"><i class="fas fa-info-circle"></i>Enables scripts and forms. Uncheck for untrusted/external sites.</div>
+            </div>
+        </div>
+
         <div class="form-group">
             <label>Tags <span style="font-size:0.72rem;color:var(--muted)">— tech stack, keywords (shown as pills on card)</span></label>
             <div class="tag-editor" id="tagEditor" onclick="document.getElementById('tagInput').focus()">
@@ -308,7 +328,9 @@ async function openProjectModal(proj = null) {
         thumbnail_path: document.getElementById('modalThumb').value || null,
         gallery_type:   galleryType,
         gallery_folder: galleryType === 'webpage' ? null : (document.getElementById('modalGalleryFolder').value || null),
-        webpage_url:    galleryType === 'webpage' ? (document.getElementById('modalWebpageUrl').value || null) : null,
+        webpage_url:         galleryType === 'webpage' ? (document.getElementById('modalWebpageUrl').value || null) : null,
+        wp_device:           galleryType === 'webpage' ? (document.getElementById('modalWpDevice')?.value || 'full') : null,
+        wp_allow_interaction: galleryType === 'webpage' ? (document.getElementById('modalWpInteraction')?.checked ? 1 : 0) : null,
         category:       document.getElementById('modalCategory').value || 'standard',
         status:         document.getElementById('modalStatus').value || 'published',
         featured:       document.getElementById('modalFeatured').checked ? 1 : 0,
@@ -334,10 +356,12 @@ async function openProjectModal(proj = null) {
 window.toggleWebpageField = function() {
     const type      = document.getElementById('modalGalleryType')?.value;
     const isWebpage = type === 'webpage';
-    const folderRow  = document.getElementById('galleryFolderRow');
-    const webpageRow = document.getElementById('webpageUrlRow');
+    const folderRow    = document.getElementById('galleryFolderRow');
+    const webpageRow   = document.getElementById('webpageUrlRow');
+    const wpSettings   = document.getElementById('wpSettingsRow');
     if (folderRow)  folderRow.style.display  = isWebpage ? 'none' : '';
     if (webpageRow) webpageRow.style.display = isWebpage ? '' : 'none';
+    if (wpSettings) wpSettings.style.display = isWebpage ? '' : 'none';
 };
 
 window.pickThumb = function(url) {

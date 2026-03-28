@@ -35,6 +35,10 @@ function applySiteConfig(cfg) {
     var s = cfg.settings || {};
     var r2 = cfg.r2Base || '';
 
+    /* ── Theme accent colors ── */
+    if (s.accent1) document.documentElement.style.setProperty('--accent1', s.accent1);
+    if (s.accent2) document.documentElement.style.setProperty('--accent2', s.accent2);
+
     /* ── Hero ── */
     var eyebrow = document.querySelector('.hero-eyebrow');
     if (eyebrow && s.heroEyebrow) eyebrow.textContent = s.heroEyebrow;
@@ -160,6 +164,12 @@ function applySiteConfig(cfg) {
             } else {
                 sectionEl.style.display = '';
                 sectionEl.removeAttribute('aria-hidden');
+            }
+            /* Animation control — sec.animate === 0 disables scroll-reveal for this section */
+            if (sec.animate === 0) {
+                sectionEl.setAttribute('data-no-animate', '');
+            } else {
+                sectionEl.removeAttribute('data-no-animate');
             }
         });
     }
@@ -526,7 +536,7 @@ function applySiteConfig(cfg) {
             dataAttr = 'data-video-folder="' + esc(proj.gallery_folder) + '" style="cursor:pointer"';
         } else if (isWebpage) {
             overlayIcon = 'fas fa-globe'; overlayText = 'Live Preview';
-            dataAttr = 'data-webpage-url="' + esc(proj.webpage_url || '') + '" data-webpage-title="' + esc(proj.title) + '" style="cursor:pointer"';
+            dataAttr = 'data-webpage-url="' + esc(proj.webpage_url || '') + '" data-webpage-title="' + esc(proj.title) + '" data-webpage-device="' + esc(proj.wp_device || 'full') + '" data-webpage-interaction="' + (proj.wp_allow_interaction !== 0 ? '1' : '0') + '" style="cursor:pointer"';
         } else if (hasGallery) {
             overlayIcon = 'fas fa-images'; overlayText = 'View Gallery';
             dataAttr = 'data-gallery-folder="' + esc(proj.gallery_folder) + '"';
@@ -1728,12 +1738,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 100);
     };
 
-    function openWebpageModal(url, title) {
+    function openWebpageModal(url, title, projConfig) {
         if (!webpageModal || !webpageFrame) return;
         if (!url) { showToast('No URL configured for this project.', 'error'); return; }
         _wpCurrentUrl   = url;
-        _wpActiveDevice = 'full';
+        _wpActiveDevice = (projConfig && projConfig.wp_device) ? projConfig.wp_device : 'full';
         _wpZoom         = 1;
+        /* Apply per-project interaction setting */
+        var allowInteraction = !projConfig || projConfig.wp_allow_interaction !== false;
+        if (allowInteraction) {
+            webpageFrame.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups');
+        } else {
+            webpageFrame.setAttribute('sandbox', 'allow-same-origin');
+        }
         if (webpageTitle)   webpageTitle.textContent = title || 'Live Preview';
         if (webpageOpenBtn) webpageOpenBtn.href = url;
         if (webpageErrorLink) webpageErrorLink.href = url;
@@ -1784,7 +1801,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (thumb.dataset.webpageBound) return;
             thumb.dataset.webpageBound = '1';
             thumb.addEventListener('click', function() {
-                openWebpageModal(thumb.dataset.webpageUrl, thumb.dataset.webpageTitle);
+                openWebpageModal(thumb.dataset.webpageUrl, thumb.dataset.webpageTitle, {
+                    wp_device:            thumb.dataset.webpageDevice || 'full',
+                    wp_allow_interaction: thumb.dataset.webpageInteraction !== '0',
+                });
             });
         });
     }
@@ -2261,8 +2281,242 @@ document.addEventListener('DOMContentLoaded', () => {
         return { init: render, reset: render };
     })();
 
+    /* ── MEMORY CARD GAME ── */
+    var memoryGame = (function() {
+        var GRID = { easy: { pairs: 8, cols: 4 }, normal: { pairs: 12, cols: 4 }, hard: { pairs: 18, cols: 6 } };
+        var EMOJIS = ['🎯','🔥','⚡','🌟','🎮','🎵','🎨','🏆','🚀','🌈','💎','🦋','🌺','🎪','🎭','🎲','🍀','🌊'];
+        var difficulty = 'normal';
+        var cards = [], flipped = [], matched = 0, moves = 0, running = false, startTime = 0;
+        var flipLock = false;
+
+        function shuffle(arr) {
+            var a = arr.slice();
+            for (var i = a.length - 1; i > 0; i--) {
+                var j = Math.floor(Math.random() * (i + 1));
+                var t = a[i]; a[i] = a[j]; a[j] = t;
+            }
+            return a;
+        }
+
+        function render() {
+            var g = GRID[difficulty] || GRID.normal;
+            matched = 0; moves = 0; flipped = []; running = false; flipLock = false; startTime = 0;
+            var pairs = EMOJIS.slice(0, g.pairs);
+            cards = shuffle(pairs.concat(pairs));
+            var high = getHigh('memory_' + difficulty);
+            var highStr = high !== null ? '<span class="mg-best-label">Best: ' + high + ' moves</span>' : '';
+            arena.innerHTML =
+                '<div class="mg-game-shell">' +
+                '<div class="mg-game-header"><h4>🃏 Memory Cards</h4>' + highStr + '</div>' +
+                '<div class="mg-instructions">Flip cards to find all matching pairs. Fewer moves = better score.</div>' +
+                diffBar('mDiff', [{key:'easy',label:'Easy'},{key:'normal',label:'Normal'},{key:'hard',label:'Hard'}], difficulty) +
+                '<div class="mg-memory-info"><span id="mgMemMoves">Moves: 0</span><span id="mgMemMatched">Matched: 0/' + g.pairs + '</span></div>' +
+                '<div class="mg-memory-grid mg-memory-cols-' + g.cols + '" id="mgMemGrid">' +
+                cards.map(function(emoji, idx) {
+                    return '<div class="mg-memory-card" data-idx="' + idx + '" tabindex="0" role="button" aria-label="Memory card">' +
+                        '<div class="mg-memory-card-inner">' +
+                        '<div class="mg-memory-front">?</div>' +
+                        '<div class="mg-memory-back">' + emoji + '</div>' +
+                        '</div></div>';
+                }).join('') +
+                '</div>' +
+                '<div id="mgMemStatus"></div></div>';
+            bindMemory();
+        }
+
+        function bindMemory() {
+            var grid = document.getElementById('mgMemGrid');
+            if (!grid) return;
+            grid.addEventListener('click', function(e) {
+                var card = e.target.closest('.mg-memory-card');
+                if (!card || flipLock) return;
+                var idx = parseInt(card.dataset.idx);
+                if (isNaN(idx)) return;
+                if (flipped.includes(idx) || card.classList.contains('mg-memory-matched')) return;
+                if (flipped.length >= 2) return;
+                if (!running) { running = true; startTime = Date.now(); }
+                card.classList.add('mg-memory-flipped');
+                flipped.push(idx);
+                if (flipped.length === 2) {
+                    moves++;
+                    var moEl = document.getElementById('mgMemMoves');
+                    if (moEl) moEl.textContent = 'Moves: ' + moves;
+                    var a = flipped[0], b = flipped[1];
+                    if (cards[a] === cards[b]) {
+                        matched++;
+                        var maEl = document.getElementById('mgMemMatched');
+                        var g2 = GRID[difficulty] || GRID.normal;
+                        if (maEl) maEl.textContent = 'Matched: ' + matched + '/' + g2.pairs;
+                        grid.querySelectorAll('.mg-memory-card').forEach(function(c) {
+                            if (parseInt(c.dataset.idx) === a || parseInt(c.dataset.idx) === b)
+                                c.classList.add('mg-memory-matched');
+                        });
+                        flipped = [];
+                        if (matched === g2.pairs) {
+                            var elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+                            var isRec = setHigh('memory_' + difficulty, moves);
+                            document.getElementById('mgMemStatus').innerHTML =
+                                '<div class="mg-result-summary" style="margin-top:16px">' +
+                                '<div class="mg-result-stat"><span class="mg-result-big">' + moves + '</span><span class="mg-result-unit">Moves</span></div>' +
+                                '<div class="mg-result-stat"><span class="mg-result-big">' + elapsed + 's</span><span class="mg-result-unit">Time</span></div>' +
+                                '</div>' +
+                                (isRec ? '<div class="mg-new-record" style="text-align:center;margin-bottom:12px">🏆 New Best!</div>' : '') +
+                                '<div style="text-align:center"><button class="cta-button primary" onclick="memoryGame_reset()" style="padding:8px 24px;font-size:0.85rem">Play Again</button></div>';
+                        }
+                    } else {
+                        flipLock = true;
+                        setTimeout(function() {
+                            grid.querySelectorAll('.mg-memory-card').forEach(function(c) {
+                                if (parseInt(c.dataset.idx) === a || parseInt(c.dataset.idx) === b)
+                                    c.classList.remove('mg-memory-flipped');
+                            });
+                            flipped = [];
+                            flipLock = false;
+                        }, 900);
+                    }
+                }
+            });
+            var diffDiv = document.getElementById('mDiff');
+            if (diffDiv) {
+                diffDiv.addEventListener('click', function(e) {
+                    var btn = e.target.closest('.mg-diff-btn');
+                    if (!btn) return;
+                    difficulty = btn.dataset.diff;
+                    render();
+                });
+            }
+        }
+
+        window.memoryGame_reset = render;
+        return { init: render, reset: render };
+    })();
+
+    /* ── AIM TRAINER GAME ── */
+    var aimGame = (function() {
+        var DIFF_SETTINGS = {
+            easy:   { radius: 38, duration: 2500, total: 15 },
+            normal: { radius: 26, duration: 1600, total: 20 },
+            hard:   { radius: 16, duration: 1000, total: 25 },
+        };
+        var difficulty = 'normal';
+        var score = 0, misses = 0, remaining = 0;
+        var targetTimer = null, countdownInterval = null;
+        var timeLeft = 30, running = false;
+
+        function render() {
+            score = 0; misses = 0; running = false;
+            clearTimeout(targetTimer); clearInterval(countdownInterval);
+            var d = DIFF_SETTINGS[difficulty] || DIFF_SETTINGS.normal;
+            remaining = d.total;
+            timeLeft = 30;
+            var high = getHigh('aim_score');
+            var highStr = high !== null ? '<span class="mg-best-label">Best: ' + high + ' hits</span>' : '';
+            arena.innerHTML =
+                '<div class="mg-game-shell">' +
+                '<div class="mg-game-header"><h4>🎯 Aim Trainer</h4>' + highStr + '</div>' +
+                '<div class="mg-instructions">Click targets as fast as you can. ' + d.total + ' targets — hit them all!</div>' +
+                diffBar('aDiff', [{key:'easy',label:'Easy'},{key:'normal',label:'Normal'},{key:'hard',label:'Hard'}], difficulty) +
+                '<div class="mg-aim-info"><span id="mgAimScore">Hits: 0</span><span id="mgAimMiss">Miss: 0</span><span class="mg-click-timer" id="mgAimTimer">30s</span></div>' +
+                '<div class="mg-aim-arena" id="mgAimArena">' +
+                '<div class="mg-aim-start" id="mgAimStart"><button class="cta-button primary" onclick="aimGame_start()" style="padding:10px 32px">Start!</button></div>' +
+                '</div>' +
+                '<div id="mgAimStatus"></div></div>';
+            var diffDiv = document.getElementById('aDiff');
+            if (diffDiv) {
+                diffDiv.addEventListener('click', function(e) {
+                    var btn = e.target.closest('.mg-diff-btn');
+                    if (!btn) return;
+                    difficulty = btn.dataset.diff;
+                    render();
+                });
+            }
+        }
+
+        window.aimGame_start = function() {
+            if (running) return;
+            running = true;
+            score = 0; misses = 0;
+            var d = DIFF_SETTINGS[difficulty] || DIFF_SETTINGS.normal;
+            remaining = d.total;
+            timeLeft = 30;
+            var startEl = document.getElementById('mgAimStart');
+            if (startEl) startEl.style.display = 'none';
+            countdownInterval = setInterval(function() {
+                timeLeft--;
+                var el = document.getElementById('mgAimTimer');
+                if (el) {
+                    el.textContent = timeLeft + 's';
+                    if (timeLeft <= 5) el.style.color = 'var(--accent1)';
+                }
+                if (timeLeft <= 0) endGame();
+            }, 1000);
+            spawnTarget();
+        };
+
+        function spawnTarget() {
+            if (!running) return;
+            var arenaEl = document.getElementById('mgAimArena');
+            if (!arenaEl) return;
+            var old = arenaEl.querySelector('.mg-aim-target');
+            if (old) { misses++; updateAimDisplay(); old.remove(); }
+            var d = DIFF_SETTINGS[difficulty] || DIFF_SETTINGS.normal;
+            var r = d.radius;
+            var maxX = Math.max(0, arenaEl.clientWidth  - r * 2 - 4);
+            var maxY = Math.max(0, arenaEl.clientHeight - r * 2 - 4);
+            var x = Math.floor(Math.random() * maxX);
+            var y = Math.floor(Math.random() * maxY);
+            var target = document.createElement('div');
+            target.className = 'mg-aim-target';
+            target.style.cssText = 'left:' + x + 'px;top:' + y + 'px;width:' + (r * 2) + 'px;height:' + (r * 2) + 'px;';
+            target.setAttribute('aria-label', 'Aim target');
+            target.addEventListener('click', function() {
+                if (!running) return;
+                score++; remaining--;
+                target.remove();
+                updateAimDisplay();
+                clearTimeout(targetTimer);
+                if (remaining <= 0) { endGame(); } else { spawnTarget(); }
+            });
+            arenaEl.appendChild(target);
+            targetTimer = setTimeout(function() {
+                if (!running) return;
+                if (document.contains(target)) { misses++; target.remove(); updateAimDisplay(); }
+                if (remaining > 0) spawnTarget();
+            }, d.duration);
+        }
+
+        function updateAimDisplay() {
+            var sEl = document.getElementById('mgAimScore');
+            var mEl = document.getElementById('mgAimMiss');
+            if (sEl) sEl.textContent = 'Hits: ' + score;
+            if (mEl) mEl.textContent = 'Miss: ' + misses;
+        }
+
+        function endGame() {
+            running = false;
+            clearInterval(countdownInterval); clearTimeout(targetTimer);
+            var arenaEl = document.getElementById('mgAimArena');
+            if (arenaEl) arenaEl.querySelectorAll('.mg-aim-target').forEach(function(t) { t.remove(); });
+            var total   = score + misses;
+            var accuracy = total > 0 ? Math.round((score / total) * 100) : 0;
+            var isRec = setHigh('aim_score', score);
+            var statusEl = document.getElementById('mgAimStatus');
+            if (statusEl) statusEl.innerHTML =
+                '<div class="mg-result-summary" style="margin-top:16px">' +
+                '<div class="mg-result-stat"><span class="mg-result-big">' + score + '</span><span class="mg-result-unit">Hits</span></div>' +
+                '<div class="mg-result-stat"><span class="mg-result-big">' + misses + '</span><span class="mg-result-unit">Misses</span></div>' +
+                '<div class="mg-result-stat"><span class="mg-result-big">' + accuracy + '%</span><span class="mg-result-unit">Accuracy</span></div>' +
+                '</div>' +
+                (isRec ? '<div class="mg-new-record" style="text-align:center;margin-bottom:12px">🏆 New Record!</div>' : '') +
+                '<div style="text-align:center"><button class="cta-button primary" onclick="aimGame_reset()" style="padding:8px 24px;font-size:0.85rem">Play Again</button></div>';
+        }
+
+        window.aimGame_reset = render;
+        return { init: render, reset: render };
+    })();
+
     /* ── Tab switching ── */
-    var games = { reaction: reactionGame, typing: typingGame, click: clickGame };
+    var games = { reaction: reactionGame, typing: typingGame, click: clickGame, memory: memoryGame, aim: aimGame };
 
     function switchGame(name) {
         activeGame = name;

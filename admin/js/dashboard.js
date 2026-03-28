@@ -176,36 +176,73 @@ router.register('overview', async () => {
 });
 
 // ── System Page ──
-router.register('system', () => {
+router.register('system', async () => {
     const btn = document.getElementById('runMigrateBtn');
-    if (!btn) return;
-    btn.addEventListener('click', async () => {
-        const resultsDiv = document.getElementById('migrateResults');
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner"></span> Running…';
+    if (btn) {
+        btn.addEventListener('click', async () => {
+            const resultsDiv = document.getElementById('migrateResults');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Running…';
+            try {
+                const data = await API.request('/api/admin/migrate', { method: 'POST' });
+                let html = '<div style="margin-top:12px;display:flex;flex-direction:column;gap:6px">';
+                (data.results || []).forEach(r => {
+                    const icon = r.status === 'applied' ? 'check-circle' : 'info-circle';
+                    const color = r.status === 'applied' ? 'var(--accent2)' : 'var(--muted)';
+                    html += `<div style="font-size:0.82rem;display:flex;gap:8px;align-items:flex-start">
+                        <i class="fas fa-${icon}" style="color:${color};margin-top:2px;flex-shrink:0"></i>
+                        <span style="color:var(--text-secondary)">${esc(r.sql.substring(0,80))}…<br>
+                        <em style="color:${color}">${esc(r.status)}</em>${r.detail ? ' — ' + esc(r.detail) : ''}</span>
+                    </div>`;
+                });
+                html += '</div>';
+                resultsDiv.innerHTML = html;
+                resultsDiv.style.display = '';
+                showToast('Migrations complete!', 'success');
+                loadAuditLog(); // Refresh audit log after migration
+            } catch (err) {
+                showToast('Migration failed: ' + err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-play"></i> Run Migrations';
+            }
+        });
+    }
+
+    // Load audit log
+    async function loadAuditLog() {
+        const logContainer = document.getElementById('auditLogList');
+        if (!logContainer) return;
         try {
-            const data = await API.request('/api/admin/migrate', { method: 'POST' });
-            let html = '<div style="margin-top:12px;display:flex;flex-direction:column;gap:6px">';
-            (data.results || []).forEach(r => {
-                const icon = r.status === 'applied' ? 'check-circle' : 'info-circle';
-                const color = r.status === 'applied' ? 'var(--accent2)' : 'var(--muted)';
-                html += `<div style="font-size:0.82rem;display:flex;gap:8px;align-items:flex-start">
-                    <i class="fas fa-${icon}" style="color:${color};margin-top:2px;flex-shrink:0"></i>
-                    <span style="color:var(--text-secondary)">${esc(r.sql.substring(0,80))}…<br>
-                    <em style="color:${color}">${esc(r.status)}</em>${r.detail ? ' — ' + esc(r.detail) : ''}</span>
+            const logs = await API.request('/api/admin/audit-log?limit=40');
+            if (!logs || !logs.length) {
+                logContainer.innerHTML = '<p style="color:var(--muted);font-size:0.85rem;padding:8px 0">No activity recorded yet. Actions on projects and other content will appear here.</p>';
+                return;
+            }
+            const ACTION_ICON  = { create: 'plus-circle', update: 'pen', delete: 'trash-alt' };
+            const ACTION_COLOR = { create: 'var(--accent2)', update: 'var(--text-secondary)', delete: 'var(--accent1)' };
+            logContainer.innerHTML = logs.map(entry => {
+                const icon  = ACTION_ICON[entry.action]  || 'circle';
+                const color = ACTION_COLOR[entry.action] || 'var(--muted)';
+                const time  = entry.performed_at ? new Date(entry.performed_at).toLocaleString() : '';
+                return `<div style="display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--border)">
+                    <i class="fas fa-${icon}" style="color:${color};font-size:0.8rem;margin-top:3px;width:14px;flex-shrink:0"></i>
+                    <div style="flex:1;min-width:0">
+                        <span style="color:var(--text-primary);font-size:0.83rem">
+                            <strong style="text-transform:capitalize">${esc(entry.action)}</strong>
+                            <span style="color:var(--muted)"> ${esc(entry.resource)}</span>
+                            ${entry.summary ? ' — ' + esc(entry.summary) : ''}
+                        </span>
+                        ${time ? `<div style="font-size:0.71rem;color:var(--muted);margin-top:1px">${time}</div>` : ''}
+                    </div>
                 </div>`;
-            });
-            html += '</div>';
-            resultsDiv.innerHTML = html;
-            resultsDiv.style.display = '';
-            showToast('Migrations complete!', 'success');
-        } catch (err) {
-            showToast('Migration failed: ' + err.message, 'error');
-        } finally {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-play"></i> Run Migrations';
+            }).join('');
+        } catch (e) {
+            const logContainer = document.getElementById('auditLogList');
+            if (logContainer) logContainer.innerHTML = '<p style="color:var(--muted);font-size:0.85rem;padding:8px 0">Could not load activity log.</p>';
         }
-    });
+    }
+    loadAuditLog();
 });
 
 // ── Initialize ──

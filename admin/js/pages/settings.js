@@ -92,6 +92,47 @@ router.register('settings', async () => {
                 </div>
             </div>
 
+            <div class="admin-card">
+                <div class="admin-card-header">
+                    <h3><i class="fas fa-palette"></i> Theme Colors</h3>
+                </div>
+                <div class="card-description">
+                    Customize the accent colors of your portfolio. Primary (red) is used for highlights and hover states.
+                    Secondary (teal) is used for tags, badges, and interactive elements. Changes apply after publishing.
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Primary Accent</label>
+                        <div style="display:flex;gap:8px;align-items:center">
+                            <input type="color" id="settAccent1Color" value="${settings.accent1 || '#ff6b6b'}"
+                                style="width:44px;height:36px;border:1px solid var(--border);cursor:pointer;border-radius:6px;background:none;padding:2px"
+                                oninput="document.getElementById('settAccent1').value=this.value">
+                            <input type="text" class="form-input" id="settAccent1" value="${esc(settings.accent1 || '#ff6b6b')}"
+                                placeholder="#ff6b6b" style="flex:1;font-family:monospace"
+                                oninput="document.getElementById('settAccent1Color').value=this.value">
+                        </div>
+                        <div class="field-hint"><i class="fas fa-info-circle"></i>Used for hover highlights, active states, and alert colors.</div>
+                    </div>
+                    <div class="form-group">
+                        <label>Secondary Accent</label>
+                        <div style="display:flex;gap:8px;align-items:center">
+                            <input type="color" id="settAccent2Color" value="${settings.accent2 || '#4ecdc4'}"
+                                style="width:44px;height:36px;border:1px solid var(--border);cursor:pointer;border-radius:6px;background:none;padding:2px"
+                                oninput="document.getElementById('settAccent2').value=this.value">
+                            <input type="text" class="form-input" id="settAccent2" value="${esc(settings.accent2 || '#4ecdc4')}"
+                                placeholder="#4ecdc4" style="flex:1;font-family:monospace"
+                                oninput="document.getElementById('settAccent2Color').value=this.value">
+                        </div>
+                        <div class="field-hint"><i class="fas fa-info-circle"></i>Used for tags, badges, skill bars, and active nav links.</div>
+                    </div>
+                </div>
+                <div style="margin-top:4px">
+                    <button class="btn btn-secondary btn-sm" onclick="resetAccentColors()" style="font-size:0.8rem">
+                        <i class="fas fa-undo"></i> Reset to Defaults
+                    </button>
+                </div>
+            </div>
+
             <button class="btn btn-primary" id="saveSettings"><i class="fas fa-save"></i> Save Settings</button>
         `;
 
@@ -135,6 +176,8 @@ router.register('settings', async () => {
                     navLogo:      document.getElementById('settNavLogo').value,
                     footerText:   document.getElementById('settFooter').value,
                     profileShape: document.getElementById('settProfileShape').value,
+                    accent1:      document.getElementById('settAccent1').value || '#ff6b6b',
+                    accent2:      document.getElementById('settAccent2').value || '#4ecdc4',
                 });
                 showToast('Settings saved! Hit Publish to apply.', 'success');
             }, 'Saving…').catch(err => showToast(err.message, 'error'));
@@ -150,4 +193,16 @@ window.selectShape = function(shape) {
     const el = document.querySelector(`.shape-option[data-shape="${shape}"]`);
     if (el) el.classList.add('active');
     document.getElementById('settProfileShape').value = shape;
+};
+
+window.resetAccentColors = function() {
+    const a1 = '#ff6b6b', a2 = '#4ecdc4';
+    const t1 = document.getElementById('settAccent1');
+    const c1 = document.getElementById('settAccent1Color');
+    const t2 = document.getElementById('settAccent2');
+    const c2 = document.getElementById('settAccent2Color');
+    if (t1) t1.value = a1;
+    if (c1) c1.value = a1;
+    if (t2) t2.value = a2;
+    if (c2) c2.value = a2;
 };

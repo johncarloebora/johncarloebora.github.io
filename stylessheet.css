@@ -2950,3 +2950,123 @@ footer .footer-copy {
     .pf-controls { flex-direction: column; align-items: stretch; }
     .pf-sort { flex: 1; }
 }
+
+/* ── SECTION NO-ANIMATE ─────────────────────────────────── */
+[data-no-animate] .card,
+[data-no-animate] .skill-card,
+[data-no-animate] .project-card,
+[data-no-animate] .timeline-item,
+[data-no-animate] .social-card,
+[data-no-animate] .stat-card {
+    opacity: 1 !important;
+    transform: none !important;
+    animation: none !important;
+    transition: none !important;
+}
+
+/* ── IFRAME SKELETON LOADER ─────────────────────────────── */
+.webpage-skeleton { padding: 20px 24px; display: flex; flex-direction: column; gap: 10px; }
+.ws-bar {
+    height: 14px; border-radius: 6px;
+    background: var(--surface3);
+    animation: ws-shimmer 1.5s ease-in-out infinite;
+}
+.ws-bar-nav   { height: 20px; width: 100%; }
+.ws-hero      { height: 150px; border-radius: 10px; background: var(--surface3); animation: ws-shimmer 1.5s ease-in-out infinite; margin-bottom: 4px; }
+.ws-bar-title { width: 55%; height: 18px; }
+.ws-bar-text  { width: 92%; }
+.ws-bar-short { width: 68%; }
+@keyframes ws-shimmer {
+    0%, 100% { opacity: 0.4; }
+    50%       { opacity: 0.9; }
+}
+
+/* ── MEMORY CARD GAME ───────────────────────────────────── */
+.mg-memory-info {
+    display: flex; justify-content: space-between;
+    font-size: 0.83rem; color: var(--muted); margin-bottom: 10px;
+}
+.mg-memory-grid {
+    display: grid; gap: 7px;
+    margin: 0 auto 12px;
+    max-width: 400px;
+}
+.mg-memory-cols-4 { grid-template-columns: repeat(4, 1fr); }
+.mg-memory-cols-6 { grid-template-columns: repeat(6, 1fr); }
+.mg-memory-card {
+    aspect-ratio: 1; cursor: pointer;
+    perspective: 500px; user-select: none;
+    border-radius: 8px;
+}
+.mg-memory-card-inner {
+    width: 100%; height: 100%; position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.38s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 8px;
+}
+.mg-memory-card.mg-memory-flipped .mg-memory-card-inner,
+.mg-memory-card.mg-memory-matched .mg-memory-card-inner {
+    transform: rotateY(180deg);
+}
+.mg-memory-front,
+.mg-memory-back {
+    position: absolute; inset: 0;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    backface-visibility: hidden;
+    font-size: clamp(0.9rem, 2.5vw, 1.3rem);
+    border: 1.5px solid var(--border);
+}
+.mg-memory-front {
+    background: var(--surface2);
+    color: var(--text-secondary);
+    font-size: 0.9rem; font-weight: 700;
+}
+.mg-memory-back { background: var(--surface3); transform: rotateY(180deg); }
+.mg-memory-card.mg-memory-matched .mg-memory-back {
+    border-color: var(--accent2);
+    background: rgba(78, 205, 196, 0.12);
+}
+@media (max-width: 480px) {
+    .mg-memory-grid { gap: 5px; }
+    .mg-memory-cols-6 { grid-template-columns: repeat(6, 1fr); }
+}
+
+/* ── AIM TRAINER GAME ───────────────────────────────────── */
+.mg-aim-info {
+    display: flex; gap: 16px; align-items: center;
+    font-size: 0.83rem; color: var(--muted); margin-bottom: 6px;
+}
+.mg-aim-arena {
+    position: relative;
+    width: 100%; height: 260px;
+    background: var(--surface2);
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1.5px solid var(--border);
+    margin: 0 0 12px;
+    cursor: crosshair;
+    user-select: none;
+}
+.mg-aim-start {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+}
+.mg-aim-target {
+    position: absolute;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #ff8a80, #e53935);
+    cursor: pointer;
+    box-shadow: 0 0 0 3px rgba(229, 57, 53, 0.25);
+    animation: aim-pop 0.12s ease-out;
+    transition: transform 0.08s ease, box-shadow 0.08s ease;
+}
+.mg-aim-target:hover {
+    transform: scale(0.92);
+    box-shadow: 0 0 0 5px rgba(229, 57, 53, 0.35);
+}
+.mg-aim-target:active { transform: scale(0.82); }
+@keyframes aim-pop {
+    from { transform: scale(0); opacity: 0; }
+    to   { transform: scale(1); opacity: 1; }
+}

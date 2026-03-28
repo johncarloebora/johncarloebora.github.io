@@ -354,11 +354,39 @@ router.put('/api/settings', authMiddleware, async (request, env) => {
 });
 
 // ────────────────────────────────────────────────────────────
+// AUDIT LOG HELPERS
+// ────────────────────────────────────────────────────────────
+
+async function writeAuditLog(env, action, resource, resourceId, summary) {
+  try {
+    await env.DB.prepare(
+      'INSERT INTO audit_log (action, resource, resource_id, summary) VALUES (?, ?, ?, ?)'
+    ).bind(action, resource, String(resourceId || ''), summary || '').run();
+  } catch (e) {
+    // Non-fatal — audit log failures must not break primary operations
+    console.error('[audit]', e.message);
+  }
+}
+
+router.get('/api/admin/audit-log', authMiddleware, async (request, env) => {
+  const limit = Math.min(parseInt(request.query?.limit || '50'), 200);
+  try {
+    const { results } = await env.DB.prepare(
+      'SELECT * FROM audit_log ORDER BY id DESC LIMIT ?'
+    ).bind(limit).all();
+    return json(results);
+  } catch (e) {
+    // Table may not exist yet — return empty array gracefully
+    return json([]);
+  }
+});
+
+// ────────────────────────────────────────────────────────────
 // GENERIC CRUD HELPERS
 // ────────────────────────────────────────────────────────────
 
 function crudRoutes(router, path, table, options = {}) {
-  const { orderBy = 'sort_order', parentKey, allowedFields } = options;
+  const { orderBy = 'sort_order', parentKey, allowedFields, onWrite } = options;
 
   // LIST
   router.get(`/api/${path}`, authMiddleware, async (request, env) => {
@@ -400,6 +428,7 @@ function crudRoutes(router, path, table, options = {}) {
     ).bind(...values).run();
 
     const inserted = await env.DB.prepare(`SELECT * FROM ${table} WHERE id = ?`).bind(result.meta.last_row_id).first();
+    if (onWrite) await onWrite(env, 'create', inserted.id, inserted);
     return json(inserted, { status: 201 });
   });
 
@@ -419,11 +448,13 @@ function crudRoutes(router, path, table, options = {}) {
 
     await env.DB.prepare(`UPDATE ${table} SET ${sets} WHERE id = ?`).bind(...values).run();
     const updated = await env.DB.prepare(`SELECT * FROM ${table} WHERE id = ?`).bind(request.params.id).first();
+    if (onWrite) await onWrite(env, 'update', updated.id, updated);
     return json(updated);
   });
 
   // DELETE
   router.delete(`/api/${path}/:id`, authMiddleware, async (request, env) => {
+    if (onWrite) await onWrite(env, 'delete', request.params.id, null);
     await env.DB.prepare(`DELETE FROM ${table} WHERE id = ?`).bind(request.params.id).run();
     return json({ success: true });
   });
@@ -441,7 +472,7 @@ function crudRoutes(router, path, table, options = {}) {
 
 // Register CRUD routes for all content tables
 crudRoutes(router, 'sections', 'sections', {
-  allowedFields: ['id', 'title', 'subtitle', 'nav_icon', 'nav_label', 'sort_order', 'visible', 'type', 'config'],
+  allowedFields: ['id', 'title', 'subtitle', 'nav_icon', 'nav_label', 'sort_order', 'visible', 'type', 'config', 'animate'],
 });
 crudRoutes(router, 'about-cards', 'about_cards', {
   allowedFields: ['title', 'icon', 'content', 'type', 'expanded', 'sort_order'],
@@ -469,7 +500,11 @@ crudRoutes(router, 'education', 'education', {
 crudRoutes(router, 'projects', 'projects', {
   allowedFields: ['title', 'description', 'thumbnail_path', 'gallery_type', 'gallery_folder',
                   'webpage_url', 'category', 'tags', 'skills', 'sort_order',
-                  'status', 'featured', 'visibility'],
+                  'status', 'featured', 'visibility', 'wp_device', 'wp_allow_interaction'],
+  onWrite: async (env, action, id, data) => {
+    const summary = data ? (data.title || 'Untitled') : `id:${id}`;
+    await writeAuditLog(env, action, 'project', String(id), summary);
+  },
 });
 crudRoutes(router, 'socials', 'socials', {
   allowedFields: ['platform', 'url', 'icon', 'label', 'sort_order'],
@@ -648,6 +683,14 @@ router.post('/api/admin/migrate', authMiddleware, async (request, env) => {
     "ALTER TABLE sections ADD COLUMN subtitle TEXT",
     // Seed minigame section (hidden by default)
     "INSERT OR IGNORE INTO sections (id, title, nav_icon, nav_label, sort_order, visible, type) VALUES ('minigame', 'Quick Challenges', 'fas fa-gamepad', 'Fun Zone', 8, 0, 'builtin')",
+    // Per-project iframe device default (mobile/tablet/desktop/full)
+    "ALTER TABLE projects ADD COLUMN wp_device TEXT DEFAULT 'full'",
+    // Per-project iframe interaction flag (1=allow scripts+forms, 0=read-only sandbox)
+    "ALTER TABLE projects ADD COLUMN wp_allow_interaction INTEGER DEFAULT 1",
+    // Section animation toggle (1=animated, 0=no animations)
+    "ALTER TABLE sections ADD COLUMN animate INTEGER DEFAULT 1",
+    // Audit log table for admin activity tracking
+    "CREATE TABLE IF NOT EXISTS audit_log (id INTEGER PRIMARY KEY AUTOINCREMENT, action TEXT NOT NULL, resource TEXT NOT NULL, resource_id TEXT, summary TEXT, performed_at TEXT DEFAULT (datetime('now')))",
   ];
   const results = [];
   for (const sql of migrations) {
