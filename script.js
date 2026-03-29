@@ -117,7 +117,12 @@ function applySiteConfig(cfg) {
             /* Remove existing nav links (keep drawer header) */
             navLinksContainer.querySelectorAll('.nav-link').forEach(function (l) { l.remove(); });
             var visibleSections = cfg.sections.filter(function (sec) { return sec.visible; })
-                .sort(function (a, b) { return a.sort_order - b.sort_order; });
+                .sort(function (a, b) {
+                    /* minigame always floats to the end of the nav */
+                    if (a.id === 'minigame') return 1;
+                    if (b.id === 'minigame') return -1;
+                    return a.sort_order - b.sort_order;
+                });
             visibleSections.forEach(function (sec) {
                 var a = document.createElement('a');
                 a.href = '#' + sec.id;
@@ -550,6 +555,41 @@ function applySiteConfig(cfg) {
             });
         }
     }
+
+    /* ── Auto-show content sections that have data but aren't yet in the
+         sections registry (i.e. migration hasn't run yet).
+         Sections already controlled by cfg.sections are skipped — their
+         visibility was already set by the loop above. ── */
+    (function() {
+        var dataMap = {
+            testimonials:   cfg.testimonials,
+            certifications: cfg.certifications,
+            achievements:   cfg.achievements,
+            blog:           cfg.blog,
+        };
+        Object.keys(dataMap).forEach(function(id) {
+            var data = dataMap[id];
+            if (!data || !data.length) return;
+            var el = document.getElementById(id);
+            if (!el || el.style.display !== 'none') return;
+            var controlled = cfg.sections && cfg.sections.some(function(s) { return s.id === id; });
+            if (controlled) return;
+            el.style.display = '';
+            el.removeAttribute('aria-hidden');
+        });
+        /* Resume: auto-show if experiences or education data exists */
+        var resumeEl = document.getElementById('resume');
+        if (resumeEl && resumeEl.style.display === 'none') {
+            var resumeControlled = cfg.sections && cfg.sections.some(function(s) { return s.id === 'resume'; });
+            if (!resumeControlled) {
+                var hasData = (cfg.experiences && cfg.experiences.length) || (cfg.education && cfg.education.length);
+                if (hasData) {
+                    resumeEl.style.display = '';
+                    resumeEl.removeAttribute('aria-hidden');
+                }
+            }
+        }
+    })();
 
     /* Re-bind gallery/video/webpage click handlers after DOM replacement */
     if (typeof window._rebindGallery === 'function') window._rebindGallery();
@@ -2217,7 +2257,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function diffBar(id, levels, active) {
         return '<div class="mg-diff-bar" id="' + id + '">' +
             levels.map(function(l) {
-                return '<button class="mg-diff-btn' + (l.key === active ? ' mg-diff-btn--active' : '') + '" data-diff="' + l.key + '" onclick="mgSetDiff(\'' + id + '\',\'' + l.key + '\')">' + l.label + '</button>';
+                return '<button class="mg-diff-btn' + (l.key === active ? ' mg-diff-btn--active' : '') + '" data-diff="' + l.key + '">' + l.label + '</button>';
             }).join('') + '</div>';
     }
 
@@ -2341,7 +2381,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }, delay);
         }
 
-        return { init: function() { state = 'start'; render(); }, reset: function() { state = 'start'; results = []; clearTimeout(timer); render(); } };
+        return { init: function() { state = 'start'; render(); }, reset: function() { state = 'start'; results = []; clearTimeout(timer); render(); }, destroy: function() { clearTimeout(timer); timer = null; } };
     })();
 
     /* ── TYPING SPEED TEST ── */
@@ -2537,7 +2577,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         window.clickGame_reset = render;
-        return { init: render, reset: render };
+        return { init: render, reset: render, destroy: function() { clearInterval(timerInterval); running = false; } };
     })();
 
     /* ── MEMORY CARD GAME ── */
@@ -2771,7 +2811,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         window.aimGame_reset = render;
-        return { init: render, reset: render };
+        return { init: render, reset: render, destroy: function() { clearTimeout(targetTimer); clearInterval(countdownInterval); running = false; targetTimer = null; countdownInterval = null; } };
     })();
 
     /* ── Logic Puzzle Game ── */
@@ -2958,6 +2998,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function switchGame(name) {
         if (!games[name]) return;
+        /* Destroy current game first — clears timers, prevents stale callbacks
+           (e.g. reactionGame timer firing and overwriting arena mid-another-game) */
+        if (activeGame && games[activeGame] && typeof games[activeGame].destroy === 'function') {
+            games[activeGame].destroy();
+        }
         activeGame = name;
         tabs.querySelectorAll('.minigame-tab').forEach(function(t) {
             var active = t.dataset.game === name;

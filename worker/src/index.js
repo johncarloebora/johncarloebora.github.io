@@ -785,6 +785,14 @@ router.post('/api/admin/migrate', authMiddleware, async (request, env) => {
     // Section animation preset and layout variant
     "ALTER TABLE sections ADD COLUMN animation_preset TEXT DEFAULT 'fade'",
     "ALTER TABLE sections ADD COLUMN layout_variant TEXT DEFAULT 'standard'",
+    // Seed missing built-in sections (hidden by default; admin enables when ready)
+    "INSERT OR IGNORE INTO sections (id, title, nav_icon, nav_label, sort_order, visible, type) VALUES ('resume',          'Resume',          'fas fa-file-alt',   'Resume',       9,  0, 'builtin')",
+    "INSERT OR IGNORE INTO sections (id, title, nav_icon, nav_label, sort_order, visible, type) VALUES ('testimonials',    'Testimonials',    'fas fa-star',       'Reviews',      10, 0, 'builtin')",
+    "INSERT OR IGNORE INTO sections (id, title, nav_icon, nav_label, sort_order, visible, type) VALUES ('certifications',  'Certifications',  'fas fa-certificate','Certs',        11, 0, 'builtin')",
+    "INSERT OR IGNORE INTO sections (id, title, nav_icon, nav_label, sort_order, visible, type) VALUES ('achievements',    'Achievements',    'fas fa-trophy',     'Achievements', 12, 0, 'builtin')",
+    "INSERT OR IGNORE INTO sections (id, title, nav_icon, nav_label, sort_order, visible, type) VALUES ('blog',            'Blog',            'fas fa-blog',       'Blog',         13, 0, 'builtin')",
+    // Ensure minigame is always positioned last regardless of other section additions
+    "UPDATE sections SET sort_order = 99 WHERE id = 'minigame'",
   ];
   const results = [];
   for (const sql of migrations) {

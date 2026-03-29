@@ -2389,9 +2389,9 @@ footer .footer-copy {
         gap: 2rem;
     }
 
-    .hero-avatar { order: -1; }
+    .hero-avatar { order: -1; width: fit-content; margin: 0 auto; }
 
-    .avatar-frame { width: 200px; height: 200px; margin: 0 auto; }
+    .avatar-frame { width: 200px; height: 200px; }
     .avatar-svg { width: 200px; margin: 0 auto; }
 
     .hero-buttons { justify-content: center; }
