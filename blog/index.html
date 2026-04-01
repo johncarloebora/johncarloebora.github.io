@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carlo — Blog</title>
+    <meta name="description" content="Thoughts, projects, and updates from Carlo Ebora.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script>(function(){var t=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',t);})()</script>
+</head>
+<body>
+
+    <!-- Header -->
+    <header class="blog-header">
+        <div class="blog-header-inner">
+            <a href="../index.html" class="blog-logo">CE<span>.</span></a>
+            <nav class="blog-nav">
+                <a href="../index.html" class="blog-nav-link"><i class="fas fa-arrow-left"></i> Portfolio</a>
+                <button id="themeToggle" class="theme-btn" aria-label="Toggle theme">
+                    <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="5"/>
+                        <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                        <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                    </svg>
+                    <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                    </svg>
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Hero banner -->
+    <section class="blog-hero">
+        <div class="blog-hero-inner">
+            <h1>Blog</h1>
+            <p>Thoughts, projects, and updates.</p>
+        </div>
+    </section>
+
+    <!-- Tag filter bar -->
+    <div class="blog-tag-bar" id="tagBar">
+        <button class="tag-filter-btn active" data-tag="">All</button>
+        <!-- Tags injected by JS -->
+    </div>
+
+    <!-- Main layout -->
+    <main class="blog-main">
+        <div class="blog-feed" id="feed">
+            <!-- Posts injected by JS -->
+            <div class="feed-loading" id="feedLoading">
+                <div class="spinner"></div>
+            </div>
+        </div>
+        <aside class="blog-sidebar" id="sidebar">
+            <!-- Sidebar injected by JS -->
+        </aside>
+    </main>
+
+    <!-- Post detail modal / thread view -->
+    <div class="post-modal-backdrop" id="postModalBackdrop" aria-hidden="true">
+        <div class="post-modal" id="postModal" role="dialog" aria-modal="true" aria-label="Post thread">
+            <button class="post-modal-close" id="postModalClose" aria-label="Close">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="post-modal-body" id="postModalBody">
+                <!-- Thread content injected by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="toast" aria-live="polite"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>

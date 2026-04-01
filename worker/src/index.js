@@ -562,7 +562,8 @@ crudRoutes(router, 'projects', 'projects', {
   allowedFields: ['title', 'description', 'thumbnail_path', 'gallery_type', 'gallery_folder',
                   'webpage_url', 'category', 'tags', 'skills', 'sort_order',
                   'status', 'featured', 'visibility', 'wp_device', 'wp_allow_interaction',
-                  'custom_width', 'custom_height', 'zoom_level', 'preview_mode', 'load_strategy', 'wp_timeout'],
+                  'custom_width', 'custom_height', 'zoom_level', 'preview_mode', 'load_strategy', 'wp_timeout',
+                  'priority', 'layout_type'],
   onWrite: async (env, action, id, data) => {
     const summary = data ? (data.title || 'Untitled') : `id:${id}`;
     await writeAuditLog(env, action, 'project', String(id), summary);
@@ -793,6 +794,13 @@ router.post('/api/admin/migrate', authMiddleware, async (request, env) => {
     "INSERT OR IGNORE INTO sections (id, title, nav_icon, nav_label, sort_order, visible, type) VALUES ('blog',            'Blog',            'fas fa-blog',       'Blog',         13, 0, 'builtin')",
     // Ensure minigame is always positioned last regardless of other section additions
     "UPDATE sections SET sort_order = 99 WHERE id = 'minigame'",
+    // Social blog platform — separate from portfolio blog_posts
+    "CREATE TABLE IF NOT EXISTS social_posts (id INTEGER PRIMARY KEY AUTOINCREMENT, author TEXT NOT NULL DEFAULT 'Carlo', content TEXT NOT NULL DEFAULT '', media TEXT NOT NULL DEFAULT '[]', hashtags TEXT NOT NULL DEFAULT '[]', tags TEXT NOT NULL DEFAULT '[]', location TEXT NOT NULL DEFAULT '', reply_to INTEGER DEFAULT NULL REFERENCES social_posts(id), reactions TEXT NOT NULL DEFAULT '{\"like\":0,\"love\":0,\"fire\":0,\"clap\":0}', reply_count INTEGER NOT NULL DEFAULT 0, pinned INTEGER NOT NULL DEFAULT 0, featured INTEGER NOT NULL DEFAULT 0, created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now')))",
+    "CREATE INDEX IF NOT EXISTS idx_social_posts_reply_to ON social_posts(reply_to)",
+    "CREATE INDEX IF NOT EXISTS idx_social_posts_created ON social_posts(created_at DESC)",
+    // Project priority (0=normal, 1=high, 2=urgent) and layout type
+    "ALTER TABLE projects ADD COLUMN priority INTEGER DEFAULT 0",
+    "ALTER TABLE projects ADD COLUMN layout_type TEXT DEFAULT 'card'",
   ];
   const results = [];
   for (const sql of migrations) {
@@ -1112,6 +1120,263 @@ router.get('/api/sync-status', authMiddleware, async (request, env) => {
       lastChangeAt: lastAudit?.performed_at || null,
     });
   } catch { return json({ publishedAt: null, lastChangeAt: null }); }
+});
+
+// ────────────────────────────────────────────────────────────
+// BLOG / SOCIAL PLATFORM ROUTES
+// ────────────────────────────────────────────────────────────
+
+function safeParseReactions(raw) {
+  try { return raw ? JSON.parse(raw) : { like: 0, love: 0, fire: 0, clap: 0 }; } catch { return { like: 0, love: 0, fire: 0, clap: 0 }; }
+}
+function safeParseArr(raw) {
+  try { return raw ? JSON.parse(raw) : []; } catch { return []; }
+}
+function hydrateSocialPost(row) {
+  return {
+    ...row,
+    media:     safeParseArr(row.media),
+    hashtags:  safeParseArr(row.hashtags),
+    tags:      safeParseArr(row.tags),
+    reactions: safeParseReactions(row.reactions),
+  };
+}
+function sanitizeText(s, max = 2000) {
+  return String(s || '').trim().slice(0, max);
+}
+
+/* Public: paginated feed with optional tag filter */
+router.get('/api/blog/feed', async (request, env) => {
+  const page  = Math.max(1, parseInt(request.query?.page  || '1'));
+  const limit = Math.min(50, Math.max(1, parseInt(request.query?.limit || '10')));
+  const tag   = (request.query?.tag || '').trim().slice(0, 64);
+  const offset = (page - 1) * limit;
+
+  let countSql, fetchSql, binds;
+  if (tag) {
+    const pattern = '%"' + tag.replace(/"/g, '') + '"%';
+    countSql = 'SELECT COUNT(*) as cnt FROM social_posts WHERE reply_to IS NULL AND (tags LIKE ? OR hashtags LIKE ?)';
+    fetchSql = 'SELECT * FROM social_posts WHERE reply_to IS NULL AND (tags LIKE ? OR hashtags LIKE ?) ORDER BY pinned DESC, created_at DESC LIMIT ? OFFSET ?';
+    binds = [pattern, pattern];
+  } else {
+    countSql = 'SELECT COUNT(*) as cnt FROM social_posts WHERE reply_to IS NULL';
+    fetchSql = 'SELECT * FROM social_posts WHERE reply_to IS NULL ORDER BY pinned DESC, created_at DESC LIMIT ? OFFSET ?';
+    binds = [];
+  }
+
+  const [countRow, { results }] = await Promise.all([
+    env.DB.prepare(countSql).bind(...binds).first(),
+    env.DB.prepare(fetchSql).bind(...binds, limit, offset).all(),
+  ]);
+
+  return json({
+    posts: results.map(hydrateSocialPost),
+    total: countRow?.cnt || 0,
+    page,
+    limit,
+  });
+});
+
+/* Public: all tags with counts */
+router.get('/api/blog/tags', async (request, env) => {
+  const { results } = await env.DB.prepare('SELECT tags, hashtags FROM social_posts WHERE reply_to IS NULL').all();
+  const counts = {};
+  results.forEach(row => {
+    const combined = [...safeParseArr(row.tags), ...safeParseArr(row.hashtags)];
+    combined.forEach(t => { if (t) counts[t] = (counts[t] || 0) + 1; });
+  });
+  const tags = Object.entries(counts)
+    .map(([tag, count]) => ({ tag, count }))
+    .sort((a, b) => b.count - a.count);
+  return json({ tags });
+});
+
+/* Public: single post + replies (thread view) */
+router.get('/api/blog/posts/:id/thread', async (request, env) => {
+  const id = parseInt(request.params.id);
+  if (!id) return error(400, 'Invalid id');
+  const [post, { results: replies }] = await Promise.all([
+    env.DB.prepare('SELECT * FROM social_posts WHERE id = ?').bind(id).first(),
+    env.DB.prepare('SELECT * FROM social_posts WHERE reply_to = ? ORDER BY created_at ASC').bind(id).all(),
+  ]);
+  if (!post) return error(404, 'Post not found');
+  return json({ post: hydrateSocialPost(post), replies: replies.map(hydrateSocialPost) });
+});
+
+/* Public: create post / reply (open for now; auth required for non-replies in admin) */
+router.post('/api/blog/posts', async (request, env) => {
+  const body = await request.json();
+  const content  = sanitizeText(body?.content, 2000);
+  if (!content) return error(400, 'Content is required');
+
+  const replyTo  = body?.reply_to ? parseInt(body.reply_to) : null;
+  const author   = sanitizeText(body?.author || 'Carlo', 100);
+  const location = sanitizeText(body?.location || '', 200);
+
+  /* Parse hashtags from content */
+  const inlineHashtags = (content.match(/#(\w+)/g) || []).map(h => h.slice(1));
+  const explicitTags   = Array.isArray(body?.tags) ? body.tags.map(t => sanitizeText(t, 50)).filter(Boolean) : [];
+  const allTags = [...new Set([...inlineHashtags, ...explicitTags])];
+
+  const reactionsDefault = JSON.stringify({ like: 0, love: 0, fire: 0, clap: 0 });
+
+  const result = await env.DB.prepare(
+    'INSERT INTO social_posts (author, content, media, hashtags, tags, location, reply_to, reactions) VALUES (?,?,?,?,?,?,?,?)'
+  ).bind(
+    author, content,
+    JSON.stringify(Array.isArray(body?.media) ? body.media : []),
+    JSON.stringify(inlineHashtags),
+    JSON.stringify(allTags),
+    location, replyTo, reactionsDefault
+  ).run();
+
+  const newId = result.meta?.last_row_id;
+
+  /* Increment reply_count on parent */
+  if (replyTo) {
+    await env.DB.prepare('UPDATE social_posts SET reply_count = reply_count + 1 WHERE id = ?').bind(replyTo).run();
+  }
+
+  const newPost = await env.DB.prepare('SELECT * FROM social_posts WHERE id = ?').bind(newId).first();
+  return json(hydrateSocialPost(newPost), { status: 201 });
+});
+
+/* Public: react to a post */
+router.post('/api/blog/posts/:id/react', async (request, env) => {
+  const id       = parseInt(request.params.id);
+  const body     = await request.json();
+  const reaction = (body?.reaction || '').toLowerCase();
+  const remove   = !!body?.remove;
+  const VALID    = ['like', 'love', 'fire', 'clap'];
+  if (!VALID.includes(reaction)) return error(400, 'Invalid reaction');
+
+  const post = await env.DB.prepare('SELECT reactions FROM social_posts WHERE id = ?').bind(id).first();
+  if (!post) return error(404, 'Post not found');
+
+  const reactions = safeParseReactions(post.reactions);
+  if (remove) {
+    reactions[reaction] = Math.max(0, (reactions[reaction] || 0) - 1);
+  } else {
+    reactions[reaction] = (reactions[reaction] || 0) + 1;
+  }
+
+  await env.DB.prepare('UPDATE social_posts SET reactions = ? WHERE id = ?').bind(JSON.stringify(reactions), id).run();
+  return json({ reactions });
+});
+
+/* Admin: edit post */
+router.put('/api/blog/posts/:id', authMiddleware, async (request, env) => {
+  const id   = parseInt(request.params.id);
+  const body = await request.json();
+  const post = await env.DB.prepare('SELECT * FROM social_posts WHERE id = ?').bind(id).first();
+  if (!post) return error(404, 'Post not found');
+
+  const content  = body?.content !== undefined ? sanitizeText(body.content, 2000) : post.content;
+  const location = body?.location !== undefined ? sanitizeText(body.location, 200) : post.location;
+  const inlineHashtags = (content.match(/#(\w+)/g) || []).map(h => h.slice(1));
+  const explicitTags   = Array.isArray(body?.tags) ? body.tags.map(t => sanitizeText(t, 50)).filter(Boolean) : safeParseArr(post.tags);
+  const allTags = [...new Set([...inlineHashtags, ...explicitTags])];
+
+  await env.DB.prepare(
+    'UPDATE social_posts SET content=?, location=?, hashtags=?, tags=?, media=?, updated_at=datetime(\'now\') WHERE id=?'
+  ).bind(
+    content, location,
+    JSON.stringify(inlineHashtags),
+    JSON.stringify(allTags),
+    body?.media !== undefined ? JSON.stringify(body.media) : post.media,
+    id
+  ).run();
+
+  await writeAuditLog(env, 'update', 'social_post', String(id), content.slice(0, 80));
+  const updated = await env.DB.prepare('SELECT * FROM social_posts WHERE id = ?').bind(id).first();
+  return json(hydrateSocialPost(updated));
+});
+
+/* Admin: delete post */
+router.delete('/api/blog/posts/:id', authMiddleware, async (request, env) => {
+  const id = parseInt(request.params.id);
+  const post = await env.DB.prepare('SELECT * FROM social_posts WHERE id = ?').bind(id).first();
+  if (!post) return error(404, 'Post not found');
+  /* Delete replies too */
+  await env.DB.prepare('DELETE FROM social_posts WHERE reply_to = ?').bind(id).run();
+  await env.DB.prepare('DELETE FROM social_posts WHERE id = ?').bind(id).run();
+  /* Decrement parent reply_count if this was a reply */
+  if (post.reply_to) {
+    await env.DB.prepare('UPDATE social_posts SET reply_count = MAX(0, reply_count - 1) WHERE id = ?').bind(post.reply_to).run();
+  }
+  await writeAuditLog(env, 'delete', 'social_post', String(id), (post.content || '').slice(0, 80));
+  return json({ ok: true });
+});
+
+/* Admin: pin / unpin post */
+router.put('/api/blog/posts/:id/pin', authMiddleware, async (request, env) => {
+  const id   = parseInt(request.params.id);
+  const body = await request.json();
+  const pinned = body?.pinned ? 1 : 0;
+  await env.DB.prepare('UPDATE social_posts SET pinned = ? WHERE id = ?').bind(pinned, id).run();
+  return json({ ok: true, pinned });
+});
+
+/* Admin: feature / unfeature post */
+router.put('/api/blog/posts/:id/feature', authMiddleware, async (request, env) => {
+  const id   = parseInt(request.params.id);
+  const body = await request.json();
+  const featured = body?.featured ? 1 : 0;
+  await env.DB.prepare('UPDATE social_posts SET featured = ? WHERE id = ?').bind(featured, id).run();
+  return json({ ok: true, featured });
+});
+
+/* Admin: list all posts (including unpublished/replies) */
+router.get('/api/admin/blog/posts', authMiddleware, async (request, env) => {
+  const page   = Math.max(1, parseInt(request.query?.page  || '1'));
+  const limit  = Math.min(100, Math.max(1, parseInt(request.query?.limit || '20')));
+  const search = (request.query?.search || '').trim().slice(0, 200);
+  const tag    = (request.query?.tag || '').trim().slice(0, 64);
+  const from   = (request.query?.from || '').trim().slice(0, 20);
+  const to     = (request.query?.to   || '').trim().slice(0, 20);
+  const offset = (page - 1) * limit;
+
+  let where = 'WHERE reply_to IS NULL';
+  const binds = [];
+  if (search) { where += ' AND content LIKE ?'; binds.push('%' + search + '%'); }
+  if (tag)    { const p = '%"' + tag.replace(/"/g, '') + '"%'; where += ' AND (tags LIKE ? OR hashtags LIKE ?)'; binds.push(p, p); }
+  if (from)   { where += ' AND created_at >= ?'; binds.push(from); }
+  if (to)     { where += ' AND created_at <= ?'; binds.push(to + 'T23:59:59'); }
+
+  const [countRow, { results }] = await Promise.all([
+    env.DB.prepare('SELECT COUNT(*) as cnt FROM social_posts ' + where).bind(...binds).first(),
+    env.DB.prepare('SELECT * FROM social_posts ' + where + ' ORDER BY created_at DESC LIMIT ? OFFSET ?').bind(...binds, limit, offset).all(),
+  ]);
+  return json({ posts: results.map(hydrateSocialPost), total: countRow?.cnt || 0, page, limit });
+});
+
+/* Portfolio sync: returns social posts whose tags match portfolio section mapping */
+router.get('/api/portfolio/sync', async (request, env) => {
+  const TAG_MAP = {
+    project:     'projects',
+    achievement: 'achievements',
+    gallery:     'gallery',
+    media:       'media',
+  };
+  const { results } = await env.DB.prepare(
+    'SELECT * FROM social_posts WHERE reply_to IS NULL ORDER BY created_at DESC LIMIT 200'
+  ).all();
+
+  const synced = {};
+  Object.keys(TAG_MAP).forEach(tag => { synced[TAG_MAP[tag]] = []; });
+
+  results.forEach(row => {
+    const post = hydrateSocialPost(row);
+    const allTags = [...post.tags, ...post.hashtags];
+    allTags.forEach(t => {
+      const section = TAG_MAP[t.toLowerCase()];
+      if (section && post.media.length) {
+        synced[section].push(post);
+      }
+    });
+  });
+
+  return json({ synced, tag_map: TAG_MAP });
 });
 
 // ────────────────────────────────────────────────────────────

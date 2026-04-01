@@ -31,6 +31,25 @@ function esc(s) {
     return d.innerHTML;
 }
 
+/* ── Avatar ring SVG sync ──────────────────────────────────── */
+/* Keeps the SVG border stroke on the same path as the CSS clip-path.
+   The viewBox is 0 0 100 100.  Each polygon uses the same percentage
+   values as the corresponding clip-path rule in stylessheet.css. */
+var _AVATAR_RING_PATHS = {
+    hexagon: 'M50,0 L95,25 L95,75 L50,100 L5,75 L5,25 Z',
+    circle:  'M50,0 A50,50 0 1,0 50,100 A50,50 0 1,0 50,0 Z',
+    square:  'M0,0 L100,0 L100,100 L0,100 Z',
+    rounded: 'M20,0 Q0,0 0,20 L0,80 Q0,100 20,100 L80,100 Q100,100 100,80 L100,20 Q100,0 80,0 Z',
+    diamond: 'M50,0 L100,50 L50,100 L0,50 Z',
+    shield:  'M50,0 L100,20 L100,80 L50,100 L0,80 L0,20 Z',
+};
+function updateAvatarRing(shape) {
+    var pathEl = document.getElementById('avatarRingPath');
+    if (!pathEl) return;
+    var d = _AVATAR_RING_PATHS[shape] || _AVATAR_RING_PATHS.hexagon;
+    pathEl.setAttribute('d', d);
+}
+
 /* ── PAGE VIEW TRACKING ──────────────────────────────────── */
 (function() {
     var API_BASE = 'https://carlo-portfolio-api.johncarloebora.workers.dev';
@@ -106,8 +125,11 @@ function applySiteConfig(cfg) {
                 frame.classList.add('shape-' + s.profileShape);
             }
         }
-        // Set data attribute on wrapper for CSS :has() ring matching
+        // Set data attribute on wrapper
         if (avatar) avatar.setAttribute('data-shape', s.profileShape);
+        // Sync SVG ring path to exactly match the active clip-path shape.
+        // Both the clip and the stroke use the same coordinate set — pixel-perfect alignment.
+        updateAvatarRing(s.profileShape);
     }
 
     /* ── Nav links ── */
@@ -487,22 +509,7 @@ function applySiteConfig(cfg) {
         }
     }
 
-    /* ── Blog ── */
-    if (cfg.blog && cfg.blog.length) {
-        var blogGrid = document.getElementById('blogGrid');
-        if (blogGrid) {
-            blogGrid.innerHTML = cfg.blog.map(function(p) {
-                var tags = Array.isArray(p.tags) ? p.tags : [];
-                return '<article class="blog-card" role="listitem">' +
-                    (p.cover_image ? '<div class="blog-cover"><img src="' + esc(p.cover_image) + '" alt="' + esc(p.title) + '" loading="lazy"></div>' : '') +
-                    '<div class="blog-content">' +
-                    (tags.length ? '<div class="blog-tags">' + tags.map(function(t) { return '<span class="tag-chip">' + esc(t) + '</span>'; }).join('') + '</div>' : '') +
-                    '<h3 class="blog-title">' + esc(p.title || '') + '</h3>' +
-                    (p.excerpt ? '<p class="blog-excerpt">' + esc(p.excerpt) + '</p>' : '') +
-                    '</div></article>';
-            }).join('');
-        }
-    }
+    /* Blog moved to /blog — no longer rendered in portfolio */
 
     /* ── Resume (from experiences + education) ── */
     var resumeContent = document.getElementById('resumeContent');
@@ -565,7 +572,6 @@ function applySiteConfig(cfg) {
             testimonials:   cfg.testimonials,
             certifications: cfg.certifications,
             achievements:   cfg.achievements,
-            blog:           cfg.blog,
         };
         Object.keys(dataMap).forEach(function(id) {
             var data = dataMap[id];
@@ -596,7 +602,79 @@ function applySiteConfig(cfg) {
 
     /* Re-init animations on new elements */
     reinitAfterConfig();
+
+    /* Tag-based blog→portfolio sync (non-blocking, fires after config) */
+    applySocialSync();
 }
+
+/* ── TAG-BASED BLOG SYNC ──────────────────────────────────── */
+/* Pulls social posts tagged "project", "achievement", "gallery", "media"
+   and appends their media to the matching portfolio sections.
+   Runs silently — any failure is non-fatal. */
+(function() {
+    var API_SYNC = 'https://carlo-portfolio-api.johncarloebora.workers.dev/api/portfolio/sync';
+    var _syncDone = false;
+
+    window.applySocialSync = function() {
+        if (_syncDone) return;
+        _syncDone = true;
+        fetch(API_SYNC, { cache: 'no-store' })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                var synced = data.synced || {};
+                /* Achievements */
+                if (synced.achievements && synced.achievements.length) {
+                    injectSyncedBadges('achievementsGrid', synced.achievements);
+                }
+                /* Gallery / media — inject into media section if it has a container */
+                if (synced.gallery && synced.gallery.length) {
+                    injectSyncedMedia('galleryGrid', synced.gallery);
+                }
+                if (synced.media && synced.media.length) {
+                    injectSyncedMedia('mediaGrid', synced.media);
+                }
+            })
+            .catch(function() { /* silent — blog may not have matching posts */ });
+    };
+
+    function injectSyncedBadges(containerId, posts) {
+        var grid = document.getElementById(containerId);
+        if (!grid) return;
+        posts.forEach(function(post) {
+            /* Avoid duplicating if already present */
+            if (document.getElementById('synced-' + post.id)) return;
+            var media = Array.isArray(post.media) ? post.media : [];
+            if (!media.length) return;
+            var el = document.createElement('div');
+            el.className = 'achievement-card card';
+            el.id = 'synced-' + post.id;
+            el.setAttribute('data-synced-blog', '1');
+            el.innerHTML = '<div class="achievement-icon"><i class="fas fa-star"></i></div>' +
+                '<div class="achievement-content">' +
+                '<h4>' + esc((post.content || '').slice(0, 80)) + '</h4>' +
+                (media[0] ? '<img src="' + esc(media[0].url) + '" alt="" loading="lazy" style="margin-top:8px;border-radius:8px;max-height:140px;object-fit:cover;width:100%">' : '') +
+                '</div>';
+            grid.appendChild(el);
+        });
+    }
+
+    function injectSyncedMedia(containerId, posts) {
+        var grid = document.getElementById(containerId);
+        if (!grid) return;
+        posts.forEach(function(post) {
+            if (document.getElementById('synced-' + post.id)) return;
+            var media = Array.isArray(post.media) ? post.media : [];
+            media.forEach(function(m, i) {
+                var el = document.createElement('div');
+                el.className = 'media-item card';
+                el.id = i === 0 ? 'synced-' + post.id : 'synced-' + post.id + '-' + i;
+                el.setAttribute('data-synced-blog', '1');
+                el.innerHTML = '<img src="' + esc(m.url) + '" alt="' + esc(m.alt || '') + '" loading="lazy" style="width:100%;border-radius:8px">';
+                grid.appendChild(el);
+            });
+        });
+    }
+})();
 
 /* ── PROJECT FILTER SYSTEM ─────────────────────────────────── */
 (function() {
@@ -747,7 +825,7 @@ function applySiteConfig(cfg) {
         } else if (isWebpage) {
             overlayIcon = proj.preview_mode === 'static' ? 'fas fa-image' : 'fas fa-globe';
             overlayText = proj.preview_mode === 'static' ? 'View Screenshot' : 'Live Preview';
-            dataAttr = 'data-webpage-url="' + esc(proj.webpage_url || '') + '" data-webpage-title="' + esc(proj.title) + '" data-webpage-device="' + esc(proj.wp_device || 'full') + '" data-webpage-interaction="' + (proj.wp_allow_interaction !== 0 ? '1' : '0') + '" data-preview-mode="' + esc(proj.preview_mode || 'live') + '" style="cursor:pointer"';
+            dataAttr = 'data-webpage-url="' + esc(proj.webpage_url || '') + '" data-webpage-title="' + esc(proj.title) + '" data-webpage-device="' + esc(proj.wp_device || 'full') + '" data-webpage-interaction="' + (proj.wp_allow_interaction !== 0 ? '1' : '0') + '" data-preview-mode="' + esc(proj.preview_mode || 'live') + '" data-wp-timeout="' + (parseInt(proj.wp_timeout) || 30) + '" style="cursor:pointer"';
         } else if (hasGallery) {
             overlayIcon = 'fas fa-images'; overlayText = 'View Gallery';
             dataAttr = 'data-gallery-folder="' + esc(proj.gallery_folder) + '"';
@@ -1989,14 +2067,15 @@ document.addEventListener('DOMContentLoaded', () => {
         lockScroll();
         hideNav();
         applyDeviceSimulation();
-        /* X-Frame timeout (8s) */
+        /* X-Frame timeout — uses per-project wp_timeout (default 30s, min 5s) */
+        var timeoutMs = Math.max(5, (projConfig && projConfig.wp_timeout) ? parseInt(projConfig.wp_timeout) : 30) * 1000;
         if (_wpLoadTimeout) clearTimeout(_wpLoadTimeout);
         _wpLoadTimeout = setTimeout(function() {
             if (webpageFrame && webpageFrame.style.opacity === '0') {
                 if (webpageLoading) webpageLoading.style.display = 'none';
                 if (webpageError)   webpageError.style.display   = '';
             }
-        }, 8000);
+        }, timeoutMs);
         webpageFrame.onload = function() {
             clearTimeout(_wpLoadTimeout);
             if (webpageLoading) webpageLoading.style.display = 'none';
@@ -2030,6 +2109,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 openWebpageModal(thumb.dataset.webpageUrl, thumb.dataset.webpageTitle, {
                     wp_device:            thumb.dataset.webpageDevice || 'full',
                     wp_allow_interaction: thumb.dataset.webpageInteraction !== '0',
+                    wp_timeout:           parseInt(thumb.dataset.wpTimeout) || 30,
                 });
             });
         });
@@ -2408,6 +2488,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ],
         };
         var sentence = '', started = false, startTime = 0, finished = false, difficulty = 'normal';
+        var timerInterval = null;
 
         function pickSentence() {
             var pool = SENTENCES[difficulty] || SENTENCES.normal;
@@ -2431,7 +2512,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 '<div class="mg-typing-status" id="mgTypingStatus"></div>' +
                 '</div></div>';
             var inp = document.getElementById('mgTypingInput');
-            var timerInterval = null;
+            timerInterval = null;
             if (inp) {
                 inp.addEventListener('input', function() {
                     if (finished) return;
@@ -2499,7 +2580,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         window.typingGame_reset = render;
-        return { init: render, reset: render };
+        return { init: render, reset: render, destroy: function() { clearInterval(timerInterval); timerInterval = null; finished = true; } };
     })();
 
     /* ── CLICK SPEED TEST ── */
@@ -2687,7 +2768,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         window.memoryGame_reset = render;
-        return { init: render, reset: render };
+        return { init: render, reset: render, destroy: function() { flipLock = false; running = false; } };
     })();
 
     /* ── AIM TRAINER GAME ── */
@@ -2825,14 +2906,40 @@ document.addEventListener('DOMContentLoaded', () => {
             { q: 'What comes next: 1, 3, 7, 15, 31, ?', a: '63', hint: '2n+1 pattern' },
             { q: 'What comes next: 2, 3, 5, 7, 11, ?', a: '13', hint: 'Prime numbers' },
             { q: 'What comes next: 0, 1, 4, 9, 16, ?', a: '25', hint: 'n squared (0-based)' },
+            { q: 'What comes next: 1, 2, 4, 7, 11, ?', a: '16', hint: 'Add 1, 2, 3, 4, 5…' },
+            { q: 'What comes next: 5, 10, 20, 40, ?', a: '80', hint: 'Multiply by 2' },
+            { q: 'What comes next: 81, 27, 9, 3, ?', a: '1', hint: 'Divide by 3 each time' },
+            { q: 'What comes next: 1, 8, 27, 64, ?', a: '125', hint: 'Cubed numbers' },
+            { q: 'What comes next: 10, 9, 7, 4, 0, ?', a: '-5', hint: 'Subtract 1, 2, 3, 4, 5…' },
+            { q: 'What comes next: 2, 6, 12, 20, 30, ?', a: '42', hint: 'n×(n+1)' },
+            { q: 'What comes next: 1, 5, 14, 30, 55, ?', a: '91', hint: 'Sum of squares' },
+            { q: 'What comes next: 3, 5, 8, 13, 21, ?', a: '34', hint: 'Each = sum of prior two' },
+            { q: 'What comes next: 4, 8, 16, 32, 64, ?', a: '128', hint: 'Powers of 2' },
+            { q: 'What comes next: 1, 3, 6, 10, 15, ?', a: '21', hint: 'Triangular numbers' },
+            { q: 'What comes next: 7, 14, 21, 28, ?', a: '35', hint: 'Multiples of 7' },
+            { q: 'What comes next: 256, 64, 16, 4, ?', a: '1', hint: 'Divide by 4 each time' },
         ];
+        /* Seen-set so questions don't repeat until the full pool is exhausted */
+        var _seen = [];
         var DIFF_TOTALS = { easy: 3, normal: 5, hard: 8 };
         var difficulty = 'normal';
         var idx = 0, correct = 0, count = 0, total = 5;
+        var logicTimer = null;
+
+        function _nextIdx() {
+            if (_seen.length >= PUZZLES.length) _seen = [];
+            var pool = [];
+            for (var i = 0; i < PUZZLES.length; i++) {
+                if (_seen.indexOf(i) === -1) pool.push(i);
+            }
+            var pick = pool[Math.floor(Math.random() * pool.length)];
+            _seen.push(pick);
+            return pick;
+        }
 
         function render() {
             total = DIFF_TOTALS[difficulty] || 5;
-            idx = Math.floor(Math.random() * PUZZLES.length);
+            idx = _nextIdx();
             correct = 0;
             count = 0;
             var high = getHigh('logic_score');
@@ -2865,7 +2972,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         function loadPuzzle() {
-            var p = PUZZLES[idx % PUZZLES.length];
+            var p = PUZZLES[idx];
             var qEl = document.getElementById('mgLQ');
             var aEl = document.getElementById('mgLAns');
             var prog = document.getElementById('mgLProgress');
@@ -2878,7 +2985,7 @@ document.addEventListener('DOMContentLoaded', () => {
             var aEl = document.getElementById('mgLAns');
             var fb  = document.getElementById('mgLFb');
             if (!aEl || !fb) return;
-            var p   = PUZZLES[idx % PUZZLES.length];
+            var p   = PUZZLES[idx];
             var ans = aEl.value.trim().replace(/\s/g,'');
             if (ans.toLowerCase() === p.a.toLowerCase()) {
                 correct++;
@@ -2896,18 +3003,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     (isRec ? '<div class="mg-new-record" style="text-align:center;margin-bottom:12px">🏆 New Record!</div>' : '') +
                     '<div style="text-align:center"><button class="cta-button primary" onclick="logicGame_reset()" style="padding:8px 24px;font-size:0.85rem">Play Again</button></div></div>';
             } else {
-                idx = (idx + 1) % PUZZLES.length;
-                setTimeout(loadPuzzle, 900);
+                idx = _nextIdx();
+                logicTimer = setTimeout(loadPuzzle, 900);
             }
         };
 
         window.logicGame_reset = function() { render(); };
-        return { init: render, reset: render };
+        return { init: render, reset: render, destroy: function() { clearTimeout(logicTimer); logicTimer = null; } };
     })();
 
     /* ── Tech Quiz Game ── */
     var quizGame = (function() {
-        var QS = [
+        /* Built-in fallback questions */
+        var QS_FALLBACK = [
             { q: 'What does CSS stand for?', a: 1, opts: ['Computer Style Sheets','Cascading Style Sheets','Colorful Style Sheets','Coded Style Sheets'] },
             { q: 'Which language runs in the browser natively?', a: 2, opts: ['Python','Java','JavaScript','C++'] },
             { q: 'What does HTTP stand for?', a: 0, opts: ['HyperText Transfer Protocol','High Text Transfer Protocol','HyperText Transmission Process','Hyper Transfer Text Protocol'] },
@@ -2918,16 +3026,55 @@ document.addEventListener('DOMContentLoaded', () => {
             { q: 'Which protocol secures HTTPS?', a: 3, opts: ['FTP','SSH','HTTP','TLS/SSL'] },
             { q: 'What is a CDN?', a: 1, opts: ['Code Delivery Network','Content Delivery Network','Central Data Node','Coded Data Network'] },
             { q: 'What does DOM stand for?', a: 0, opts: ['Document Object Model','Data Object Module','Document Order Map','Dynamic Object Module'] },
+            { q: 'Which CSS property controls element stacking order?', a: 2, opts: ['display','position','z-index','overflow'] },
+            { q: 'What does JSON stand for?', a: 1, opts: ['Java Serialized Object Notation','JavaScript Object Notation','Java Standard Output Notation','JavaScript Online Notation'] },
+            { q: 'Which git command stages all changed files?', a: 3, opts: ['git commit','git push','git status','git add .'] },
+            { q: 'What is the output of typeof null in JavaScript?', a: 0, opts: ['object','null','undefined','boolean'] },
+            { q: 'Which HTTP method is idempotent and used to update a resource?', a: 1, opts: ['POST','PUT','PATCH','DELETE'] },
         ];
         var DIFF_TOTALS = { easy: 3, normal: 5, hard: 10 };
         var difficulty = 'normal';
         var qi = 0, correct = 0, total = 5, shuffled = [];
+        var quizTimer = null;
+        /* Question cache: keyed by difficulty, expires after 10 minutes */
+        var _cache = {};
+
+        function _decodeHtml(str) {
+            try { var d = document.createElement('div'); d.innerHTML = str; return d.textContent || str; }
+            catch(e) { return str; }
+        }
+
+        function _fetchQuestions(count, cb) {
+            var now = Date.now();
+            var cached = _cache[difficulty];
+            if (cached && now - cached.ts < 600000 && cached.qs.length >= count) {
+                return cb(null, cached.qs.slice().sort(function() { return Math.random() - 0.5; }).slice(0, count));
+            }
+            fetch('https://opentdb.com/api.php?amount=15&type=multiple', { cache: 'no-store' })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (!data.results || !data.results.length) throw new Error('empty');
+                    var mapped = data.results.map(function(item) {
+                        var opts = item.incorrect_answers.map(_decodeHtml).concat([_decodeHtml(item.correct_answer)]);
+                        opts = opts.sort(function() { return Math.random() - 0.5; });
+                        return { q: _decodeHtml(item.question), a: opts.indexOf(_decodeHtml(item.correct_answer)), opts: opts };
+                    });
+                    _cache[difficulty] = { ts: Date.now(), qs: mapped };
+                    cb(null, mapped.slice(0, count));
+                })
+                .catch(function() {
+                    cb(null, QS_FALLBACK.slice().sort(function() { return Math.random() - 0.5; }).slice(0, count));
+                });
+        }
 
         function render() {
             total = DIFF_TOTALS[difficulty] || 5;
-            shuffled = QS.slice().sort(function() { return Math.random() - 0.5; }).slice(0, total);
             qi = 0; correct = 0;
-            showQ();
+            arena.innerHTML = '<div class="mg-game-shell"><div style="text-align:center;padding:32px;color:var(--text-muted)">Loading questions…</div></div>';
+            _fetchQuestions(total, function(err, qs) {
+                shuffled = qs;
+                showQ();
+            });
         }
 
         function showQ() {
@@ -2977,7 +3124,7 @@ document.addEventListener('DOMContentLoaded', () => {
             qi++;
             if (qi >= total) {
                 var isRec = setHigh('quiz_score', correct);
-                setTimeout(function() {
+                quizTimer = setTimeout(function() {
                     arena.innerHTML = '<div class="mg-game-shell"><div class="mg-result-summary">' +
                         '<div class="mg-result-stat"><span class="mg-result-big">' + correct + '/' + total + '</span><span class="mg-result-unit">Correct</span></div>' +
                         '</div>' +
@@ -2985,12 +3132,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         '<div style="text-align:center"><button class="cta-button primary" onclick="quizGame_reset()" style="padding:8px 24px;font-size:0.85rem">Play Again</button></div></div>';
                 }, 1200);
             } else {
-                setTimeout(showQ, 1200);
+                quizTimer = setTimeout(showQ, 1200);
             }
         };
 
         window.quizGame_reset = function() { render(); };
-        return { init: render, reset: render };
+        return { init: render, reset: render, destroy: function() { clearTimeout(quizTimer); quizTimer = null; } };
     })();
 
     /* ── Tab switching ── */

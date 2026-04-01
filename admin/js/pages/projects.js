@@ -226,6 +226,15 @@ async function openProjectModal(proj = null) {
                 <input type="number" class="form-input" id="modalSortOrder" value="${proj?.sort_order ?? 99}" min="0" max="999">
                 <div class="field-hint"><i class="fas fa-info-circle"></i>Lower = appears first</div>
             </div>
+            <div class="form-group" style="flex:0 0 130px">
+                <label>Priority</label>
+                <select class="form-input" id="modalPriority">
+                    <option value="0" ${(!proj?.priority || proj?.priority == 0) ? 'selected' : ''}>Normal</option>
+                    <option value="1" ${proj?.priority == 1 ? 'selected' : ''}>High</option>
+                    <option value="2" ${proj?.priority == 2 ? 'selected' : ''}>Urgent</option>
+                </select>
+                <div class="field-hint"><i class="fas fa-info-circle"></i>Affects sort tie-breaking</div>
+            </div>
         </div>
         <div class="form-group">
             <label>Description <span style="font-size:0.72rem;color:var(--muted)">— shown below the card</span></label>
@@ -265,6 +274,16 @@ async function openProjectModal(proj = null) {
                     <option value="webpage"           ${proj?.category === 'webpage'                               ? 'selected' : ''}>Webpage Projects</option>
                 </select>
                 <div class="field-hint"><i class="fas fa-info-circle"></i>Used for portfolio filtering.</div>
+            </div>
+            <div class="form-group">
+                <label>Layout Type</label>
+                <select class="form-input" id="modalLayoutType">
+                    <option value="card"     ${(!proj?.layout_type || proj?.layout_type === 'card')     ? 'selected' : ''}>Card — standard grid card</option>
+                    <option value="wide"     ${proj?.layout_type === 'wide'                              ? 'selected' : ''}>Wide — full-row featured card</option>
+                    <option value="minimal"  ${proj?.layout_type === 'minimal'                           ? 'selected' : ''}>Minimal — compact text card</option>
+                    <option value="showcase" ${proj?.layout_type === 'showcase'                          ? 'selected' : ''}>Showcase — large hero card</option>
+                </select>
+                <div class="field-hint"><i class="fas fa-info-circle"></i>Controls how this project renders in the portfolio grid.</div>
             </div>
             <div class="form-group">
                 <label>Status</label>
@@ -466,7 +485,9 @@ async function openProjectModal(proj = null) {
         zoom_level:           galleryType === 'webpage' ? (parseFloat(document.getElementById('modalZoomLevel')?.value) || 1.0) : null,
         wp_timeout:           galleryType === 'webpage' ? (parseInt(document.getElementById('modalWpTimeout')?.value) || 30) : null,
         category:       document.getElementById('modalCategory').value || 'standard',
+        layout_type:    document.getElementById('modalLayoutType').value || 'card',
         status:         document.getElementById('modalStatus').value || 'published',
+        priority:       parseInt(document.getElementById('modalPriority').value) || 0,
         featured:       document.getElementById('modalFeatured').checked ? 1 : 0,
         visibility:     document.getElementById('modalVisibility').checked ? 1 : 0,
         tags:           JSON.stringify(newTags),

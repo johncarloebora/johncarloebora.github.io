@@ -77,7 +77,7 @@ const router = {
             projects: 'Projects', socials: 'Social Links', contact: 'Contact Settings',
             sections: 'Section Manager', media: 'Media Library',
             settings: 'Settings', password: 'Change Password',
-            blog: 'Blog Posts', testimonials: 'Testimonials', certifications: 'Certifications',
+            blog: 'Blog Posts', social: 'Social Posts', testimonials: 'Testimonials', certifications: 'Certifications',
             achievements: 'Achievements', 'game-settings': 'Game Settings',
             versions: 'Version History', analytics: 'Analytics',
         };

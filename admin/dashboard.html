@@ -55,6 +55,9 @@
             <a href="#blog" class="sidebar-link" data-page="blog">
                 <i class="fas fa-newspaper"></i><span>Blog</span>
             </a>
+            <a href="#social" class="sidebar-link" data-page="social">
+                <i class="fas fa-comments"></i><span>Social Posts</span>
+            </a>
             <a href="#testimonials" class="sidebar-link" data-page="testimonials">
                 <i class="fas fa-comments"></i><span>Testimonials</span>
             </a>
@@ -312,6 +315,23 @@
             <div id="blogEditor"></div>
         </div>
 
+        <!-- Social Posts Page -->
+        <div class="page" id="page-social">
+            <div class="page-header">
+                <h1>Social Posts</h1>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                    <input type="text" id="socialSearch" class="input-sm" placeholder="Search posts…" style="width:200px">
+                    <select id="socialTagFilter" class="input-sm" style="width:140px">
+                        <option value="">All tags</option>
+                    </select>
+                    <button class="btn btn-primary btn-sm" id="addSocialPost"><i class="fas fa-plus"></i> New Post</button>
+                    <a href="../blog/" target="_blank" class="btn btn-secondary btn-sm"><i class="fas fa-external-link-alt"></i> View Blog</a>
+                </div>
+            </div>
+            <div id="socialPostEditor" style="display:none;margin-bottom:20px"></div>
+            <div id="socialPostsList"></div>
+        </div>
+
         <!-- Testimonials Page -->
         <div class="page" id="page-testimonials">
             <div class="page-header">
@@ -431,6 +451,7 @@
     <script src="js/pages/settings.js"></script>
     <script src="js/pages/password.js"></script>
     <script src="js/pages/blog.js"></script>
+    <script src="js/pages/social.js"></script>
     <script src="js/pages/testimonials.js"></script>
     <script src="js/pages/certifications.js"></script>
     <script src="js/pages/achievements.js"></script>

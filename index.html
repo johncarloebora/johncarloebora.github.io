@@ -100,6 +100,13 @@
                 </div>
             </div>
             <div class="hero-avatar">
+                <!-- SVG ring drawn with the exact same path as the avatar clip-path.
+                     JS keeps both in sync via updateAvatarRing() when shape changes. -->
+                <svg class="avatar-ring-svg" id="avatarRingSvg" aria-hidden="true"
+                     viewBox="0 0 100 100" preserveAspectRatio="none">
+                    <path class="avatar-ring-path" id="avatarRingPath"
+                          d="M50,0 L95,25 L95,75 L50,100 L5,75 L5,25 Z"/>
+                </svg>
                 <div class="avatar-frame" id="avatarFrame">
                     <img class="hero-photo" id="heroPhoto"
                          src=""
@@ -831,17 +838,6 @@
             <h2 class="section-title" data-scramble="Achievements">Achievements</h2>
             <p class="section-intro" id="achievementsSubtitle"></p>
             <div class="achievements-grid" id="achievementsGrid" role="list" aria-label="Achievements">
-                <!-- Populated by JS -->
-            </div>
-        </div>
-    </section>
-
-    <!-- Blog Section (hidden by default) -->
-    <section id="blog" style="display:none" aria-hidden="true">
-        <div class="container">
-            <h2 class="section-title" data-scramble="Blog">Blog</h2>
-            <p class="section-intro" id="blogSubtitle"></p>
-            <div class="blog-grid" id="blogGrid" role="list" aria-label="Blog posts">
                 <!-- Populated by JS -->
             </div>
         </div>
