@@ -15,7 +15,7 @@ function getToken() {
 
 (function checkAuth() {
   if (!getToken()) {
-    window.location.href = '../index.html';
+    window.location.href = 'login.html';
   }
 })();
 
@@ -23,7 +23,7 @@ function getToken() {
 const API = {
   async request(path, opts = {}) {
     const token = getToken();
-    if (!token) { window.location.href = '../index.html'; throw new Error('Not authenticated'); }
+    if (!token) { window.location.href = 'login.html'; throw new Error('Not authenticated'); }
 
     const headers = { ...opts.headers };
     if (token) headers['Authorization'] = 'Bearer ' + token;
@@ -45,7 +45,7 @@ const API = {
 
     if (res.status === 401) {
       sessionStorage.removeItem('admin_token');
-      window.location.href = '../index.html';
+      window.location.href = 'login.html';
       throw new Error('Session expired');
     }
 
