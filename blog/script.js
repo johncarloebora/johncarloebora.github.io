@@ -56,12 +56,12 @@ function toast(msg, type) {
 }
 
 function authHeaders() {
-  var token = localStorage.getItem('admin_jwt') || sessionStorage.getItem('admin_jwt') || '';
+  var token = sessionStorage.getItem('admin_token') || localStorage.getItem('admin_jwt') || '';
   return token ? { 'Authorization': 'Bearer ' + token } : {};
 }
 
 function checkAdmin() {
-  var token = localStorage.getItem('admin_jwt') || sessionStorage.getItem('admin_jwt') || '';
+  var token = sessionStorage.getItem('admin_token') || localStorage.getItem('admin_jwt') || '';
   _state.isAdmin = !!token;
   var composeBtn = document.getElementById('composeBtn');
   var adminLink  = document.getElementById('adminLink');
@@ -195,7 +195,7 @@ function uploadBlogMedia(file, onProgress) {
       _state.uploadAbort = function() { xhr.abort(); };
 
       xhr.open('POST', API + '/api/blog/media/upload');
-      var token = localStorage.getItem('admin_jwt') || sessionStorage.getItem('admin_jwt') || '';
+      var token = sessionStorage.getItem('admin_token') || localStorage.getItem('admin_jwt') || '';
       if (token) xhr.setRequestHeader('Authorization', 'Bearer ' + token);
 
       if (onProgress) {

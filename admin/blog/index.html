@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blog Admin — Carlo Ebora</title>
+  <link rel="icon" href="../../favicon.ico">
+  <link rel="stylesheet" href="../css/admin.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+</head>
+<body>
+
+<!-- ── Top Nav ──────────────────────────────────────────── -->
+<header class="ba-nav">
+  <div class="ba-nav-left">
+    <button class="ba-hamburger" id="sidebarToggle"><i class="fas fa-bars"></i></button>
+    <a href="../../" class="ba-logo"><span class="ba-logo-icon">◈</span> Blog Admin</a>
+  </div>
+  <div class="ba-nav-right">
+    <a href="../../blog/" target="_blank" class="btn btn-secondary btn-sm"><i class="fas fa-external-link-alt"></i> Live Blog</a>
+    <a href="../dashboard.html" class="btn btn-secondary btn-sm"><i class="fas fa-briefcase"></i> Portfolio Admin</a>
+    <button id="logoutBtn" class="btn btn-secondary btn-sm"><i class="fas fa-sign-out-alt"></i> Logout</button>
+  </div>
+</header>
+
+<!-- ── Layout ────────────────────────────────────────────── -->
+<div class="ba-layout">
+
+  <!-- Sidebar -->
+  <aside class="ba-sidebar" id="baSidebar">
+    <nav class="ba-sidebar-nav">
+      <a href="#posts" class="ba-nav-link active" data-view="posts">
+        <i class="fas fa-newspaper"></i><span>Posts</span>
+      </a>
+      <a href="#media" class="ba-nav-link" data-view="media">
+        <i class="fas fa-photo-video"></i><span>Media Library</span>
+      </a>
+      <a href="#sync" class="ba-nav-link" data-view="sync">
+        <i class="fas fa-sync-alt"></i><span>Portfolio Sync</span>
+      </a>
+    </nav>
+    <div class="ba-sidebar-footer">
+      <div class="ba-sidebar-stat" id="sidebarStats">
+        <div class="ba-stat"><span id="stTotalPosts">—</span><label>Posts</label></div>
+        <div class="ba-stat"><span id="stTotalMedia">—</span><label>Media</label></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="ba-main" id="baMain">
+
+    <!-- ── POSTS VIEW ──────────────────────────────────────── -->
+    <section class="ba-view active" id="view-posts">
+      <div class="ba-view-header">
+        <div>
+          <h1 class="ba-view-title">Blog Posts</h1>
+          <p class="ba-view-sub">Create and manage all social blog posts</p>
+        </div>
+        <button class="btn btn-primary" id="newPostBtn"><i class="fas fa-plus"></i> New Post</button>
+      </div>
+
+      <!-- Filters -->
+      <div class="ba-filters">
+        <div class="ba-search-wrap">
+          <i class="fas fa-search ba-search-icon"></i>
+          <input type="text" class="ba-input ba-search-input" id="postSearch" placeholder="Search posts…" autocomplete="off">
+        </div>
+        <select class="ba-input ba-select" id="postTagFilter">
+          <option value="">All tags</option>
+        </select>
+        <input type="date" class="ba-input ba-date" id="postDateFrom" title="From">
+        <input type="date" class="ba-input ba-date" id="postDateTo" title="To">
+        <button class="btn btn-secondary btn-sm" id="clearFiltersBtn"><i class="fas fa-times"></i> Clear</button>
+      </div>
+
+      <div id="postsList"></div>
+    </section>
+
+    <!-- ── MEDIA VIEW ──────────────────────────────────────── -->
+    <section class="ba-view" id="view-media">
+      <div class="ba-view-header">
+        <div>
+          <h1 class="ba-view-title">Media Library</h1>
+          <p class="ba-view-sub">All uploaded images, videos and GIFs stored in R2</p>
+        </div>
+        <label class="btn btn-primary" style="cursor:pointer">
+          <i class="fas fa-upload"></i> Upload
+          <input type="file" id="mediaUploadInput" accept="image/*,video/mp4,video/webm,video/quicktime" multiple style="display:none">
+        </label>
+      </div>
+
+      <!-- Upload progress -->
+      <div class="ba-upload-bar-wrap" id="mediaUploadProgress" style="display:none">
+        <div class="ba-upload-bar-track"><div class="ba-upload-bar-fill" id="mediaUploadFill"></div></div>
+        <span id="mediaUploadLabel">Uploading…</span>
+      </div>
+
+      <!-- Filters -->
+      <div class="ba-filters">
+        <div class="ba-search-wrap">
+          <i class="fas fa-search ba-search-icon"></i>
+          <input type="text" class="ba-input ba-search-input" id="mediaSearch" placeholder="Search files…">
+        </div>
+        <select class="ba-input ba-select" id="mediaTypeFilter">
+          <option value="">All types</option>
+          <option value="image">Images</option>
+          <option value="video">Videos</option>
+          <option value="gif">GIFs</option>
+        </select>
+      </div>
+
+      <div class="ba-media-grid" id="mediaGrid"></div>
+      <div id="mediaPagination" class="ba-pagination-row"></div>
+    </section>
+
+    <!-- ── SYNC VIEW ───────────────────────────────────────── -->
+    <section class="ba-view" id="view-sync">
+      <div class="ba-view-header">
+        <div>
+          <h1 class="ba-view-title">Portfolio Sync</h1>
+          <p class="ba-view-sub">Map blog post tags to portfolio sections for automatic injection</p>
+        </div>
+        <button class="btn btn-primary" id="addSyncRowBtn"><i class="fas fa-plus"></i> Add Mapping</button>
+      </div>
+
+      <div class="ba-card">
+        <div class="ba-card-body">
+          <p class="ba-help-text">
+            <i class="fas fa-info-circle"></i>
+            Posts with matching tags are automatically synced to the portfolio via <code>/api/portfolio/sync</code>.
+            The portfolio reads this config to inject blog highlights into sections.
+          </p>
+          <div id="syncRows" style="margin-top:16px"></div>
+        </div>
+        <div class="ba-card-footer">
+          <button class="btn btn-primary" id="saveSyncBtn"><i class="fas fa-save"></i> Save Config</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ── Post Editor Modal ────────────────────────────────── -->
+<div class="ba-overlay" id="editorModal" style="display:none">
+  <div class="ba-modal ba-editor-modal" role="dialog" aria-modal="true">
+    <div class="ba-modal-hd">
+      <span id="editorTitle">New Post</span>
+      <button class="ba-close-btn" id="editorClose"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="ba-modal-bd">
+      <!-- Left: Editor -->
+      <div class="ba-editor-pane">
+        <label class="ba-label">Content</label>
+        <textarea class="ba-input ba-textarea" id="edContent"
+          placeholder="What's on your mind? Use #hashtags to tag the post…"
+          maxlength="2000" rows="8"></textarea>
+        <div class="ba-editor-meta">
+          <span id="edTagPreview" class="ba-tag-preview" style="display:none"></span>
+          <span class="ba-char-count"><span id="edCharCount">0</span>/2000</span>
+        </div>
+
+        <label class="ba-label" style="margin-top:12px">Location <span class="ba-optional">(optional)</span></label>
+        <input type="text" class="ba-input" id="edLocation" placeholder="📍 Location" maxlength="100">
+
+        <!-- Media preview grid -->
+        <label class="ba-label" style="margin-top:12px">Media</label>
+        <div id="edMediaGrid" class="ba-ed-media-grid"></div>
+
+        <!-- Upload progress -->
+        <div class="ba-upload-bar-wrap" id="edUploadRow" style="display:none">
+          <div class="ba-upload-bar-track"><div class="ba-upload-bar-fill" id="edUploadBar"></div></div>
+          <span id="edUploadLabel">Uploading…</span>
+          <button class="ba-cancel-upload" id="edCancelUpload" type="button"><i class="fas fa-times"></i> Cancel</button>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="ba-ed-toolbar">
+          <label class="btn btn-secondary btn-sm" title="Images (max 4)" style="cursor:pointer">
+            <i class="fas fa-image"></i> Image
+            <input type="file" id="edImageInput" accept="image/jpeg,image/png,image/webp,image/avif" multiple style="display:none">
+          </label>
+          <label class="btn btn-secondary btn-sm" title="Video (max 20MB)" style="cursor:pointer">
+            <i class="fas fa-video"></i> Video
+            <input type="file" id="edVideoInput" accept="video/mp4,video/webm,video/quicktime" style="display:none">
+          </label>
+          <label class="btn btn-secondary btn-sm" title="GIF" style="cursor:pointer">
+            <i class="fas fa-film"></i> GIF
+            <input type="file" id="edGifInput" accept="image/gif" style="display:none">
+          </label>
+          <button class="btn btn-secondary btn-sm" id="edPickFromLibraryBtn"><i class="fas fa-folder-open"></i> Library</button>
+        </div>
+      </div>
+
+      <!-- Right: Live Preview -->
+      <div class="ba-preview-pane">
+        <div class="ba-preview-label">Live Preview</div>
+        <div class="ba-preview-card" id="edPreview">
+          <div class="ba-preview-author">
+            <img src="../../profile/Carlo.jpg" alt="Carlo" class="ba-preview-av"
+              onerror="this.src='https://ui-avatars.com/api/?name=C&background=4ecdc4&color=0d0d0d&size=36'">
+            <div>
+              <div class="ba-preview-name">Carlo Ebora</div>
+              <div class="ba-preview-time">just now</div>
+            </div>
+          </div>
+          <div class="ba-preview-text" id="edPreviewText">Your post will appear here…</div>
+          <div class="ba-preview-media" id="edPreviewMedia"></div>
+          <div class="ba-preview-tags" id="edPreviewTags"></div>
+        </div>
+      </div>
+    </div>
+    <div class="ba-modal-ft">
+      <button class="btn btn-secondary" id="edCancelBtn">Cancel</button>
+      <button class="btn btn-primary" id="edSubmitBtn"><i class="fas fa-paper-plane"></i> Publish</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Library Picker Modal ─────────────────────────────── -->
+<div class="ba-overlay" id="libPickerModal" style="display:none">
+  <div class="ba-modal" style="max-width:760px" role="dialog" aria-modal="true">
+    <div class="ba-modal-hd">
+      <span>Pick from Media Library</span>
+      <button class="ba-close-btn" id="libPickerClose"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="ba-modal-bd" style="flex-direction:column;gap:12px">
+      <div class="ba-filters">
+        <select class="ba-input ba-select" id="lpTypeFilter">
+          <option value="">All types</option>
+          <option value="image">Images</option>
+          <option value="video">Videos</option>
+          <option value="gif">GIFs</option>
+        </select>
+        <div class="ba-search-wrap" style="flex:1">
+          <i class="fas fa-search ba-search-icon"></i>
+          <input type="text" class="ba-input ba-search-input" id="lpSearch" placeholder="Search…">
+        </div>
+      </div>
+      <div class="ba-media-grid ba-media-grid-sm" id="lpGrid"></div>
+      <div id="lpPagination" class="ba-pagination-row"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Toast ─────────────────────────────────────────────── -->
+<div id="baToastContainer" class="ba-toasts"></div>
+
+<script src="script.js"></script>
+</body>
+</html>

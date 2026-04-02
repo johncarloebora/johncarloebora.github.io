@@ -55,8 +55,8 @@
             <a href="#blog" class="sidebar-link" data-page="blog">
                 <i class="fas fa-newspaper"></i><span>Blog</span>
             </a>
-            <a href="#social" class="sidebar-link" data-page="social">
-                <i class="fas fa-comments"></i><span>Social Posts</span>
+            <a href="blog/" class="sidebar-link" target="_blank">
+                <i class="fas fa-comments"></i><span>Blog Admin <i class="fas fa-external-link-alt" style="font-size:.7rem;opacity:.6;margin-left:2px"></i></span>
             </a>
             <a href="#testimonials" class="sidebar-link" data-page="testimonials">
                 <i class="fas fa-comments"></i><span>Testimonials</span>
@@ -315,24 +315,26 @@
             <div id="blogEditor"></div>
         </div>
 
-        <!-- Social Posts Page -->
+        <!-- Blog Admin — now a separate system at /admin/blog/ -->
         <div class="page" id="page-social">
             <div class="page-header">
-                <h1>Social Posts</h1>
-                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-                    <input type="text" id="socialSearch" class="input-sm" placeholder="Search posts…" style="width:180px">
-                    <select id="socialTagFilter" class="input-sm" style="width:130px">
-                        <option value="">All tags</option>
-                    </select>
-                    <input type="date" id="socialDateFrom" class="input-sm" title="From date" style="width:140px">
-                    <input type="date" id="socialDateTo"   class="input-sm" title="To date"   style="width:140px">
-                    <button class="btn btn-primary btn-sm" id="addSocialPost"><i class="fas fa-plus"></i> New Post</button>
-                    <button class="btn btn-secondary btn-sm" id="blogMediaLibBtn"><i class="fas fa-photo-video"></i> Media</button>
-                    <button class="btn btn-secondary btn-sm" id="syncConfigBtn"><i class="fas fa-sync-alt"></i> Sync</button>
-                    <a href="../blog/" target="_blank" class="btn btn-secondary btn-sm"><i class="fas fa-external-link-alt"></i> Blog</a>
+                <h1>Blog Admin</h1>
+            </div>
+            <div class="help-banner" style="margin-bottom:20px">
+                <i class="fas fa-info-circle"></i>
+                <div>
+                    Blog post management has moved to its own dedicated admin panel.
+                    It is now a completely separate system from portfolio management.
                 </div>
             </div>
-            <div id="socialPostsList"></div>
+            <div style="display:flex;flex-wrap:wrap;gap:14px">
+                <a href="blog/" target="_blank" class="btn btn-primary" style="font-size:1rem;padding:14px 28px">
+                    <i class="fas fa-comments"></i> Open Blog Admin
+                </a>
+                <a href="../blog/" target="_blank" class="btn btn-secondary" style="font-size:1rem;padding:14px 28px">
+                    <i class="fas fa-external-link-alt"></i> View Live Blog
+                </a>
+            </div>
         </div>
 
         <!-- Testimonials Page -->
@@ -454,7 +456,6 @@
     <script src="js/pages/settings.js"></script>
     <script src="js/pages/password.js"></script>
     <script src="js/pages/blog.js"></script>
-    <script src="js/pages/social.js"></script>
     <script src="js/pages/testimonials.js"></script>
     <script src="js/pages/certifications.js"></script>
     <script src="js/pages/achievements.js"></script>
