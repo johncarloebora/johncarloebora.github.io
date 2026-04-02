@@ -1540,6 +1540,76 @@ router.put('/api/admin/blog/sync-config', authMiddleware, async (request, env) =
 });
 
 // ────────────────────────────────────────────────────────────
+// PRESET SYSTEM — Schema-driven form configurations
+// ────────────────────────────────────────────────────────────
+
+/* Migration: add presets table — harmless if already exists */
+async function ensurePresetsTable(db) {
+  await db.prepare(`CREATE TABLE IF NOT EXISTS presets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    description TEXT DEFAULT '',
+    schema_json TEXT NOT NULL DEFAULT '{"fields":[]}',
+    values_json TEXT NOT NULL DEFAULT '{}',
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
+  )`).run().catch(() => {});
+}
+
+router.get('/api/admin/presets', authMiddleware, async (request, env) => {
+  await ensurePresetsTable(env.DB);
+  const { results } = await env.DB.prepare('SELECT * FROM presets ORDER BY name').all();
+  return json({ presets: results.map(r => ({
+    ...r,
+    schema: JSON.parse(r.schema_json || '{"fields":[]}'),
+    values: JSON.parse(r.values_json || '{}'),
+  })) });
+});
+
+router.get('/api/admin/presets/:id', authMiddleware, async (request, env) => {
+  await ensurePresetsTable(env.DB);
+  const r = await env.DB.prepare('SELECT * FROM presets WHERE id = ?').bind(request.params.id).first();
+  if (!r) return error(404, 'Preset not found');
+  return json({ ...r, schema: JSON.parse(r.schema_json || '{}'), values: JSON.parse(r.values_json || '{}') });
+});
+
+router.post('/api/admin/presets', authMiddleware, async (request, env) => {
+  await ensurePresetsTable(env.DB);
+  const body = await request.json();
+  const name   = sanitizeText(body?.name || 'Untitled', 100);
+  const desc   = sanitizeText(body?.description || '', 500);
+  const schema = JSON.stringify(body?.schema || { fields: [] });
+  const values = JSON.stringify(body?.values || {});
+  const result = await env.DB.prepare(
+    'INSERT INTO presets (name, description, schema_json, values_json) VALUES (?, ?, ?, ?)'
+  ).bind(name, desc, schema, values).run();
+  const row = await env.DB.prepare('SELECT * FROM presets WHERE id = ?').bind(result.meta.last_row_id).first();
+  return json({ ...row, schema: JSON.parse(row.schema_json), values: JSON.parse(row.values_json) }, { status: 201 });
+});
+
+router.put('/api/admin/presets/:id', authMiddleware, async (request, env) => {
+  await ensurePresetsTable(env.DB);
+  const body = await request.json();
+  const id   = parseInt(request.params.id);
+  const name   = sanitizeText(body?.name || 'Untitled', 100);
+  const desc   = sanitizeText(body?.description || '', 500);
+  const schema = JSON.stringify(body?.schema || { fields: [] });
+  const values = JSON.stringify(body?.values || {});
+  await env.DB.prepare(
+    'UPDATE presets SET name=?, description=?, schema_json=?, values_json=?, updated_at=datetime(\'now\') WHERE id=?'
+  ).bind(name, desc, schema, values, id).run();
+  const row = await env.DB.prepare('SELECT * FROM presets WHERE id = ?').bind(id).first();
+  if (!row) return error(404, 'Preset not found');
+  return json({ ...row, schema: JSON.parse(row.schema_json), values: JSON.parse(row.values_json) });
+});
+
+router.delete('/api/admin/presets/:id', authMiddleware, async (request, env) => {
+  await ensurePresetsTable(env.DB);
+  await env.DB.prepare('DELETE FROM presets WHERE id = ?').bind(parseInt(request.params.id)).run();
+  return json({ ok: true });
+});
+
+// ────────────────────────────────────────────────────────────
 // 404 fallback
 // ────────────────────────────────────────────────────────────
 

@@ -79,6 +79,9 @@
                 <i class="fas fa-gamepad"></i><span>Game Settings</span>
             </a>
             <div class="sidebar-divider"></div>
+            <a href="#presets" class="sidebar-link" data-page="presets">
+                <i class="fas fa-magic"></i><span>Presets</span>
+            </a>
             <a href="#analytics" class="sidebar-link" data-page="analytics">
                 <i class="fas fa-chart-bar"></i><span>Analytics</span>
             </a>
@@ -370,6 +373,15 @@
             <div id="gameSettingsEditor"></div>
         </div>
 
+        <!-- Presets Page -->
+        <div class="page" id="page-presets">
+            <div class="page-header">
+                <h1>Presets</h1>
+                <button class="btn btn-primary btn-sm" id="addPresetBtn"><i class="fas fa-plus"></i> Add Preset</button>
+            </div>
+            <div id="presetsEditor"></div>
+        </div>
+
         <!-- Analytics Page -->
         <div class="page" id="page-analytics">
             <div class="page-header"><h1>Analytics</h1></div>
@@ -460,6 +472,7 @@
     <script src="js/pages/certifications.js"></script>
     <script src="js/pages/achievements.js"></script>
     <script src="js/pages/game-settings.js"></script>
+    <script src="js/pages/presets.js"></script>
     <script src="js/pages/analytics.js"></script>
     <script src="js/pages/versions.js"></script>
 </body>

@@ -330,7 +330,7 @@ function openEditor(postId) {
   /* Reset fields */
   document.getElementById('edContent').value  = '';
   document.getElementById('edLocation').value = '';
-  document.getElementById('edTitle').textContent = 'New Post';
+  document.getElementById('editorTitle').textContent = 'New Post';
   document.getElementById('edSubmitBtn').innerHTML = '<i class="fas fa-paper-plane"></i> Publish';
   renderEditorMedia();
   updateEditorPreview();
@@ -340,14 +340,14 @@ function openEditor(postId) {
   document.body.style.overflow = 'hidden';
 
   if (postId) {
-    document.getElementById('edTitle').textContent = 'Loading…';
+    document.getElementById('editorTitle').textContent = 'Loading…';
     API.get('/api/blog/posts/' + postId + '/thread')
       .then(data => {
         const p = data.post;
         _editor.post = p;
         document.getElementById('edContent').value  = p.content  || '';
         document.getElementById('edLocation').value = p.location || '';
-        document.getElementById('edTitle').textContent = 'Edit Post';
+        document.getElementById('editorTitle').textContent = 'Edit Post';
         document.getElementById('edSubmitBtn').innerHTML = '<i class="fas fa-save"></i> Save';
         if (Array.isArray(p.media)) {
           _editor.media = p.media.map(m => ({ url: m.url, type: m.type || 'image', uploaded: true }));
@@ -825,6 +825,22 @@ function bindUI() {
       this.value = '';
     });
   });
+
+  /* Drag and drop on editor textarea */
+  const edContent = document.getElementById('edContent');
+  if (edContent) {
+    edContent.addEventListener('dragover', e => { e.preventDefault(); edContent.classList.add('drag-over'); });
+    edContent.addEventListener('dragleave', () => edContent.classList.remove('drag-over'));
+    edContent.addEventListener('drop', e => {
+      e.preventDefault();
+      edContent.classList.remove('drag-over');
+      const files = Array.from(e.dataTransfer.files);
+      const images = files.filter(f => f.type.startsWith('image/'));
+      const videos = files.filter(f => f.type.startsWith('video/'));
+      if (images.length) handleEditorFiles(images, images[0].type === 'image/gif' ? 'gif' : 'image');
+      if (videos.length) handleEditorFiles(videos, 'video');
+    });
+  }
 
   /* Click outside modals */
   document.getElementById('editorModal')?.addEventListener('click', e => {

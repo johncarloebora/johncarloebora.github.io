@@ -79,6 +79,7 @@ const router = {
             settings: 'Settings', password: 'Change Password',
             blog: 'Blog Posts', social: 'Social Posts', testimonials: 'Testimonials', certifications: 'Certifications',
             achievements: 'Achievements', 'game-settings': 'Game Settings',
+            presets: 'Presets',
             versions: 'Version History', analytics: 'Analytics',
         };
         document.getElementById('pageTitle').textContent = titles[page] || page;

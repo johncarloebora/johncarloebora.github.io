@@ -348,6 +348,11 @@
   width: 100%; resize: vertical; min-height: 140px;
   line-height: 1.6;
   font-family: inherit;
+  transition: border-color var(--trans);
+}
+.ba-textarea.drag-over {
+  border-color: var(--accent2);
+  background: rgba(78,205,196,0.05);
 }
 
 .ba-editor-meta {

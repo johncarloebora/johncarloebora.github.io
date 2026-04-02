@@ -405,6 +405,19 @@ textarea { font-family: inherit; resize: vertical; }
 
 /* ── Thread view ────────────────────────────────────────── */
 .bl-thread-replies { margin-top: 16px; }
+.bl-thread-replies-hd {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: .78rem; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .06em; color: var(--bl-muted); margin-bottom: 12px;
+}
+.bl-thread-toggle {
+  background: none; border: 1px solid var(--bl-border); cursor: pointer;
+  color: var(--bl-accent); font-size: .76rem; font-weight: 600;
+  padding: 4px 10px; border-radius: 20px;
+  display: flex; align-items: center; gap: 5px;
+  transition: background .15s, border-color .15s;
+}
+.bl-thread-toggle:hover { background: rgba(78,205,196,0.1); border-color: var(--bl-accent); }
 .bl-reply {
   display: flex; gap: 10px;
   padding: 10px 0;
@@ -574,6 +587,12 @@ textarea { font-family: inherit; resize: vertical; }
   border-radius: 4px; transition: color 0.15s, background 0.15s; flex-shrink: 0;
 }
 .bl-upload-cancel:hover { color: var(--bl-accent2); background: rgba(255,82,82,0.1); }
+.bl-upload-retry {
+  background: none; border: 1px solid var(--bl-accent); cursor: pointer;
+  color: var(--bl-accent); font-size: 0.78rem; padding: 2px 8px;
+  border-radius: 20px; transition: background 0.15s; flex-shrink: 0; white-space: nowrap;
+}
+.bl-upload-retry:hover { background: rgba(78,205,196,0.15); }
 .bl-compose-toolbar {
   display: flex; align-items: center; gap: 6px;
   margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--bl-border);
