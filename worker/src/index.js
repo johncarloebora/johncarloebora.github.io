@@ -801,6 +801,19 @@ router.post('/api/admin/migrate', authMiddleware, async (request, env) => {
     // Project priority (0=normal, 1=high, 2=urgent) and layout type
     "ALTER TABLE projects ADD COLUMN priority INTEGER DEFAULT 0",
     "ALTER TABLE projects ADD COLUMN layout_type TEXT DEFAULT 'card'",
+    // Blog media metadata table
+    "CREATE TABLE IF NOT EXISTS blog_media (id INTEGER PRIMARY KEY AUTOINCREMENT, filename TEXT NOT NULL, r2_key TEXT NOT NULL, url TEXT NOT NULL, type TEXT NOT NULL DEFAULT 'image', size_bytes INTEGER DEFAULT 0, width INTEGER DEFAULT 0, height INTEGER DEFAULT 0, mime_type TEXT, post_id INTEGER, created_at TEXT DEFAULT (datetime('now')))",
+    "CREATE INDEX IF NOT EXISTS idx_blog_media_type ON blog_media(type)",
+    "CREATE INDEX IF NOT EXISTS idx_blog_media_post ON blog_media(post_id)",
+    // Blog-to-portfolio sync config (admin-configurable tag→section mapping)
+    "CREATE TABLE IF NOT EXISTS blog_sync_config (id INTEGER PRIMARY KEY AUTOINCREMENT, tag TEXT NOT NULL UNIQUE, section TEXT NOT NULL, enabled INTEGER DEFAULT 1)",
+    "INSERT OR IGNORE INTO blog_sync_config (tag, section) VALUES ('project', 'projects')",
+    "INSERT OR IGNORE INTO blog_sync_config (tag, section) VALUES ('achievement', 'achievements')",
+    "INSERT OR IGNORE INTO blog_sync_config (tag, section) VALUES ('gallery', 'gallery')",
+    "INSERT OR IGNORE INTO blog_sync_config (tag, section) VALUES ('media', 'media')",
+    // Author avatar/bio support on social_posts
+    "ALTER TABLE social_posts ADD COLUMN author_avatar TEXT DEFAULT ''",
+    "ALTER TABLE social_posts ADD COLUMN author_bio TEXT DEFAULT ''",
   ];
   const results = [];
   for (const sql of migrations) {
@@ -1352,31 +1365,171 @@ router.get('/api/admin/blog/posts', authMiddleware, async (request, env) => {
 
 /* Portfolio sync: returns social posts whose tags match portfolio section mapping */
 router.get('/api/portfolio/sync', async (request, env) => {
-  const TAG_MAP = {
-    project:     'projects',
-    achievement: 'achievements',
-    gallery:     'gallery',
-    media:       'media',
-  };
+  /* Load configurable tag→section mapping from DB, fall back to defaults */
+  let TAG_MAP = { project: 'projects', achievement: 'achievements', gallery: 'gallery', media: 'media' };
+  try {
+    const { results: configRows } = await env.DB.prepare('SELECT tag, section FROM blog_sync_config WHERE enabled = 1').all();
+    if (configRows.length) {
+      TAG_MAP = {};
+      configRows.forEach(r => { TAG_MAP[r.tag] = r.section; });
+    }
+  } catch {}
+
   const { results } = await env.DB.prepare(
     'SELECT * FROM social_posts WHERE reply_to IS NULL ORDER BY created_at DESC LIMIT 200'
   ).all();
 
   const synced = {};
-  Object.keys(TAG_MAP).forEach(tag => { synced[TAG_MAP[tag]] = []; });
+  Object.values(TAG_MAP).forEach(s => { if (!synced[s]) synced[s] = []; });
 
   results.forEach(row => {
     const post = hydrateSocialPost(row);
     const allTags = [...post.tags, ...post.hashtags];
     allTags.forEach(t => {
       const section = TAG_MAP[t.toLowerCase()];
-      if (section && post.media.length) {
-        synced[section].push(post);
-      }
+      if (section) synced[section].push(post);
     });
   });
 
-  return json({ synced, tag_map: TAG_MAP });
+  /* Also include featured posts as highlights */
+  const featured = results.filter(r => r.featured).map(hydrateSocialPost);
+  return json({ synced, featured, tag_map: TAG_MAP });
+});
+
+/* ── Blog media upload ── */
+router.post('/api/blog/media/upload', authMiddleware, async (request, env) => {
+  const contentType = request.headers.get('Content-Type') || '';
+  if (!contentType.includes('multipart/form-data')) return error(400, 'Multipart form data required');
+
+  const formData = await request.formData();
+  const file = formData.get('file');
+  if (!file || !file.name) return error(400, 'File is required');
+
+  const postId = formData.get('post_id') || null;
+
+  /* Validate size (20MB max for video, 10MB for images) */
+  const isVideo = file.type.startsWith('video/');
+  const maxSize = isVideo ? 20 * 1024 * 1024 : 10 * 1024 * 1024;
+  if (file.size > maxSize) return error(400, `File too large (max ${isVideo ? '20' : '10'}MB)`);
+
+  /* Validate MIME */
+  const allowedMimes = [
+    'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif',
+    'video/mp4', 'video/webm', 'video/quicktime',
+  ];
+  if (!allowedMimes.includes(file.type)) return error(400, `Type ${file.type} not allowed`);
+
+  /* Determine type and R2 path: blog/images/YYYY/MM/ or blog/videos/YYYY/MM/ */
+  const now = new Date();
+  const yyyy = now.getUTCFullYear();
+  const mm   = String(now.getUTCMonth() + 1).padStart(2, '0');
+  let mediaType = 'image';
+  if (file.type.startsWith('video/')) mediaType = 'video';
+  else if (file.type === 'image/gif') mediaType = 'gif';
+
+  const typeFolder = mediaType === 'video' ? 'videos' : mediaType === 'gif' ? 'gifs' : 'images';
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const uniqueName = `${Date.now()}_${safeName}`;
+  const r2Key = `blog/${typeFolder}/${yyyy}/${mm}/${uniqueName}`;
+
+  /* Upload to R2 */
+  const arrayBuffer = await file.arrayBuffer();
+  await env.MEDIA.put(r2Key, arrayBuffer, {
+    httpMetadata: { contentType: file.type },
+  });
+
+  const url = `${env.R2_PUBLIC_URL}/${r2Key}`;
+
+  /* Store metadata */
+  const width  = parseInt(formData.get('width')  || '0');
+  const height = parseInt(formData.get('height') || '0');
+  await env.DB.prepare(
+    'INSERT INTO blog_media (filename, r2_key, url, type, size_bytes, width, height, mime_type, post_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+  ).bind(safeName, r2Key, url, mediaType, file.size, width, height, file.type, postId).run();
+
+  const media = await env.DB.prepare('SELECT * FROM blog_media WHERE r2_key = ?').bind(r2Key).first();
+  return json(media, { status: 201 });
+});
+
+/* Blog media list */
+router.get('/api/blog/media', authMiddleware, async (request, env) => {
+  const page  = Math.max(1, parseInt(request.query?.page || '1'));
+  const limit = Math.min(100, Math.max(1, parseInt(request.query?.limit || '30')));
+  const type  = (request.query?.type || '').trim();
+  const search = (request.query?.search || '').trim().slice(0, 200);
+  const offset = (page - 1) * limit;
+
+  let where = 'WHERE 1=1';
+  const binds = [];
+  if (type && ['image', 'video', 'gif'].includes(type)) { where += ' AND type = ?'; binds.push(type); }
+  if (search) { where += ' AND filename LIKE ?'; binds.push('%' + search + '%'); }
+
+  const [countRow, { results }] = await Promise.all([
+    env.DB.prepare('SELECT COUNT(*) as cnt FROM blog_media ' + where).bind(...binds).first(),
+    env.DB.prepare('SELECT * FROM blog_media ' + where + ' ORDER BY created_at DESC LIMIT ? OFFSET ?').bind(...binds, limit, offset).all(),
+  ]);
+  return json({ media: results, total: countRow?.cnt || 0, page, limit });
+});
+
+/* Delete blog media */
+router.delete('/api/blog/media/:id', authMiddleware, async (request, env) => {
+  const id = parseInt(request.params.id);
+  const media = await env.DB.prepare('SELECT * FROM blog_media WHERE id = ?').bind(id).first();
+  if (!media) return error(404, 'Media not found');
+  try { await env.MEDIA.delete(media.r2_key); } catch {}
+  await env.DB.prepare('DELETE FROM blog_media WHERE id = ?').bind(id).run();
+  return json({ ok: true });
+});
+
+/* Public: user profile posts */
+router.get('/api/blog/user/:author', async (request, env) => {
+  const author = decodeURIComponent(request.params.author);
+  const page   = Math.max(1, parseInt(request.query?.page || '1'));
+  const limit  = Math.min(50, Math.max(1, parseInt(request.query?.limit || '10')));
+  const offset = (page - 1) * limit;
+
+  const [countRow, { results }] = await Promise.all([
+    env.DB.prepare('SELECT COUNT(*) as cnt FROM social_posts WHERE reply_to IS NULL AND author = ?').bind(author).first(),
+    env.DB.prepare('SELECT * FROM social_posts WHERE reply_to IS NULL AND author = ? ORDER BY created_at DESC LIMIT ? OFFSET ?').bind(author, limit, offset).all(),
+  ]);
+
+  /* Aggregate stats */
+  const statsRow = await env.DB.prepare(
+    'SELECT COUNT(*) as total_posts, SUM(reply_count) as total_replies FROM social_posts WHERE author = ? AND reply_to IS NULL'
+  ).bind(author).first();
+
+  /* Get author info from most recent post */
+  const latest = results[0] ? hydrateSocialPost(results[0]) : null;
+  return json({
+    author: { name: author, avatar: latest?.author_avatar || '', bio: latest?.author_bio || '' },
+    stats: { posts: statsRow?.total_posts || 0, replies: statsRow?.total_replies || 0 },
+    posts: results.map(hydrateSocialPost),
+    total: countRow?.cnt || 0, page, limit,
+  });
+});
+
+/* Admin: sync config management */
+router.get('/api/admin/blog/sync-config', authMiddleware, async (request, env) => {
+  const { results } = await env.DB.prepare('SELECT * FROM blog_sync_config ORDER BY tag').all();
+  return json({ config: results });
+});
+
+router.put('/api/admin/blog/sync-config', authMiddleware, async (request, env) => {
+  const body = await request.json();
+  const mappings = body?.mappings;
+  if (!Array.isArray(mappings)) return error(400, 'mappings array required');
+
+  /* Replace all mappings */
+  await env.DB.prepare('DELETE FROM blog_sync_config').run();
+  for (const m of mappings) {
+    if (!m.tag || !m.section) continue;
+    const tag     = sanitizeText(m.tag, 50);
+    const section = sanitizeText(m.section, 50);
+    const enabled = m.enabled !== false ? 1 : 0;
+    await env.DB.prepare('INSERT INTO blog_sync_config (tag, section, enabled) VALUES (?, ?, ?)').bind(tag, section, enabled).run();
+  }
+  const { results } = await env.DB.prepare('SELECT * FROM blog_sync_config ORDER BY tag').all();
+  return json({ ok: true, config: results });
 });
 
 // ────────────────────────────────────────────────────────────

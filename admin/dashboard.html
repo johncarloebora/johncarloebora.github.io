@@ -320,15 +320,18 @@
             <div class="page-header">
                 <h1>Social Posts</h1>
                 <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-                    <input type="text" id="socialSearch" class="input-sm" placeholder="Search posts…" style="width:200px">
-                    <select id="socialTagFilter" class="input-sm" style="width:140px">
+                    <input type="text" id="socialSearch" class="input-sm" placeholder="Search posts…" style="width:180px">
+                    <select id="socialTagFilter" class="input-sm" style="width:130px">
                         <option value="">All tags</option>
                     </select>
+                    <input type="date" id="socialDateFrom" class="input-sm" title="From date" style="width:140px">
+                    <input type="date" id="socialDateTo"   class="input-sm" title="To date"   style="width:140px">
                     <button class="btn btn-primary btn-sm" id="addSocialPost"><i class="fas fa-plus"></i> New Post</button>
-                    <a href="../blog/" target="_blank" class="btn btn-secondary btn-sm"><i class="fas fa-external-link-alt"></i> View Blog</a>
+                    <button class="btn btn-secondary btn-sm" id="blogMediaLibBtn"><i class="fas fa-photo-video"></i> Media</button>
+                    <button class="btn btn-secondary btn-sm" id="syncConfigBtn"><i class="fas fa-sync-alt"></i> Sync</button>
+                    <a href="../blog/" target="_blank" class="btn btn-secondary btn-sm"><i class="fas fa-external-link-alt"></i> Blog</a>
                 </div>
             </div>
-            <div id="socialPostEditor" style="display:none;margin-bottom:20px"></div>
             <div id="socialPostsList"></div>
         </div>
 

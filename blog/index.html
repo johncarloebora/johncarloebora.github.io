@@ -1,83 +1,215 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Carlo — Blog</title>
-    <meta name="description" content="Thoughts, projects, and updates from Carlo Ebora.">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
-    <script>(function(){var t=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',t);})()</script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blog — Carlo Ebora</title>
+  <meta name="description" content="Thoughts, projects, and creative work by Carlo Ebora">
+  <link rel="icon" href="../favicon.ico">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
 </head>
 <body>
 
-    <!-- Header -->
-    <header class="blog-header">
-        <div class="blog-header-inner">
-            <a href="../index.html" class="blog-logo">CE<span>.</span></a>
-            <nav class="blog-nav">
-                <a href="../index.html" class="blog-nav-link"><i class="fas fa-arrow-left"></i> Portfolio</a>
-                <button id="themeToggle" class="theme-btn" aria-label="Toggle theme">
-                    <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="5"/>
-                        <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
-                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-                        <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
-                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-                    </svg>
-                    <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-                    </svg>
-                </button>
-            </nav>
-        </div>
-    </header>
+<!-- ── Header ─────────────────────────────────────────── -->
+<header class="bh" id="blogHeader">
+  <div class="bh-inner">
+    <a href="../" class="bh-logo">
+      <span class="bh-logo-icon">◈</span>
+      <span class="bh-logo-text">Carlo<span class="bh-logo-accent">Blog</span></span>
+    </a>
+    <nav class="bh-nav">
+      <a href="#/" class="bh-nav-link" data-route="/">Feed</a>
+      <a href="#/user/Carlo" class="bh-nav-link" data-route="/user/Carlo">Profile</a>
+      <a href="../" class="bh-nav-link">Portfolio</a>
+      <a href="../admin/" class="bh-nav-link bh-admin-link" id="adminLink" style="display:none">Admin</a>
+    </nav>
+    <div class="bh-actions">
+      <button class="bh-icon-btn" id="searchToggle" aria-label="Search"><i class="fas fa-search"></i></button>
+      <button class="bh-icon-btn" id="themeToggle" aria-label="Toggle theme"><i class="fas fa-moon"></i></button>
+      <button class="bh-compose-btn" id="composeBtn" style="display:none"><i class="fas fa-plus"></i><span>Post</span></button>
+    </div>
+  </div>
+  <div class="bh-search" id="searchBar" style="display:none">
+    <div class="bh-search-inner">
+      <i class="fas fa-search bh-search-icon"></i>
+      <input type="text" class="bh-search-input" id="searchInput" placeholder="Search posts, tags, topics…" autocomplete="off">
+      <button class="bh-icon-btn" id="searchClose"><i class="fas fa-times"></i></button>
+    </div>
+  </div>
+</header>
 
-    <!-- Hero banner -->
-    <section class="blog-hero">
-        <div class="blog-hero-inner">
-            <h1>Blog</h1>
-            <p>Thoughts, projects, and updates.</p>
-        </div>
-    </section>
+<!-- ── Main 3-Column Layout ───────────────────────────── -->
+<main class="bl-main">
 
-    <!-- Tag filter bar -->
-    <div class="blog-tag-bar" id="tagBar">
-        <button class="tag-filter-btn active" data-tag="">All</button>
-        <!-- Tags injected by JS -->
+  <!-- Left Sidebar -->
+  <aside class="bl-sidebar bl-sidebar-left">
+    <div class="bl-profile-card">
+      <div class="bl-avatar-wrap">
+        <img class="bl-avatar" id="profileAvatar" src="../profile/Carlo.jpg" alt="Carlo"
+          onerror="this.src='https://ui-avatars.com/api/?name=Carlo+Ebora&background=4ecdc4&color=0d0d0d&size=80&bold=true'">
+      </div>
+      <h3 class="bl-profile-name">Carlo Ebora</h3>
+      <p class="bl-profile-bio" id="profileBio">Computer Engineer · Creative Developer · Multidisciplinary Artist</p>
+      <div class="bl-profile-stats">
+        <div class="bl-stat"><span id="statPosts">—</span><label>Posts</label></div>
+        <div class="bl-stat"><span id="statTags">—</span><label>Tags</label></div>
+        <div class="bl-stat"><span id="statReplies">—</span><label>Replies</label></div>
+      </div>
+      <a href="../" class="bl-btn bl-btn-outline" style="width:100%;justify-content:center;margin-top:10px">
+        <i class="fas fa-briefcase"></i> Portfolio
+      </a>
     </div>
 
-    <!-- Main layout -->
-    <main class="blog-main">
-        <div class="blog-feed" id="feed">
-            <!-- Posts injected by JS -->
-            <div class="feed-loading" id="feedLoading">
-                <div class="spinner"></div>
-            </div>
-        </div>
-        <aside class="blog-sidebar" id="sidebar">
-            <!-- Sidebar injected by JS -->
-        </aside>
-    </main>
+    <nav class="bl-sidebar-nav">
+      <a href="#/" class="bl-snav" data-route="/"><i class="fas fa-home"></i> Feed</a>
+      <a href="#/user/Carlo" class="bl-snav" data-route="/user/Carlo"><i class="fas fa-user"></i> Profile</a>
+      <div class="bl-snav-sep"></div>
+      <a href="#/tag/project" class="bl-snav" data-route="/tag/project"><i class="fas fa-folder-open"></i> Projects</a>
+      <a href="#/tag/achievement" class="bl-snav" data-route="/tag/achievement"><i class="fas fa-trophy"></i> Achievements</a>
+      <a href="#/tag/design" class="bl-snav" data-route="/tag/design"><i class="fas fa-palette"></i> Design</a>
+      <a href="#/tag/code" class="bl-snav" data-route="/tag/code"><i class="fas fa-code"></i> Code</a>
+    </nav>
+  </aside>
 
-    <!-- Post detail modal / thread view -->
-    <div class="post-modal-backdrop" id="postModalBackdrop" aria-hidden="true">
-        <div class="post-modal" id="postModal" role="dialog" aria-modal="true" aria-label="Post thread">
-            <button class="post-modal-close" id="postModalClose" aria-label="Close">
-                <i class="fas fa-times"></i>
-            </button>
-            <div class="post-modal-body" id="postModalBody">
-                <!-- Thread content injected by JS -->
-            </div>
-        </div>
+  <!-- Main Feed -->
+  <div class="bl-feed-col" id="blFeedCol">
+    <div id="pageContent">
+      <!-- Initial skeletons while loading -->
+      <div id="initialSkeleton">
+        <div class="bl-skeleton-card"><div class="bl-sk bl-sk-avatar"></div><div class="bl-sk-lines"><div class="bl-sk" style="width:45%"></div><div class="bl-sk" style="width:90%"></div><div class="bl-sk" style="width:75%"></div></div></div>
+        <div class="bl-skeleton-card"><div class="bl-sk bl-sk-avatar"></div><div class="bl-sk-lines"><div class="bl-sk" style="width:55%"></div><div class="bl-sk" style="width:100%"></div><div class="bl-sk" style="width:65%"></div><div class="bl-sk" style="width:80%"></div></div></div>
+        <div class="bl-skeleton-card"><div class="bl-sk bl-sk-avatar"></div><div class="bl-sk-lines"><div class="bl-sk" style="width:40%"></div><div class="bl-sk" style="width:85%"></div><div class="bl-sk" style="width:70%"></div></div></div>
+      </div>
+    </div>
+    <div id="scrollSentinel" style="height:20px"></div>
+    <div class="bl-loading-spinner" id="loadingSpinner" style="display:none">
+      <span class="bl-spinner"></span><span>Loading more posts…</span>
+    </div>
+    <div class="bl-end-marker" id="endMarker" style="display:none">
+      <span>— You've reached the end —</span>
+    </div>
+  </div>
+
+  <!-- Right Sidebar -->
+  <aside class="bl-sidebar bl-sidebar-right">
+    <div class="bl-widget">
+      <h4 class="bl-widget-title"><i class="fas fa-hashtag"></i> Trending Tags</h4>
+      <div class="bl-tag-cloud" id="tagCloud">
+        <div class="bl-sk" style="height:26px;width:80px;border-radius:30px"></div>
+        <div class="bl-sk" style="height:26px;width:60px;border-radius:30px"></div>
+        <div class="bl-sk" style="height:26px;width:95px;border-radius:30px"></div>
+        <div class="bl-sk" style="height:26px;width:70px;border-radius:30px"></div>
+        <div class="bl-sk" style="height:26px;width:50px;border-radius:30px"></div>
+      </div>
     </div>
 
-    <!-- Toast -->
-    <div id="toast" class="toast" aria-live="polite"></div>
+    <div class="bl-widget" id="featuredWidget" style="display:none">
+      <h4 class="bl-widget-title"><i class="fas fa-star"></i> Featured</h4>
+      <div id="featuredList"></div>
+    </div>
 
-    <script src="script.js"></script>
+    <div class="bl-widget">
+      <h4 class="bl-widget-title"><i class="fas fa-info-circle"></i> About</h4>
+      <p class="bl-widget-text">
+        A living journal of projects, ideas, experiments, and creative work.
+        Posts sync to the portfolio in real time via tags.
+      </p>
+    </div>
+  </aside>
+
+</main>
+
+<!-- ── Post / Thread Modal ────────────────────────────── -->
+<div class="bl-overlay" id="postModal" style="display:none">
+  <div class="bl-modal" role="dialog" aria-modal="true" aria-label="Post thread">
+    <div class="bl-modal-hd">
+      <button class="bl-back-btn" id="postModalBack"><i class="fas fa-arrow-left"></i></button>
+      <span class="bl-modal-ttl">Thread</span>
+      <button class="bl-close-btn" id="postModalClose" aria-label="Close"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="bl-modal-bd" id="postModalBody"></div>
+    <div class="bl-reply-bar" id="replyBar" style="display:none">
+      <img class="bl-reply-av" id="replyAvatar" src="../profile/Carlo.jpg" alt=""
+        onerror="this.src='https://ui-avatars.com/api/?name=C&background=4ecdc4&color=0d0d0d&size=36'">
+      <div class="bl-reply-input">
+        <textarea class="bl-reply-ta" id="replyText" placeholder="Write a reply…" rows="2" maxlength="1000"></textarea>
+        <button class="bl-btn bl-btn-primary" id="replySubmit"><i class="fas fa-reply"></i> Reply</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Compose Modal ──────────────────────────────────── -->
+<div class="bl-overlay" id="composeModal" style="display:none">
+  <div class="bl-modal bl-compose-modal" role="dialog" aria-modal="true">
+    <div class="bl-modal-hd">
+      <span class="bl-modal-ttl" id="composeTitle">New Post</span>
+      <button class="bl-close-btn" id="composeClose" aria-label="Close"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="bl-compose-bd">
+      <div class="bl-compose-author">
+        <img class="bl-reply-av" src="../profile/Carlo.jpg" alt="Carlo"
+          onerror="this.src='https://ui-avatars.com/api/?name=C&background=4ecdc4&color=0d0d0d&size=36'">
+        <span>Carlo Ebora</span>
+      </div>
+      <textarea class="bl-compose-ta" id="composeText"
+        placeholder="What's on your mind? Use #hashtags to tag your post…"
+        rows="5" maxlength="2000"></textarea>
+      <div class="bl-compose-meta">
+        <span class="bl-compose-char"><span id="composeCharCount">0</span>/2000</span>
+      </div>
+      <!-- Detected tags preview -->
+      <div class="bl-compose-tags" id="composeTagPreview" style="display:none">
+        <span class="bl-compose-tags-label"><i class="fas fa-tags"></i> Tags:</span>
+        <span id="composeTagList"></span>
+      </div>
+      <!-- Media preview -->
+      <div class="bl-compose-media-grid" id="composeMediaGrid"></div>
+      <!-- Upload progress -->
+      <div class="bl-upload-row" id="uploadRow" style="display:none">
+        <div class="bl-upload-track"><div class="bl-upload-bar" id="uploadBar"></div></div>
+        <span class="bl-upload-label" id="uploadLabel">Uploading…</span>
+      </div>
+      <!-- Toolbar -->
+      <div class="bl-compose-toolbar">
+        <label class="bl-tool-btn" title="Images (max 4)">
+          <i class="fas fa-image"></i>
+          <input type="file" id="composeImageInput" accept="image/jpeg,image/png,image/webp,image/avif" multiple style="display:none">
+        </label>
+        <label class="bl-tool-btn" title="Video (max 20MB)">
+          <i class="fas fa-video"></i>
+          <input type="file" id="composeVideoInput" accept="video/mp4,video/webm,video/quicktime" style="display:none">
+        </label>
+        <label class="bl-tool-btn" title="GIF">
+          <i class="fas fa-film"></i>
+          <input type="file" id="composeGifInput" accept="image/gif" style="display:none">
+        </label>
+        <div class="bl-tool-sep"></div>
+        <input type="text" class="bl-location-inp" id="composeLocation" placeholder="📍 Location" maxlength="100">
+      </div>
+    </div>
+    <div class="bl-compose-ft">
+      <button class="bl-btn bl-btn-ghost" id="composeCancelBtn">Cancel</button>
+      <button class="bl-btn bl-btn-primary" id="composeSubmit">
+        <i class="fas fa-paper-plane"></i> Publish
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Media Lightbox ─────────────────────────────────── -->
+<div class="bl-lightbox" id="lightbox" style="display:none">
+  <button class="bl-lb-close" id="lbClose" aria-label="Close"><i class="fas fa-times"></i></button>
+  <button class="bl-lb-nav bl-lb-prev" id="lbPrev" aria-label="Previous"><i class="fas fa-chevron-left"></i></button>
+  <div class="bl-lb-stage" id="lbStage"></div>
+  <button class="bl-lb-nav bl-lb-next" id="lbNext" aria-label="Next"><i class="fas fa-chevron-right"></i></button>
+  <div class="bl-lb-counter" id="lbCounter"></div>
+</div>
+
+<!-- ── Toast Container ────────────────────────────────── -->
+<div class="bl-toasts" id="toastContainer" aria-live="polite" aria-atomic="false"></div>
+
+<script src="script.js"></script>
 </body>
 </html>

@@ -2872,6 +2872,21 @@ footer .footer-copy {
     .wp-device-group, .wp-zoom-group, .wp-reload-btn { display: none; }
 }
 
+/* ── MINI-GAME START SCREEN ──────────────────────────────── */
+.mg-start-screen {
+    display: flex; flex-direction: column; align-items: center;
+    text-align: center; padding: 32px 20px; max-width: 420px; margin: 0 auto;
+}
+.mg-start-icon { font-size: 3rem; margin-bottom: 12px; line-height: 1; }
+.mg-start-title { font-size: 1.3rem; font-weight: 700; margin-bottom: 8px; color: var(--text-primary); }
+.mg-start-desc { font-size: 0.88rem; color: var(--text-secondary); line-height: 1.6; margin-bottom: 16px; }
+.mg-start-best {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 0.85rem; color: var(--accent1); margin-bottom: 16px;
+    background: rgba(78,205,196,.1); padding: 5px 14px; border-radius: 20px;
+}
+.mg-start-btn { margin-top: 6px !important; }
+
 /* ── MINI-GAME DEPTH IMPROVEMENTS ───────────────────────── */
 .mg-game-shell { width: 100%; max-width: 540px; margin: 0 auto; }
 .mg-game-header {
@@ -3120,6 +3135,37 @@ footer .footer-copy {
 [data-layout="grid"] .blog-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
 [data-layout="split"] .container { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: start; }
 @media (max-width: 768px) { [data-layout="split"] .container { grid-template-columns: 1fr; gap: 24px; } }
+
+/* ── Blog Highlights (synced from /blog) ── */
+.blog-highlights-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+}
+.blog-highlight-card {
+    display: flex; flex-direction: column;
+    border-radius: var(--radius); overflow: hidden;
+    background: var(--surface1); border: 1px solid var(--border);
+    text-decoration: none; color: inherit;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.blog-highlight-card:hover {
+    transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,.3);
+    border-color: var(--accent2); text-decoration: none;
+}
+.blog-hi-thumb { aspect-ratio: 16/9; overflow: hidden; }
+.blog-hi-thumb img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease; }
+.blog-highlight-card:hover .blog-hi-thumb img { transform: scale(1.04); }
+.blog-hi-body { padding: 14px; flex: 1; display: flex; flex-direction: column; }
+.blog-hi-text {
+    font-size: 0.88rem; line-height: 1.55; color: var(--text-secondary);
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+    flex: 1; margin-bottom: 10px;
+}
+.blog-hi-link {
+    font-size: 0.8rem; color: var(--accent2); font-weight: 600;
+    display: flex; align-items: center; gap: 5px;
+}
 
 /* ── Testimonials ── */
 .testimonials-grid {

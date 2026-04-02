@@ -1,104 +1,72 @@
 // ============================================================
-// Social Posts Admin Page
+// Social Posts Admin Page — Full Media Upload, Library, Sync Config
 // ============================================================
 
 router.register('social', loadSocialPage);
 
-var _socialState = { posts: [], total: 0, page: 1, limit: 20, search: '', tag: '', dateFrom: '', dateTo: '' };
+/* ── State ──────────────────────────────────────────────── */
+let _ss = {
+    posts: [], total: 0, page: 1, limit: 20,
+    search: '', tag: '', dateFrom: '', dateTo: '',
+    composePendingMedia: [],  /* { file?, url, type, uploaded, id? } */
+    composingPost: null,       /* null = new, obj = editing */
+    uploadInProgress: false,
+};
 
+/* ── Page Entry ─────────────────────────────────────────── */
 async function loadSocialPage() {
-    _socialState = { posts: [], total: 0, page: 1, limit: 20, search: '', tag: '', dateFrom: '', dateTo: '' };
-    const searchIn = document.getElementById('socialSearch');
-    const tagSel   = document.getElementById('socialTagFilter');
-    if (searchIn) searchIn.value = '';
-    if (tagSel)   tagSel.value   = '';
+    _ss = { ..._ss, posts: [], total: 0, page: 1, search: '', tag: '', dateFrom: '', dateTo: '', composePendingMedia: [], composingPost: null };
 
-    /* Load tags for filter dropdown */
+    // Reset filter UI
+    ['socialSearch','socialTagFilter','socialDateFrom','socialDateTo'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+
+    // Load tag dropdown options
     try {
         const data = await API.get('/api/blog/tags');
-        const sel  = document.getElementById('socialTagFilter');
+        const sel = document.getElementById('socialTagFilter');
         if (sel) {
             sel.innerHTML = '<option value="">All tags</option>';
             (data.tags || []).forEach(t => {
-                const opt = document.createElement('option');
-                opt.value = t.tag;
-                opt.textContent = '#' + t.tag + ' (' + t.count + ')';
-                sel.appendChild(opt);
+                sel.innerHTML += `<option value="${esc(t.tag)}">#${esc(t.tag)} (${t.count})</option>`;
             });
         }
-    } catch (e) {}
+    } catch {}
 
     await refreshSocialPosts();
     bindSocialControls();
 }
 
 function bindSocialControls() {
-    const addBtn   = document.getElementById('addSocialPost');
-    const searchIn = document.getElementById('socialSearch');
-    const tagSel   = document.getElementById('socialTagFilter');
-    const dateFrom = document.getElementById('socialDateFrom');
-    const dateTo   = document.getElementById('socialDateTo');
-
-    if (addBtn && !addBtn.dataset.bound) {
-        addBtn.dataset.bound = '1';
-        addBtn.addEventListener('click', () => openSocialEditor(null));
-    }
-    if (searchIn && !searchIn.dataset.bound) {
-        searchIn.dataset.bound = '1';
-        let debounce = null;
-        searchIn.addEventListener('input', () => {
-            clearTimeout(debounce);
-            debounce = setTimeout(() => {
-                _socialState.search = searchIn.value.trim();
-                _socialState.page   = 1;
-                refreshSocialPosts();
-            }, 350);
-        });
-    }
-    if (tagSel && !tagSel.dataset.bound) {
-        tagSel.dataset.bound = '1';
-        tagSel.addEventListener('change', () => {
-            _socialState.tag  = tagSel.value;
-            _socialState.page = 1;
-            refreshSocialPosts();
-        });
-    }
-    if (dateFrom && !dateFrom.dataset.bound) {
-        dateFrom.dataset.bound = '1';
-        dateFrom.addEventListener('change', () => {
-            _socialState.dateFrom = dateFrom.value;
-            _socialState.page = 1;
-            refreshSocialPosts();
-        });
-    }
-    if (dateTo && !dateTo.dataset.bound) {
-        dateTo.dataset.bound = '1';
-        dateTo.addEventListener('change', () => {
-            _socialState.dateTo = dateTo.value;
-            _socialState.page = 1;
-            refreshSocialPosts();
-        });
-    }
+    const bind = (id, event, fn) => {
+        const el = document.getElementById(id);
+        if (el && !el.dataset.bound) { el.dataset.bound = '1'; el.addEventListener(event, fn); }
+    };
+    bind('addSocialPost', 'click', () => openSocialComposer(null));
+    bind('socialSearch', 'input', debounce(e => { _ss.search = e.target.value.trim(); _ss.page = 1; refreshSocialPosts(); }, 350));
+    bind('socialTagFilter', 'change', e => { _ss.tag = e.target.value; _ss.page = 1; refreshSocialPosts(); });
+    bind('socialDateFrom', 'change', e => { _ss.dateFrom = e.target.value; _ss.page = 1; refreshSocialPosts(); });
+    bind('socialDateTo', 'change', e => { _ss.dateTo = e.target.value; _ss.page = 1; refreshSocialPosts(); });
+    bind('syncConfigBtn', 'click', openSyncConfigModal);
+    bind('blogMediaLibBtn', 'click', openMediaLibrary);
 }
 
+/* ── Posts List ─────────────────────────────────────────── */
 async function refreshSocialPosts() {
     const list = document.getElementById('socialPostsList');
     if (!list) return;
     renderPageLoading(list);
-
     try {
-        const params = new URLSearchParams({
-            page:  _socialState.page,
-            limit: _socialState.limit,
-        });
-        if (_socialState.search)   params.set('search', _socialState.search);
-        if (_socialState.tag)      params.set('tag',    _socialState.tag);
-        if (_socialState.dateFrom) params.set('from',   _socialState.dateFrom);
-        if (_socialState.dateTo)   params.set('to',     _socialState.dateTo);
-
-        const data = await API.get('/api/admin/blog/posts?' + params.toString());
-        _socialState.posts = data.posts || [];
-        _socialState.total = data.total || 0;
+        const params = new URLSearchParams({ page: _ss.page, limit: _ss.limit });
+        if (_ss.search)   params.set('search', _ss.search);
+        if (_ss.tag)      params.set('tag', _ss.tag);
+        if (_ss.dateFrom) params.set('from', _ss.dateFrom);
+        if (_ss.dateTo)   params.set('to', _ss.dateTo);
+        const data = await API.get('/api/admin/blog/posts?' + params);
+        _ss.posts = data.posts || [];
+        _ss.total = data.total || 0;
         renderSocialList(list);
     } catch (err) {
         renderPageError(list, err, refreshSocialPosts);
@@ -106,90 +74,61 @@ async function refreshSocialPosts() {
 }
 
 function renderSocialList(container) {
-    const { posts, total, page, limit } = _socialState;
-
+    const { posts, total, page, limit } = _ss;
     let html = `
         <div class="help-banner">
             <i class="fas fa-info-circle"></i>
-            <div><strong>Social Posts</strong> — These appear on your
-            <a href="../blog/" target="_blank" style="color:var(--accent2)">public blog</a>.
-            Posts tagged <code>project</code>, <code>achievement</code>, <code>gallery</code>, or <code>media</code>
-            with attached media are automatically synced to matching portfolio sections.</div>
+            <div>
+                <strong>Social Posts</strong> — Appear on your
+                <a href="../blog/" target="_blank" style="color:var(--accent2)">public blog</a>.
+                Tagged posts sync to portfolio sections automatically.
+                Use <strong>Media Upload</strong> for R2-hosted images and videos.
+            </div>
         </div>`;
 
     if (!posts.length) {
-        html += '<div class="empty-state"><i class="fas fa-comments"></i><p>No posts found. Adjust filters or create a new post.</p></div>';
+        html += `<div class="empty-state"><i class="fas fa-comments"></i><p>No posts found.</p></div>`;
         container.innerHTML = html;
         return;
     }
 
     html += '<div class="data-grid">';
     for (const post of posts) {
-        const tags    = Array.isArray(post.tags) ? post.tags : [];
-        const media   = Array.isArray(post.media) ? post.media : [];
-        const preview = (post.content || '').slice(0, 180) + (post.content.length > 180 ? '…' : '');
-        const badges  = [
+        const tags   = Array.isArray(post.tags) ? post.tags : [];
+        const media  = Array.isArray(post.media) ? post.media : [];
+        const prev   = (post.content || '').slice(0, 200) + ((post.content||'').length > 200 ? '…' : '');
+        const badges = [
             post.pinned   ? '<span class="status-badge visible">📌 Pinned</span>'   : '',
             post.featured ? '<span class="status-badge visible">⭐ Featured</span>' : '',
             post.reply_to ? '<span class="status-badge hidden">↩ Reply</span>'      : '',
-        ].filter(Boolean).join(' ');
+        ].filter(Boolean).join('');
 
-        html += `
-            <div class="data-card" id="social-card-${post.id}">
-                <div class="data-card-header">
-                    <div style="flex:1;min-width:0">
-                        <div class="data-card-subtitle">
-                            ${esc(post.author)} · ${esc(relativeTimeSocial(post.created_at))}
-                            ${post.location ? ' · 📍 ' + esc(post.location) : ''}
-                        </div>
-                        <div style="font-size:0.88rem;line-height:1.55;margin-top:4px;white-space:pre-wrap;word-break:break-word">${esc(preview)}</div>
-                    </div>
-                    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;margin-left:12px">${badges}</div>
+        html += `<div class="data-card" id="social-card-${post.id}">
+            <div class="data-card-header">
+                <div style="flex:1;min-width:0">
+                    <div class="data-card-subtitle">${esc(post.author)} · ${esc(relativeTimeSocial(post.created_at))}${post.location ? ' · 📍 ' + esc(post.location) : ''}</div>
+                    <div style="font-size:.88rem;line-height:1.55;margin-top:4px;white-space:pre-wrap;word-break:break-word">${esc(prev)}</div>
                 </div>
-                ${tags.length ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin:8px 0 4px">${tags.map(t=>`<span class="tag">#${esc(t)}</span>`).join('')}</div>` : ''}
-                ${media.length ? `<div class="data-card-subtitle" style="margin-top:4px"><i class="fas fa-paperclip"></i> ${media.length} media file${media.length > 1 ? 's' : ''}</div>` : ''}
-                ${post.reply_count > 0 ? `<div class="data-card-subtitle" style="margin-top:4px"><i class="fas fa-comment"></i> ${post.reply_count} repl${post.reply_count === 1 ? 'y' : 'ies'}</div>` : ''}
-
-                <!-- Inline edit panel (hidden by default) -->
-                <div id="social-inline-${post.id}" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
-                    <textarea id="social-ie-content-${post.id}" class="form-input"
-                        placeholder="Post content…" style="min-height:80px;width:100%;margin-bottom:8px;resize:vertical">${esc(post.content || '')}</textarea>
-                    <div class="form-row" style="gap:8px;margin-bottom:8px">
-                        <input type="text" class="form-input" id="social-ie-location-${post.id}"
-                            value="${esc(post.location || '')}" placeholder="Location (optional)" style="flex:1">
-                        <input type="text" class="form-input" id="social-ie-tags-${post.id}"
-                            value="${esc(tags.join(', '))}" placeholder="tags (comma-separated)" style="flex:1">
-                    </div>
-                    <div style="margin-bottom:8px">
-                        <label style="font-size:0.82rem;color:var(--muted);display:block;margin-bottom:4px">Media URLs (one per line, JSON format: [{"url":"...","type":"image"}])</label>
-                        <textarea id="social-ie-media-${post.id}" class="form-input"
-                            placeholder='[{"url":"https://...","type":"image","alt":""}]'
-                            style="min-height:56px;width:100%;resize:vertical;font-size:0.78rem;font-family:monospace">${esc(JSON.stringify(media))}</textarea>
-                    </div>
-                    <div style="display:flex;gap:6px;flex-wrap:wrap">
-                        <button class="btn btn-primary btn-sm" onclick="saveSocialInline(${post.id})"><i class="fas fa-save"></i> Save</button>
-                        <button class="btn btn-secondary btn-sm" onclick="toggleSocialInline(${post.id})"><i class="fas fa-times"></i> Cancel</button>
-                    </div>
-                </div>
-
-                <div class="data-card-actions">
-                    <button class="btn btn-secondary btn-sm" onclick="toggleSocialInline(${post.id})"><i class="fas fa-pen"></i> Edit</button>
-                    <button class="btn btn-secondary btn-sm" onclick="toggleSocialPin(${post.id}, ${post.pinned ? 0 : 1})">
-                        <i class="fas fa-thumbtack"></i> ${post.pinned ? 'Unpin' : 'Pin'}
-                    </button>
-                    <button class="btn btn-secondary btn-sm" onclick="toggleSocialFeature(${post.id}, ${post.featured ? 0 : 1})">
-                        <i class="fas fa-star"></i> ${post.featured ? 'Unfeature' : 'Feature'}
-                    </button>
-                    <button class="btn btn-danger btn-sm" onclick="deleteSocialPost(${post.id})"><i class="fas fa-trash"></i></button>
-                </div>
-            </div>`;
+                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;margin-left:12px">${badges}</div>
+            </div>
+            ${tags.length ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin:8px 0 4px">${tags.map(t=>`<span class="tag">#${esc(t)}</span>`).join('')}</div>` : ''}
+            ${media.length ? `<div class="data-card-subtitle" style="margin-top:4px"><i class="fas fa-paperclip"></i> ${media.length} media · <a href="../blog/" target="_blank" style="color:var(--accent2);font-size:.8rem">View on Blog</a></div>` : ''}
+            ${post.reply_count > 0 ? `<div class="data-card-subtitle" style="margin-top:4px"><i class="fas fa-comment"></i> ${post.reply_count} repl${post.reply_count===1?'y':'ies'}</div>` : ''}
+            <div class="data-card-actions">
+                <button class="btn btn-secondary btn-sm" onclick="openSocialComposer(${post.id})"><i class="fas fa-pen"></i> Edit</button>
+                <button class="btn btn-secondary btn-sm" onclick="toggleSocialPin(${post.id},${post.pinned?0:1})"><i class="fas fa-thumbtack"></i> ${post.pinned?'Unpin':'Pin'}</button>
+                <button class="btn btn-secondary btn-sm" onclick="toggleSocialFeature(${post.id},${post.featured?0:1})"><i class="fas fa-star"></i> ${post.featured?'Unfeature':'Feature'}</button>
+                <a href="../blog/#/post/${post.id}" target="_blank" class="btn btn-secondary btn-sm"><i class="fas fa-external-link-alt"></i></a>
+                <button class="btn btn-danger btn-sm" onclick="deleteSocialPost(${post.id})"><i class="fas fa-trash"></i></button>
+            </div>
+        </div>`;
     }
     html += '</div>';
 
     /* Pagination */
     const totalPages = Math.ceil(total / limit);
     if (totalPages > 1) {
-        html += `<div style="display:flex;align-items:center;justify-content:space-between;margin-top:16px;font-size:0.85rem;color:var(--muted)">
+        html += `<div class="pagination-row">
             <span>${total} posts total</span>
             <div style="display:flex;gap:8px;align-items:center">
                 ${page > 1 ? `<button class="btn btn-secondary btn-sm" onclick="socialPageNav(${page-1})">← Prev</button>` : ''}
@@ -198,195 +137,540 @@ function renderSocialList(container) {
             </div>
         </div>`;
     }
-
     container.innerHTML = html;
 }
 
-window.socialPageNav = function(p) {
-    _socialState.page = p;
-    refreshSocialPosts();
-    document.getElementById('socialPostsList')?.scrollIntoView({ behavior: 'smooth' });
+window.socialPageNav = p => { _ss.page = p; refreshSocialPosts(); };
+window.toggleSocialPin = async (id, val) => {
+    try { await API.put('/api/blog/posts/' + id + '/pin', { pinned: !!val }); showToast(val ? 'Pinned' : 'Unpinned', 'success'); refreshSocialPosts(); }
+    catch (e) { showToast(e.message, 'error'); }
+};
+window.toggleSocialFeature = async (id, val) => {
+    try { await API.put('/api/blog/posts/' + id + '/feature', { featured: !!val }); showToast(val ? 'Featured' : 'Unfeatured', 'success'); refreshSocialPosts(); }
+    catch (e) { showToast(e.message, 'error'); }
+};
+window.deleteSocialPost = async id => {
+    if (!confirm('Delete this post and all replies? Cannot be undone.')) return;
+    try { await API.delete('/api/blog/posts/' + id); showToast('Post deleted', 'success'); refreshSocialPosts(); }
+    catch (e) { showToast(e.message, 'error'); }
 };
 
-window.toggleSocialInline = function(id) {
-    const el = document.getElementById('social-inline-' + id);
-    if (el) el.style.display = el.style.display === 'none' ? '' : 'none';
-};
+/* ── Composer Modal ─────────────────────────────────────── */
+async function openSocialComposer(postId) {
+    _ss.composePendingMedia = [];
+    _ss.composingPost = null;
 
-window.saveSocialInline = async function(id) {
-    const content   = (document.getElementById('social-ie-content-' + id)?.value || '').trim();
-    const location  = (document.getElementById('social-ie-location-' + id)?.value || '').trim();
-    const tagsRaw   = (document.getElementById('social-ie-tags-' + id)?.value || '').trim();
-    const mediaRaw  = (document.getElementById('social-ie-media-' + id)?.value || '').trim();
-    const tags      = tagsRaw ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean) : [];
+    let editPost = null;
+    if (postId) {
+        try { editPost = await API.request('/api/blog/posts/' + postId + '/thread').then(d => d.post); }
+        catch {}
+    }
+    _ss.composingPost = editPost;
 
-    if (!content) { showToast('Content is required', 'error'); return; }
+    const modal = document.getElementById('socialComposerModal');
+    if (!modal) { buildComposerModal(); }
 
-    let media = [];
-    if (mediaRaw) {
-        try { media = JSON.parse(mediaRaw); }
-        catch (e) { showToast('Invalid media JSON — check format', 'error'); return; }
+    const m = document.getElementById('socialComposerModal');
+    if (!m) return;
+
+    // Populate fields
+    const ta  = document.getElementById('scContent');
+    const loc = document.getElementById('scLocation');
+    const ttl = document.getElementById('scTitle');
+    if (ta)  ta.value  = editPost ? (editPost.content  || '') : '';
+    if (loc) loc.value = editPost ? (editPost.location || '') : '';
+    if (ttl) ttl.textContent = editPost ? 'Edit Post' : 'New Post';
+
+    // Pre-populate media from existing post
+    if (editPost && Array.isArray(editPost.media)) {
+        _ss.composePendingMedia = editPost.media.map(m => ({ url: m.url, type: m.type || 'image', uploaded: true }));
     }
 
-    try {
-        await API.put('/api/blog/posts/' + id, { content, location, tags, media });
-        showToast('Post updated', 'success');
-        refreshSocialPosts();
-    } catch (err) {
-        showToast(err.message || 'Save failed', 'error');
-    }
-};
+    renderComposerMediaGrid();
+    updateComposerChar();
+    updateComposerTagPreview();
 
-window.toggleSocialPin = async function(id, pinned) {
-    try {
-        await API.put('/api/blog/posts/' + id + '/pin', { pinned: !!pinned });
-        showToast(pinned ? 'Post pinned' : 'Post unpinned', 'success');
-        refreshSocialPosts();
-    } catch (err) { showToast(err.message || 'Failed', 'error'); }
-};
-
-window.toggleSocialFeature = async function(id, featured) {
-    try {
-        await API.put('/api/blog/posts/' + id + '/feature', { featured: !!featured });
-        showToast(featured ? 'Post featured' : 'Post unfeatured', 'success');
-        refreshSocialPosts();
-    } catch (err) { showToast(err.message || 'Failed', 'error'); }
-};
-
-window.deleteSocialPost = async function(id) {
-    if (!confirm('Delete this post and all its replies? This cannot be undone.')) return;
-    try {
-        await API.delete('/api/blog/posts/' + id);
-        showToast('Post deleted', 'success');
-        refreshSocialPosts();
-    } catch (err) { showToast(err.message || 'Delete failed', 'error'); }
-};
-
-/* ── New post composer ── */
-function openSocialEditor(replyTo) {
-    const editor = document.getElementById('socialPostEditor');
-    if (!editor) return;
-    editor.style.display = '';
-    editor.innerHTML = `
-        <div class="data-card" style="border-color:var(--accent2)">
-            <div class="data-card-header">
-                <div class="data-card-title">${replyTo ? 'New Reply' : 'New Post'}</div>
-                <button class="btn btn-secondary btn-sm" onclick="closeNewSocialEditor()"><i class="fas fa-times"></i></button>
-            </div>
-            <div style="margin-bottom:10px">
-                <textarea id="newSocialContent" class="form-input"
-                    placeholder="What's on your mind? Use #hashtags inline to tag."
-                    style="min-height:100px;resize:vertical;width:100%"></textarea>
-            </div>
-            <div class="form-row" style="gap:8px;margin-bottom:10px">
-                <input type="text" class="form-input" id="newSocialLocation" placeholder="📍 Location (optional)" style="flex:1">
-                <input type="text" class="form-input" id="newSocialTags" placeholder="Extra tags (comma-separated)" style="flex:1">
-            </div>
-            <div style="margin-bottom:12px">
-                <label style="font-size:0.82rem;color:var(--muted);display:block;margin-bottom:4px">
-                    Media — pick from Media Library or paste URL
-                </label>
-                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-                    <input type="url" class="form-input" id="newSocialMediaUrl" placeholder="https://… image, video, or GIF URL" style="flex:1">
-                    <select id="newSocialMediaType" class="form-input" style="width:120px">
-                        <option value="image">Image</option>
-                        <option value="video">Video</option>
-                        <option value="gif">GIF</option>
-                    </select>
-                    <button class="btn btn-secondary btn-sm" onclick="addSocialMediaItem()"><i class="fas fa-plus"></i> Add</button>
-                </div>
-                <div id="newSocialMediaList" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"></div>
-                <input type="hidden" id="newSocialMediaData" value="[]">
-            </div>
-            <div style="display:flex;gap:8px">
-                <button class="btn btn-primary btn-sm" onclick="submitNewSocialPost(${replyTo || 'null'})">
-                    <i class="fas fa-paper-plane"></i> Post
-                </button>
-                <button class="btn btn-secondary btn-sm" onclick="closeNewSocialEditor()">Cancel</button>
-            </div>
-        </div>`;
-    editor.querySelector('#newSocialContent')?.focus();
+    m.style.display = '';
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => ta?.focus(), 50);
 }
 
-window.addSocialMediaItem = function() {
-    const urlIn  = document.getElementById('newSocialMediaUrl');
-    const typeIn = document.getElementById('newSocialMediaType');
-    const list   = document.getElementById('newSocialMediaList');
-    const hidden = document.getElementById('newSocialMediaData');
-    const url    = (urlIn?.value || '').trim();
-    if (!url) { showToast('Enter a media URL first', 'error'); return; }
+function buildComposerModal() {
+    const overlay = document.createElement('div');
+    overlay.id        = 'socialComposerModal';
+    overlay.className = 'admin-modal-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.75);display:flex;align-items:flex-start;justify-content:center;padding:24px 16px;overflow-y:auto';
+    overlay.innerHTML = `
+    <div class="admin-modal" style="background:var(--surface1);border:1px solid var(--border);border-radius:12px;width:100%;max-width:580px;box-shadow:0 8px 40px rgba(0,0,0,.5);display:flex;flex-direction:column;max-height:calc(100vh - 48px)">
+      <div style="display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border);flex-shrink:0">
+        <span id="scTitle" style="font-weight:600;font-size:1rem;flex:1">New Post</span>
+        <button onclick="closeSocialComposer()" style="background:none;border:none;color:var(--muted);font-size:1rem;cursor:pointer;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:.15s" onmouseenter="this.style.background='var(--surface2)'" onmouseleave="this.style.background='none'"><i class="fas fa-times"></i></button>
+      </div>
+      <div style="padding:16px;overflow-y:auto;flex:1">
+        <textarea id="scContent" class="form-input" placeholder="What's on your mind? Use #hashtags to tag your post…" style="min-height:120px;resize:vertical;width:100%;line-height:1.6" maxlength="2000"></textarea>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:3px;margin-bottom:10px">
+          <span id="scTagPreview" style="display:none;font-size:.78rem;color:var(--accent2)"></span>
+          <span style="margin-left:auto;font-size:.75rem;color:var(--muted)"><span id="scCharCount">0</span>/2000</span>
+        </div>
+        <div class="form-row" style="gap:8px;margin-bottom:12px">
+          <input type="text" class="form-input" id="scLocation" placeholder="📍 Location (optional)" style="flex:1">
+        </div>
 
-    let items = [];
-    try { items = JSON.parse(hidden.value || '[]'); } catch(e) {}
-    items.push({ url, type: typeIn?.value || 'image', alt: '' });
-    hidden.value = JSON.stringify(items);
+        <!-- Media grid preview -->
+        <div id="scMediaGrid" style="display:grid;gap:6px;margin-bottom:10px"></div>
 
-    /* Render chip */
-    const chip = document.createElement('div');
-    chip.style.cssText = 'display:flex;align-items:center;gap:6px;background:var(--surface-alt);padding:4px 10px;border-radius:20px;font-size:0.78rem;border:1px solid var(--border)';
-    chip.innerHTML = `<i class="fas fa-${typeIn?.value === 'video' ? 'video' : 'image'}"></i> ${esc(url.split('/').pop().slice(0,30))}
-        <button onclick="removeSocialMediaItem(this,'${esc(url)}')" style="background:none;border:none;color:var(--muted);cursor:pointer;padding:0 2px"><i class="fas fa-times"></i></button>`;
-    list?.appendChild(chip);
-    if (urlIn) urlIn.value = '';
+        <!-- Upload progress -->
+        <div id="scUploadRow" style="display:none;align-items:center;gap:10px;padding:10px 12px;background:var(--surface2);border-radius:8px;margin-bottom:10px">
+          <div style="flex:1;height:4px;background:var(--border);border-radius:4px;overflow:hidden"><div id="scUploadBar" style="height:100%;background:var(--accent2);border-radius:4px;width:0%;transition:width .3s ease"></div></div>
+          <span id="scUploadLabel" style="font-size:.78rem;color:var(--muted);white-space:nowrap">Uploading…</span>
+        </div>
+
+        <!-- Toolbar -->
+        <div style="display:flex;align-items:center;gap:6px;padding-top:12px;border-top:1px solid var(--border)">
+          <label class="btn btn-secondary btn-sm" title="Upload images (max 4)" style="cursor:pointer">
+            <i class="fas fa-image"></i> Image
+            <input type="file" id="scImageInput" accept="image/jpeg,image/png,image/webp,image/avif" multiple style="display:none">
+          </label>
+          <label class="btn btn-secondary btn-sm" title="Upload video (max 20MB)" style="cursor:pointer">
+            <i class="fas fa-video"></i> Video
+            <input type="file" id="scVideoInput" accept="video/mp4,video/webm,video/quicktime" style="display:none">
+          </label>
+          <label class="btn btn-secondary btn-sm" title="Upload GIF" style="cursor:pointer">
+            <i class="fas fa-film"></i> GIF
+            <input type="file" id="scGifInput" accept="image/gif" style="display:none">
+          </label>
+          <button class="btn btn-secondary btn-sm" onclick="openMediaLibraryPicker()" title="Pick from Media Library"><i class="fas fa-folder-open"></i> Library</button>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:12px 16px;border-top:1px solid var(--border);flex-shrink:0">
+        <button class="btn btn-secondary" onclick="closeSocialComposer()">Cancel</button>
+        <button class="btn btn-primary" id="scSubmit" onclick="submitSocialComposer()"><i class="fas fa-paper-plane"></i> Publish</button>
+      </div>
+    </div>`;
+
+    overlay.addEventListener('click', e => { if (e.target === overlay) closeSocialComposer(); });
+    document.body.appendChild(overlay);
+
+    // Bind file inputs
+    overlay.querySelector('#scContent').addEventListener('input', () => { updateComposerChar(); updateComposerTagPreview(); });
+    overlay.querySelector('#scImageInput').addEventListener('change', function() { handleComposerFiles(this.files, 'image'); this.value=''; });
+    overlay.querySelector('#scVideoInput').addEventListener('change', function() { handleComposerFiles(this.files, 'video'); this.value=''; });
+    overlay.querySelector('#scGifInput').addEventListener('change',   function() { handleComposerFiles(this.files, 'gif');   this.value=''; });
+}
+
+window.closeSocialComposer = function() {
+    const m = document.getElementById('socialComposerModal');
+    if (m) m.style.display = 'none';
+    document.body.style.overflow = '';
+    _ss.composePendingMedia = [];
+    _ss.composingPost = null;
 };
 
-window.removeSocialMediaItem = function(btn, url) {
-    const hidden = document.getElementById('newSocialMediaData');
-    let items = [];
-    try { items = JSON.parse(hidden?.value || '[]'); } catch(e) {}
-    items = items.filter(m => m.url !== url);
-    if (hidden) hidden.value = JSON.stringify(items);
-    btn.closest('div')?.remove();
+function updateComposerChar() {
+    const ta = document.getElementById('scContent');
+    const el = document.getElementById('scCharCount');
+    if (ta && el) el.textContent = (ta.value||'').length;
+}
+
+function updateComposerTagPreview() {
+    const ta  = document.getElementById('scContent');
+    const el  = document.getElementById('scTagPreview');
+    if (!ta || !el) return;
+    const tags = [...new Set((ta.value.match(/#(\w+)/g)||[]).map(h=>h.slice(1)))];
+    if (tags.length) {
+        el.style.display = '';
+        el.innerHTML = '<i class="fas fa-tags"></i> ' + tags.map(t=>`<span class="tag">#${esc(t)}</span>`).join(' ');
+    } else {
+        el.style.display = 'none';
+    }
+}
+
+function renderComposerMediaGrid() {
+    const grid = document.getElementById('scMediaGrid');
+    if (!grid) return;
+    const media = _ss.composePendingMedia;
+    if (!media.length) { grid.innerHTML = ''; grid.style.gridTemplateColumns=''; return; }
+    grid.style.gridTemplateColumns = media.length === 1 ? '1fr' : 'repeat(auto-fill, minmax(100px, 1fr))';
+    grid.innerHTML = media.map((m, i) => {
+        const isVid = m.type === 'video' || /\.(mp4|webm|mov)$/i.test(m.url||'');
+        const thumb = isVid
+            ? `<video src="${esc(m.url)}" muted playsinline style="width:100%;height:100%;object-fit:cover"></video>`
+            : `<img src="${esc(m.url)}" style="width:100%;height:100%;object-fit:cover" alt="" loading="lazy">`;
+        const statusBadge = !m.uploaded && m.file
+            ? `<div style="position:absolute;bottom:4px;left:4px;background:rgba(0,0,0,.7);color:#fff;padding:2px 6px;border-radius:8px;font-size:.65rem"><span class="spinner-sm"></span> Uploading…</div>`
+            : '';
+        return `<div style="position:relative;aspect-ratio:1;border-radius:6px;overflow:hidden;background:var(--surface2)">
+            ${thumb}
+            ${statusBadge}
+            <button onclick="removeComposerMedia(${i})" style="position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.7);color:#fff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.7rem"><i class="fas fa-times"></i></button>
+        </div>`;
+    }).join('');
+}
+
+window.removeComposerMedia = function(idx) {
+    _ss.composePendingMedia.splice(idx, 1);
+    renderComposerMediaGrid();
 };
 
-window.closeNewSocialEditor = function() {
-    const editor = document.getElementById('socialPostEditor');
-    if (editor) { editor.style.display = 'none'; editor.innerHTML = ''; }
-};
+/* ── File Upload with Compression ──────────────────────── */
+function compressImageAdmin(file) {
+    const MAX = 1400, Q = 0.82;
+    return new Promise(resolve => {
+        if (file.type === 'image/gif' || file.type.startsWith('video/')) { resolve(file); return; }
+        const reader = new FileReader();
+        reader.onload = e => {
+            const img = new Image();
+            img.onload = () => {
+                let w = img.width, h = img.height;
+                if (w <= MAX && h <= MAX) { resolve(file); return; }
+                const r = Math.min(MAX/w, MAX/h);
+                w = Math.round(w*r); h = Math.round(h*r);
+                const canvas = document.createElement('canvas');
+                canvas.width = w; canvas.height = h;
+                canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                canvas.toBlob(blob => resolve(blob ? new File([blob], file.name, {type:file.type}) : file), file.type, Q);
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+}
 
-window.submitNewSocialPost = async function(replyTo) {
-    const content  = (document.getElementById('newSocialContent')?.value || '').trim();
-    const location = (document.getElementById('newSocialLocation')?.value || '').trim();
-    const tagsRaw  = (document.getElementById('newSocialTags')?.value || '').trim();
-    const tags     = tagsRaw ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean) : [];
-    let media = [];
-    try { media = JSON.parse(document.getElementById('newSocialMediaData')?.value || '[]'); } catch(e) {}
+function handleComposerFiles(files, type) {
+    let arr = Array.from(files);
+    if (!arr.length) return;
+    const maxNew = type === 'image' ? Math.max(0, 4 - _ss.composePendingMedia.filter(m=>m.type!=='video').length) : 1;
+    arr = arr.slice(0, maxNew);
+    if (!arr.length) { showToast('Media limit reached', 'info'); return; }
 
+    arr.forEach(file => {
+        const localUrl = URL.createObjectURL(file);
+        _ss.composePendingMedia.push({ file, url: localUrl, type, uploaded: false });
+    });
+    renderComposerMediaGrid();
+    uploadPendingComposerMedia();
+}
+
+function uploadPendingComposerMedia() {
+    const toUpload = _ss.composePendingMedia.filter(m => !m.uploaded && m.file);
+    if (!toUpload.length) return;
+
+    const bar   = document.getElementById('scUploadBar');
+    const row   = document.getElementById('scUploadRow');
+    const label = document.getElementById('scUploadLabel');
+    if (row) row.style.display = 'flex';
+    _ss.uploadInProgress = true;
+
+    let idx = 0;
+    const next = () => {
+        if (idx >= toUpload.length) {
+            if (row) row.style.display = 'none';
+            if (bar) bar.style.width = '0%';
+            _ss.uploadInProgress = false;
+            return;
+        }
+        const item = toUpload[idx];
+        if (label) label.textContent = `Uploading ${idx+1} of ${toUpload.length}…`;
+
+        compressImageAdmin(item.file).then(compressed => {
+            const fd = new FormData();
+            fd.append('file', compressed);
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', ADMIN_CONFIG.API_BASE + '/api/blog/media/upload');
+            const token = localStorage.getItem('admin_jwt') || sessionStorage.getItem('admin_jwt') || '';
+            if (token) xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+            xhr.upload.addEventListener('progress', e => {
+                if (e.lengthComputable && bar) bar.style.width = Math.round(e.loaded/e.total*100) + '%';
+            });
+            xhr.onload = () => {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    const result = JSON.parse(xhr.responseText);
+                    const found = _ss.composePendingMedia.find(m => m.file === item.file);
+                    if (found) { URL.revokeObjectURL(found.url); found.url = result.url; found.uploaded = true; delete found.file; found.mediaId = result.id; }
+                    renderComposerMediaGrid();
+                } else {
+                    showToast('Upload failed', 'error');
+                }
+                idx++; next();
+            };
+            xhr.onerror = () => { showToast('Upload network error', 'error'); idx++; next(); };
+            xhr.send(fd);
+        });
+    };
+    next();
+}
+
+window.submitSocialComposer = async function() {
+    const ta  = document.getElementById('scContent');
+    const loc = document.getElementById('scLocation');
+    const btn = document.getElementById('scSubmit');
+    const content  = (ta?.value || '').trim();
+    const location = (loc?.value || '').trim();
     if (!content) { showToast('Content is required', 'error'); return; }
+    if (_ss.uploadInProgress) { showToast('Wait for uploads to finish', 'info'); return; }
+
+    const still = _ss.composePendingMedia.some(m => !m.uploaded && m.file);
+    if (still) { showToast('Wait for uploads to finish', 'info'); return; }
+
+    const media = _ss.composePendingMedia.map(m => ({ url: m.url, type: m.type }));
+    const tags  = [...new Set((content.match(/#(\w+)/g)||[]).map(h=>h.slice(1)))];
+    const data  = { content, location, media, tags };
+
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Posting…'; }
 
     try {
-        await API.post('/api/blog/posts', { content, location, tags, media, reply_to: replyTo });
-        closeNewSocialEditor();
-        showToast('Post created', 'success');
-        _socialState.page = 1;
+        if (_ss.composingPost) {
+            await API.put('/api/blog/posts/' + _ss.composingPost.id, data);
+            showToast('Post updated', 'success');
+        } else {
+            await API.post('/api/blog/posts', data);
+            showToast('Post published', 'success');
+        }
+        closeSocialComposer();
+        _ss.page = 1;
         await refreshSocialPosts();
-        /* Refresh tag filter */
-        try {
-            const data = await API.get('/api/blog/tags');
-            const sel  = document.getElementById('socialTagFilter');
-            if (sel) {
-                const current = sel.value;
-                sel.innerHTML = '<option value="">All tags</option>';
-                (data.tags || []).forEach(t => {
-                    const opt = document.createElement('option');
-                    opt.value = t.tag;
-                    opt.textContent = '#' + t.tag + ' (' + t.count + ')';
-                    if (t.tag === current) opt.selected = true;
-                    sel.appendChild(opt);
-                });
-            }
-        } catch(e) {}
     } catch (err) {
-        showToast(err.message || 'Could not create post', 'error');
+        showToast(err.message || 'Failed', 'error');
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Publish'; }
     }
 };
 
-/* ── Helpers ── */
+/* ── Media Library Modal ────────────────────────────────── */
+async function openMediaLibrary() {
+    await renderMediaLibraryModal(false);
+}
+
+async function openMediaLibraryPicker() {
+    await renderMediaLibraryModal(true);
+}
+
+async function renderMediaLibraryModal(pickerMode) {
+    let modal = document.getElementById('blogMediaLibModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'blogMediaLibModal';
+        modal.style.cssText = 'position:fixed;inset:0;z-index:1001;background:rgba(0,0,0,.8);display:flex;align-items:flex-start;justify-content:center;padding:24px 16px;overflow-y:auto';
+        modal.innerHTML = `
+        <div style="background:var(--surface1);border:1px solid var(--border);border-radius:12px;width:100%;max-width:860px;max-height:calc(100vh - 48px);display:flex;flex-direction:column">
+          <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border);flex-shrink:0">
+            <span style="font-weight:600;font-size:1rem;flex:1"><i class="fas fa-photo-video"></i> Blog Media Library</span>
+            <select id="bmTypeFilter" class="form-input" style="width:130px">
+              <option value="">All types</option>
+              <option value="image">Images</option>
+              <option value="video">Videos</option>
+              <option value="gif">GIFs</option>
+            </select>
+            <input type="text" class="form-input" id="bmSearch" placeholder="Search…" style="width:180px">
+            <button onclick="document.getElementById('blogMediaLibModal').style.display='none'" style="background:none;border:none;color:var(--muted);font-size:1rem;cursor:pointer;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center" onmouseenter="this.style.background='var(--surface2)'" onmouseleave="this.style.background='none'"><i class="fas fa-times"></i></button>
+          </div>
+          <div style="padding:12px 16px;border-bottom:1px solid var(--border);flex-shrink:0">
+            <label class="btn btn-primary btn-sm" style="cursor:pointer;display:inline-flex">
+              <i class="fas fa-upload"></i> Upload to Library
+              <input type="file" id="bmUploadInput" accept="image/*,video/mp4,video/webm,video/quicktime" multiple style="display:none">
+            </label>
+            <span id="bmUploadStatus" style="margin-left:10px;font-size:.8rem;color:var(--muted)"></span>
+          </div>
+          <div id="bmGrid" style="flex:1;overflow-y:auto;padding:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px">
+            <div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Loading…</p></div>
+          </div>
+          <div id="bmPagination" style="padding:12px 16px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;font-size:.85rem;color:var(--muted)"></div>
+        </div>`;
+        modal.addEventListener('click', e => { if (e.target === modal) modal.style.display = 'none'; });
+        document.body.appendChild(modal);
+
+        // File upload handler
+        modal.querySelector('#bmUploadInput').addEventListener('change', async function() {
+            const files = Array.from(this.files);
+            if (!files.length) return;
+            const status = document.getElementById('bmUploadStatus');
+            if (status) status.textContent = `Uploading ${files.length} file(s)…`;
+            this.value = '';
+            for (const file of files) {
+                try {
+                    const compressed = await compressImageAdmin(file);
+                    const fd = new FormData();
+                    fd.append('file', compressed);
+                    const resp = await API.upload('/api/blog/media/upload', fd);
+                    if (status) status.textContent = `Uploaded: ${compressed.name}`;
+                } catch (e) {
+                    showToast('Upload failed: ' + e.message, 'error');
+                }
+            }
+            if (status) setTimeout(() => { status.textContent = ''; }, 2000);
+            loadBlogMediaLibrary(1, '', '');
+        });
+
+        // Filter bindings
+        const typeF  = modal.querySelector('#bmTypeFilter');
+        const searchF = modal.querySelector('#bmSearch');
+        let debT = null;
+        typeF.addEventListener('change',  () => loadBlogMediaLibrary(1, typeF.value, searchF.value));
+        searchF.addEventListener('input', () => { clearTimeout(debT); debT = setTimeout(() => loadBlogMediaLibrary(1, typeF.value, searchF.value), 300); });
+    }
+
+    modal.dataset.pickerMode = pickerMode ? '1' : '0';
+    modal.style.display = '';
+    loadBlogMediaLibrary(1, '', '');
+}
+
+async function loadBlogMediaLibrary(page, type, search) {
+    const grid = document.getElementById('bmGrid');
+    const pag  = document.getElementById('bmPagination');
+    if (!grid) return;
+    grid.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Loading…</p></div>';
+    try {
+        const params = new URLSearchParams({ page: page||1, limit: 30 });
+        if (type)   params.set('type', type);
+        if (search) params.set('search', search);
+        const data = await API.get('/api/blog/media?' + params);
+        const media = data.media || [];
+        const total = data.total || 0;
+        const modal = document.getElementById('blogMediaLibModal');
+        const isPickerMode = modal?.dataset.pickerMode === '1';
+
+        if (!media.length) {
+            grid.innerHTML = '<div class="empty-state"><i class="fas fa-photo-video"></i><p>No media yet. Upload files above.</p></div>';
+        } else {
+            grid.innerHTML = media.map(m => {
+                const isVid = m.type === 'video';
+                const thumb = isVid
+                    ? `<video src="${esc(m.url)}" muted preload="metadata" style="width:100%;height:100%;object-fit:cover"></video><div style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,.7);color:#fff;border-radius:8px;padding:2px 6px;font-size:.65rem"><i class="fas fa-play"></i></div>`
+                    : `<img src="${esc(m.url)}" alt="${esc(m.filename)}" loading="lazy" style="width:100%;height:100%;object-fit:cover">`;
+
+                const actions = isPickerMode
+                    ? `<button class="btn btn-primary btn-sm" style="width:100%;margin-top:4px" onclick="pickLibraryMedia('${esc(m.url)}','${esc(m.type)}')"><i class="fas fa-check"></i> Use</button>`
+                    : `<button class="btn btn-danger btn-sm" style="width:100%;margin-top:4px" onclick="deleteLibraryMedia(${m.id})"><i class="fas fa-trash"></i></button>`;
+
+                return `<div style="display:flex;flex-direction:column">
+                    <div style="position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;background:var(--surface2);border:1px solid var(--border)">${thumb}</div>
+                    <div style="font-size:.7rem;color:var(--muted);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(m.filename)}">${esc(m.filename)}</div>
+                    ${actions}
+                </div>`;
+            }).join('');
+        }
+
+        if (pag) {
+            const totalPages = Math.ceil(total / 30);
+            pag.innerHTML = totalPages > 1
+                ? `<span>${total} files</span><div style="display:flex;gap:8px;align-items:center">${page>1?`<button class="btn btn-secondary btn-sm" onclick="loadBlogMediaLibrary(${page-1},'${type}','${search}')">← Prev</button>`:''}<span>Page ${page}/${totalPages}</span>${page<totalPages?`<button class="btn btn-secondary btn-sm" onclick="loadBlogMediaLibrary(${page+1},'${type}','${search}')">Next →</button>`:''}</div>`
+                : `<span>${total} file${total===1?'':'s'}</span>`;
+        }
+    } catch (err) {
+        grid.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>${esc(err.message)}</p></div>`;
+    }
+}
+
+window.pickLibraryMedia = function(url, type) {
+    _ss.composePendingMedia.push({ url, type: type||'image', uploaded: true });
+    renderComposerMediaGrid();
+    const modal = document.getElementById('blogMediaLibModal');
+    if (modal) modal.style.display = 'none';
+    showToast('Media added to post', 'success');
+};
+
+window.deleteLibraryMedia = async function(id) {
+    if (!confirm('Delete this media file? Cannot be undone.')) return;
+    try {
+        await API.delete('/api/blog/media/' + id);
+        showToast('Deleted', 'success');
+        const typeF  = document.getElementById('bmTypeFilter');
+        const searchF = document.getElementById('bmSearch');
+        loadBlogMediaLibrary(1, typeF?.value||'', searchF?.value||'');
+    } catch (e) { showToast(e.message, 'error'); }
+};
+
+/* ── Sync Config Modal ──────────────────────────────────── */
+async function openSyncConfigModal() {
+    let modal = document.getElementById('syncConfigModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'syncConfigModal';
+        modal.style.cssText = 'position:fixed;inset:0;z-index:1001;background:rgba(0,0,0,.75);display:flex;align-items:flex-start;justify-content:center;padding:24px 16px;overflow-y:auto';
+        modal.innerHTML = `
+        <div style="background:var(--surface1);border:1px solid var(--border);border-radius:12px;width:100%;max-width:520px">
+          <div style="display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border)">
+            <span style="font-weight:600;font-size:1rem;flex:1"><i class="fas fa-sync-alt"></i> Blog → Portfolio Sync Config</span>
+            <button onclick="document.getElementById('syncConfigModal').style.display='none'" style="background:none;border:none;color:var(--muted);font-size:1rem;cursor:pointer"><i class="fas fa-times"></i></button>
+          </div>
+          <div style="padding:16px">
+            <p style="font-size:.85rem;color:var(--muted);margin-bottom:14px">Map post tags to portfolio sections. Posts with matching tags are injected into the portfolio via <code>/api/portfolio/sync</code>.</p>
+            <div id="syncMappingRows"></div>
+            <button class="btn btn-secondary btn-sm" onclick="addSyncRow()" style="margin-top:10px"><i class="fas fa-plus"></i> Add Mapping</button>
+          </div>
+          <div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 16px;border-top:1px solid var(--border)">
+            <button class="btn btn-secondary" onclick="document.getElementById('syncConfigModal').style.display='none'">Cancel</button>
+            <button class="btn btn-primary" onclick="saveSyncConfig()"><i class="fas fa-save"></i> Save</button>
+          </div>
+        </div>`;
+        modal.addEventListener('click', e => { if (e.target === modal) modal.style.display = 'none'; });
+        document.body.appendChild(modal);
+    }
+    modal.style.display = '';
+    // Load existing config
+    try {
+        const data = await API.get('/api/admin/blog/sync-config');
+        const rows = document.getElementById('syncMappingRows');
+        if (!rows) return;
+        rows.innerHTML = '';
+        (data.config || []).forEach(c => addSyncRow(c.tag, c.section, c.enabled));
+        if (!data.config?.length) {
+            addSyncRow('project', 'projects', true);
+            addSyncRow('achievement', 'achievements', true);
+            addSyncRow('gallery', 'gallery', true);
+            addSyncRow('media', 'media', true);
+        }
+    } catch {}
+}
+
+window.addSyncRow = function(tag, section, enabled) {
+    const rows = document.getElementById('syncMappingRows');
+    if (!rows) return;
+    const row = document.createElement('div');
+    row.className = 'form-row';
+    row.style.cssText = 'gap:8px;margin-bottom:8px;align-items:center';
+    row.innerHTML = `
+        <input type="text" class="form-input sync-tag" placeholder="tag" value="${esc(tag||'')}" style="flex:1">
+        <span style="color:var(--muted);font-size:.85rem">→</span>
+        <input type="text" class="form-input sync-section" placeholder="section id" value="${esc(section||'')}" style="flex:1">
+        <label style="display:flex;align-items:center;gap:5px;font-size:.82rem;white-space:nowrap">
+          <input type="checkbox" class="sync-enabled" ${enabled!==false?'checked':''}>Enabled
+        </label>
+        <button onclick="this.closest('.form-row').remove()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:.9rem" title="Remove"><i class="fas fa-trash"></i></button>`;
+    rows.appendChild(row);
+};
+
+window.saveSyncConfig = async function() {
+    const rows = document.querySelectorAll('#syncMappingRows .form-row');
+    const mappings = Array.from(rows).map(r => ({
+        tag:     r.querySelector('.sync-tag')?.value.trim()     || '',
+        section: r.querySelector('.sync-section')?.value.trim() || '',
+        enabled: r.querySelector('.sync-enabled')?.checked      ?? true,
+    })).filter(m => m.tag && m.section);
+
+    try {
+        await API.put('/api/admin/blog/sync-config', { mappings });
+        showToast('Sync config saved', 'success');
+        document.getElementById('syncConfigModal').style.display = 'none';
+    } catch (e) { showToast(e.message, 'error'); }
+};
+
+/* ── Expose openSocialComposer globally ─────────────────── */
+window.openSocialComposer = openSocialComposer;
+window.openMediaLibrary    = openMediaLibrary;
+window.loadBlogMediaLibrary = loadBlogMediaLibrary;
+
+/* ── Helpers ────────────────────────────────────────────── */
 function relativeTimeSocial(iso) {
     if (!iso) return '';
-    const diff = (Date.now() - new Date(iso).getTime()) / 1000;
-    if (diff < 60)    return 'just now';
-    if (diff < 3600)  return Math.floor(diff / 60) + 'm ago';
-    if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
-    return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    const d = (Date.now() - new Date(iso).getTime()) / 1000;
+    if (d < 60)    return 'just now';
+    if (d < 3600)  return Math.floor(d/60) + 'm ago';
+    if (d < 86400) return Math.floor(d/3600) + 'h ago';
+    return new Date(iso).toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' });
+}
+
+function debounce(fn, ms) {
+    let t;
+    return function(...args) { clearTimeout(t); t = setTimeout(() => fn.apply(this, args), ms); };
 }

@@ -621,20 +621,26 @@ function applySiteConfig(cfg) {
         fetch(API_SYNC, { cache: 'no-store' })
             .then(function(r) { return r.json(); })
             .then(function(data) {
-                var synced = data.synced || {};
+                var synced   = data.synced   || {};
+                var featured = data.featured || [];
+
                 /* Achievements */
                 if (synced.achievements && synced.achievements.length) {
                     injectSyncedBadges('achievementsGrid', synced.achievements);
                 }
-                /* Gallery / media — inject into media section if it has a container */
+                /* Gallery / media */
                 if (synced.gallery && synced.gallery.length) {
                     injectSyncedMedia('galleryGrid', synced.gallery);
                 }
                 if (synced.media && synced.media.length) {
                     injectSyncedMedia('mediaGrid', synced.media);
                 }
+                /* Featured blog posts → portfolio blog highlights section */
+                if (featured.length) {
+                    injectBlogHighlights(featured);
+                }
             })
-            .catch(function() { /* silent — blog may not have matching posts */ });
+            .catch(function() { /* silent */ });
     };
 
     function injectSyncedBadges(containerId, posts) {
@@ -672,6 +678,30 @@ function applySiteConfig(cfg) {
                 el.innerHTML = '<img src="' + esc(m.url) + '" alt="' + esc(m.alt || '') + '" loading="lazy" style="width:100%;border-radius:8px">';
                 grid.appendChild(el);
             });
+        });
+    }
+
+    function injectBlogHighlights(posts) {
+        /* Find or create a blog-highlights container in the portfolio */
+        var existing = document.getElementById('blogHighlightsGrid');
+        if (!existing) return; /* Only inject if the portfolio has this section */
+        posts.slice(0, 6).forEach(function(post) {
+            if (document.getElementById('bl-hi-' + post.id)) return;
+            var media  = Array.isArray(post.media) ? post.media : [];
+            var thumb  = media.length ? media[0].url : '';
+            var el     = document.createElement('a');
+            el.className   = 'card blog-highlight-card';
+            el.id          = 'bl-hi-' + post.id;
+            el.href        = '/blog/#/post/' + post.id;
+            el.target      = '_blank';
+            el.rel         = 'noopener noreferrer';
+            el.setAttribute('data-synced-blog', '1');
+            el.innerHTML   = (thumb ? '<div class="blog-hi-thumb"><img src="' + esc(thumb) + '" alt="" loading="lazy"></div>' : '') +
+                '<div class="blog-hi-body">' +
+                '<p class="blog-hi-text">' + esc((post.content || '').slice(0, 120)) + '…</p>' +
+                '<span class="blog-hi-link">Read on blog <i class="fas fa-arrow-right"></i></span>' +
+                '</div>';
+            existing.appendChild(el);
         });
     }
 })();
@@ -2341,6 +2371,43 @@ document.addEventListener('DOMContentLoaded', () => {
             }).join('') + '</div>';
     }
 
+    /* ── Shared start screen ── */
+    function showGameStartScreen(cfg) {
+        /* cfg: { icon, title, description, diffBarId, difficulties, activeDiff,
+                  onDiffChange, playFn, bestKey, bestFormat } */
+        var high    = cfg.bestKey ? getHigh(cfg.bestKey) : null;
+        var bestStr = high !== null
+            ? '<div class="mg-start-best"><i class="fas fa-trophy"></i> Best: <strong>' + (cfg.bestFormat ? cfg.bestFormat(high) : high) + '</strong></div>'
+            : '';
+        var diffHtml = cfg.difficulties ? diffBar(cfg.diffBarId, cfg.difficulties, cfg.activeDiff) : '';
+        arena.innerHTML = '<div class="mg-start-screen">'
+            + '<div class="mg-start-icon">' + cfg.icon + '</div>'
+            + '<h3 class="mg-start-title">' + esc(cfg.title) + '</h3>'
+            + '<p class="mg-start-desc">' + esc(cfg.description) + '</p>'
+            + bestStr
+            + diffHtml
+            + '<button class="cta-button primary mg-start-btn" id="mgStartPlay" style="margin-top:22px;padding:12px 48px;font-size:1rem">'
+            + '<i class="fas fa-play"></i> Play</button>'
+            + '</div>';
+        /* Difficulty buttons */
+        if (cfg.diffBarId) {
+            var diffDiv = document.getElementById(cfg.diffBarId);
+            if (diffDiv) {
+                diffDiv.addEventListener('click', function(e) {
+                    var btn = e.target.closest('.mg-diff-btn');
+                    if (!btn) return;
+                    cfg.onDiffChange && cfg.onDiffChange(btn.dataset.diff);
+                    diffDiv.querySelectorAll('.mg-diff-btn').forEach(function(b) {
+                        b.classList.toggle('mg-diff-btn--active', b.dataset.diff === btn.dataset.diff);
+                    });
+                });
+            }
+        }
+        /* Play button */
+        var playBtn = document.getElementById('mgStartPlay');
+        if (playBtn && cfg.playFn) playBtn.addEventListener('click', cfg.playFn);
+    }
+
     /* ── REACTION TEST ── */
     var reactionGame = (function() {
         var state = 'start'; /* start | waiting | ready | done | tooearly */
@@ -2461,7 +2528,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }, delay);
         }
 
-        return { init: function() { state = 'start'; render(); }, reset: function() { state = 'start'; results = []; clearTimeout(timer); render(); }, destroy: function() { clearTimeout(timer); timer = null; } };
+        function startScreen() {
+            showGameStartScreen({
+                icon: '⚡', title: 'Reaction Test',
+                description: 'Wait for the screen to turn green, then click as fast as you can. 5 rounds.',
+                bestKey: 'reaction_avg', bestFormat: function(v) { return v + ' ms avg'; },
+                playFn: function() { state = 'start'; render(); },
+            });
+        }
+        return { init: startScreen, reset: function() { state = 'start'; results = []; clearTimeout(timer); render(); }, destroy: function() { clearTimeout(timer); timer = null; } };
     })();
 
     /* ── TYPING SPEED TEST ── */
@@ -2580,7 +2655,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         window.typingGame_reset = render;
-        return { init: render, reset: render, destroy: function() { clearInterval(timerInterval); timerInterval = null; finished = true; } };
+        function startScreen() {
+            showGameStartScreen({
+                icon: '⌨️', title: 'Typing Speed',
+                description: 'Type the displayed text as fast and accurately as you can.',
+                diffBarId: 'typStart', difficulties: [{key:'easy',label:'Easy'},{key:'normal',label:'Normal'},{key:'hard',label:'Hard'}], activeDiff: difficulty,
+                onDiffChange: function(d) { difficulty = d; },
+                bestKey: 'typing_wpm', bestFormat: function(v) { return v + ' WPM'; },
+                playFn: render,
+            });
+        }
+        return { init: startScreen, reset: render, destroy: function() { clearInterval(timerInterval); timerInterval = null; finished = true; } };
     })();
 
     /* ── CLICK SPEED TEST ── */
@@ -2658,7 +2743,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         window.clickGame_reset = render;
-        return { init: render, reset: render, destroy: function() { clearInterval(timerInterval); running = false; } };
+        function startScreen() {
+            showGameStartScreen({
+                icon: '🖱️', title: 'Click Speed',
+                description: 'Click as many times as possible before the timer runs out.',
+                diffBarId: 'clkStart', difficulties: [{key:'easy',label:'Easy (10s)'},{key:'normal',label:'Normal (5s)'},{key:'hard',label:'Hard (3s)'}], activeDiff: difficulty,
+                onDiffChange: function(d) { difficulty = d; },
+                bestKey: 'click_cps', bestFormat: function(v) { return v + ' CPS'; },
+                playFn: render,
+            });
+        }
+        return { init: startScreen, reset: render, destroy: function() { clearInterval(timerInterval); running = false; } };
     })();
 
     /* ── MEMORY CARD GAME ── */
@@ -2768,7 +2863,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         window.memoryGame_reset = render;
-        return { init: render, reset: render, destroy: function() { flipLock = false; running = false; } };
+        function startScreen() {
+            showGameStartScreen({
+                icon: '🧠', title: 'Memory Match',
+                description: 'Flip cards and match all pairs. Fewer moves = better score.',
+                diffBarId: 'memStart', difficulties: [{key:'easy',label:'Easy (8 pairs)'},{key:'normal',label:'Normal (12)'},{key:'hard',label:'Hard (18)'}], activeDiff: difficulty,
+                onDiffChange: function(d) { difficulty = d; },
+                bestKey: 'memory_moves', bestFormat: function(v) { return v + ' moves'; },
+                playFn: render,
+            });
+        }
+        return { init: startScreen, reset: render, destroy: function() { flipLock = false; running = false; } };
     })();
 
     /* ── AIM TRAINER GAME ── */
@@ -2892,7 +2997,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         window.aimGame_reset = render;
-        return { init: render, reset: render, destroy: function() { clearTimeout(targetTimer); clearInterval(countdownInterval); running = false; targetTimer = null; countdownInterval = null; } };
+        function startScreen() {
+            showGameStartScreen({
+                icon: '🎯', title: 'Aim Trainer',
+                description: 'Hit as many targets as possible before time runs out. Faster = more points.',
+                diffBarId: 'aimStart', difficulties: [{key:'easy',label:'Easy'},{key:'normal',label:'Normal'},{key:'hard',label:'Hard'}], activeDiff: difficulty,
+                onDiffChange: function(d) { difficulty = d; },
+                bestKey: 'aim_score', bestFormat: function(v) { return v + ' pts'; },
+                playFn: render,
+            });
+        }
+        return { init: startScreen, reset: render, destroy: function() { clearTimeout(targetTimer); clearInterval(countdownInterval); running = false; targetTimer = null; countdownInterval = null; } };
     })();
 
     /* ── Logic Puzzle Game ── */
@@ -3009,7 +3124,17 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         window.logicGame_reset = function() { render(); };
-        return { init: render, reset: render, destroy: function() { clearTimeout(logicTimer); logicTimer = null; } };
+        function startScreen() {
+            showGameStartScreen({
+                icon: '🧩', title: 'Logic Puzzles',
+                description: 'Solve number sequences and pattern problems. Each difficulty increases the number of questions.',
+                diffBarId: 'logStart', difficulties: [{key:'easy',label:'Easy (3)'},{key:'normal',label:'Normal (5)'},{key:'hard',label:'Hard (8)'}], activeDiff: difficulty,
+                onDiffChange: function(d) { difficulty = d; },
+                bestKey: 'logic_score', bestFormat: function(v) { return v + ' correct'; },
+                playFn: render,
+            });
+        }
+        return { init: startScreen, reset: render, destroy: function() { clearTimeout(logicTimer); logicTimer = null; } };
     })();
 
     /* ── Tech Quiz Game ── */
@@ -3137,7 +3262,17 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         window.quizGame_reset = function() { render(); };
-        return { init: render, reset: render, destroy: function() { clearTimeout(quizTimer); quizTimer = null; } };
+        function startScreen() {
+            showGameStartScreen({
+                icon: '💡', title: 'Tech Quiz',
+                description: 'Answer tech trivia questions. Questions are loaded fresh each session.',
+                diffBarId: 'qzStart', difficulties: [{key:'easy',label:'Easy (3)'},{key:'normal',label:'Normal (5)'},{key:'hard',label:'All (10)'}], activeDiff: difficulty,
+                onDiffChange: function(d) { difficulty = d; },
+                bestKey: 'quiz_score', bestFormat: function(v) { return v + ' correct'; },
+                playFn: render,
+            });
+        }
+        return { init: startScreen, reset: render, destroy: function() { clearTimeout(quizTimer); quizTimer = null; } };
     })();
 
     /* ── Tab switching ── */
