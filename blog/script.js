@@ -345,7 +345,8 @@ function buildPostCard(post, opts) {
 
 /* ── Rendering: Feed ─────────────────────────────────────── */
 function renderFeed(posts, append) {
-  var container = document.getElementById('pageContent');
+  /* Use tagFeedContent when on a tag page so the header is preserved */
+  var container = document.getElementById('tagFeedContent') || document.getElementById('pageContent');
   if (!container) return;
 
   if (!append) {
@@ -394,9 +395,16 @@ function loadFeed(reset) {
   if (reset) {
     _state.posts = []; _state.page = 1; _state.noMore = false;
     var skel = document.getElementById('initialSkeleton');
-    if (skel) skel.style.display = '';
-    var pc = document.getElementById('pageContent');
-    if (pc) { pc.innerHTML = ''; if (skel) pc.appendChild(skel); }
+    /* If a tag header is already rendered, preserve it and only show skeleton inside tagFeedContent */
+    var tagContent = document.getElementById('tagFeedContent');
+    if (tagContent) {
+      if (skel) { tagContent.innerHTML = ''; tagContent.appendChild(skel); }
+      if (skel) skel.style.display = '';
+    } else {
+      var pc = document.getElementById('pageContent');
+      if (pc) { pc.innerHTML = ''; if (skel) pc.appendChild(skel); }
+      if (skel) skel.style.display = '';
+    }
     document.getElementById('endMarker') && (document.getElementById('endMarker').style.display = 'none');
   }
   if (_state.noMore) return;
@@ -416,8 +424,12 @@ function loadFeed(reset) {
 
       renderFeed(newPosts, !isFirst);
 
-      /* Load featured posts on first load */
-      if (isFirst) loadFeatured();
+      /* Update tag page count */
+      var tagCount = document.getElementById('tagPageCount');
+      if (tagCount) tagCount.textContent = _state.total + ' post' + (_state.total !== 1 ? 's' : '');
+
+      /* Load featured posts on first load of main feed */
+      if (isFirst && !_state.tagFilter && !_state.searchQuery) loadFeatured();
 
       if (_state.posts.length >= _state.total || newPosts.length < 10) {
         _state.noMore = true;
@@ -430,8 +442,10 @@ function loadFeed(reset) {
       document.getElementById('loadingSpinner') && (document.getElementById('loadingSpinner').style.display = 'none');
       var skel = document.getElementById('initialSkeleton');
       if (skel) skel.style.display = 'none';
+      var tagContent = document.getElementById('tagFeedContent');
       var pc = document.getElementById('pageContent');
-      if (pc && !_state.posts.length) pc.innerHTML = '<div class="bl-empty"><div class="bl-empty-icon"><i class="fas fa-wifi"></i></div><div class="bl-empty-title">Couldn\'t load posts</div><div class="bl-empty-sub">' + esc(err.message) + '</div></div>';
+      var target = tagContent || pc;
+      if (target && !_state.posts.length) target.innerHTML = '<div class="bl-empty"><div class="bl-empty-icon"><i class="fas fa-wifi"></i></div><div class="bl-empty-title">Couldn\'t load posts</div><div class="bl-empty-sub">' + esc(err.message) + '</div></div>';
     });
 }
 
@@ -1059,6 +1073,19 @@ function bindUI() {
       if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); submitCompose(); }
     });
   }
+
+  /* Cancel upload */
+  var cancelUploadBtn = document.getElementById('uploadCancelBtn');
+  if (cancelUploadBtn) cancelUploadBtn.addEventListener('click', function() {
+    if (_state.uploadAbort) { _state.uploadAbort(); _state.uploadAbort = null; }
+    var uploadRow = document.getElementById('uploadRow');
+    if (uploadRow) uploadRow.style.display = 'none';
+    var uploadBar = document.getElementById('uploadBar');
+    if (uploadBar) uploadBar.style.width = '0%';
+    /* Mark any unfinished uploads as cancelled */
+    _state.pendingMedia = _state.pendingMedia.filter(function(m) { return m.uploaded; });
+    renderComposeMediaGrid();
+  });
 
   /* File inputs */
   var imageInput = document.getElementById('composeImageInput');

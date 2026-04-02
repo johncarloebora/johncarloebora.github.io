@@ -568,6 +568,12 @@ textarea { font-family: inherit; resize: vertical; }
   border-radius: 4px; transition: width 0.3s ease; width: 0%;
 }
 .bl-upload-label { font-size: 0.8rem; color: var(--bl-muted); white-space: nowrap; }
+.bl-upload-cancel {
+  background: none; border: none; cursor: pointer;
+  color: var(--bl-muted); font-size: 0.85rem; padding: 2px 4px;
+  border-radius: 4px; transition: color 0.15s, background 0.15s; flex-shrink: 0;
+}
+.bl-upload-cancel:hover { color: var(--bl-accent2); background: rgba(255,82,82,0.1); }
 .bl-compose-toolbar {
   display: flex; align-items: center; gap: 6px;
   margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--bl-border);

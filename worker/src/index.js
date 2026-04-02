@@ -1158,24 +1158,31 @@ function sanitizeText(s, max = 2000) {
   return String(s || '').trim().slice(0, max);
 }
 
-/* Public: paginated feed with optional tag filter */
+/* Public: paginated feed with optional tag/search filter */
 router.get('/api/blog/feed', async (request, env) => {
-  const page  = Math.max(1, parseInt(request.query?.page  || '1'));
-  const limit = Math.min(50, Math.max(1, parseInt(request.query?.limit || '10')));
-  const tag   = (request.query?.tag || '').trim().slice(0, 64);
+  const page   = Math.max(1, parseInt(request.query?.page   || '1'));
+  const limit  = Math.min(50, Math.max(1, parseInt(request.query?.limit || '10')));
+  const tag    = (request.query?.tag    || '').trim().slice(0, 64);
+  const search = (request.query?.search || '').trim().slice(0, 200);
   const offset = (page - 1) * limit;
 
-  let countSql, fetchSql, binds;
+  let conditions = ['reply_to IS NULL'];
+  let binds = [];
+
   if (tag) {
-    const pattern = '%"' + tag.replace(/"/g, '') + '"%';
-    countSql = 'SELECT COUNT(*) as cnt FROM social_posts WHERE reply_to IS NULL AND (tags LIKE ? OR hashtags LIKE ?)';
-    fetchSql = 'SELECT * FROM social_posts WHERE reply_to IS NULL AND (tags LIKE ? OR hashtags LIKE ?) ORDER BY pinned DESC, created_at DESC LIMIT ? OFFSET ?';
-    binds = [pattern, pattern];
-  } else {
-    countSql = 'SELECT COUNT(*) as cnt FROM social_posts WHERE reply_to IS NULL';
-    fetchSql = 'SELECT * FROM social_posts WHERE reply_to IS NULL ORDER BY pinned DESC, created_at DESC LIMIT ? OFFSET ?';
-    binds = [];
+    const tagPattern = '%"' + tag.replace(/"/g, '') + '"%';
+    conditions.push('(tags LIKE ? OR hashtags LIKE ?)');
+    binds.push(tagPattern, tagPattern);
   }
+  if (search) {
+    const searchPattern = '%' + search.replace(/%/g, '\\%').replace(/_/g, '\\_') + '%';
+    conditions.push('(content LIKE ? OR author LIKE ? OR tags LIKE ? OR hashtags LIKE ?)');
+    binds.push(searchPattern, searchPattern, searchPattern, searchPattern);
+  }
+
+  const where = 'WHERE ' + conditions.join(' AND ');
+  const countSql = `SELECT COUNT(*) as cnt FROM social_posts ${where}`;
+  const fetchSql = `SELECT * FROM social_posts ${where} ORDER BY pinned DESC, created_at DESC LIMIT ? OFFSET ?`;
 
   const [countRow, { results }] = await Promise.all([
     env.DB.prepare(countSql).bind(...binds).first(),
